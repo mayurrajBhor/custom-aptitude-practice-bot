@@ -6,6 +6,7 @@ from utils.keyboards import question_keyboard
 import random
 import html
 import time
+import asyncio
 
 async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -62,8 +63,74 @@ async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_T
     pool = context.user_data.get('question_pool', [])
     total = context.user_data.get('session_total_target', 0)
     current_idx = context.user_data.get('session_current_index', 0) + 1
+    
     chat_id = update.effective_chat.id
     user_id = update.effective_user.id
+    
+    print(f"DEBUG: trigger_daily_question. Queue: {len(queue)}, Pool: {len(pool)}")
+
+async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Helper to fill the daily question pool in background or foreground."""
+    queue = context.user_data.get('daily_queue', [])
+    if not queue:
+        return True, None # Nothing to fill
+        
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    
+    batch_size = min(5, len(queue))
+    selected_for_batch = [queue.pop(0) for _ in range(batch_size)]
+    context.user_data['daily_queue'] = queue
+    
+    batch_patterns_info = []
+    for pid in selected_for_batch:
+        res = db.execute_query("SELECT p.id, p.name, p.description, t.name as topic_name FROM patterns p JOIN topics t ON p.topic_id = t.id WHERE p.id = %s", (pid,))
+        if res:
+            p = res[0]
+            current_diff = db.get_current_difficulty(user_id, pid)
+            batch_patterns_info.append({
+                'id': p['id'],
+                'name': p['name'],
+                'topic_name': p['topic_name'],
+                'description': p['description'],
+                'difficulty': current_diff,
+                'avoid_questions': db.get_recent_questions(p['id'])
+            })
+
+    questions, error_msg = generator.generate_batch(batch_patterns_info, count=batch_size)
+    if not questions:
+        # Put items back in queue if generation failed
+        context.user_data['daily_queue'] = selected_for_batch + context.user_data['daily_queue']
+        return False, error_msg
+        
+    pool = context.user_data.get('question_pool', [])
+    for q in questions:
+        pattern_id = q.get('pattern_id') or selected_for_batch[0]
+        db.save_question(
+            pattern_id,
+            q['question_text'],
+            q['options'],
+            q['correct_option_index'],
+            q['explanation'],
+            q.get('difficulty', 3)
+        )
+        pool.append({
+            'data': q,
+            'pattern_id': pattern_id
+        })
+    context.user_data['question_pool'] = pool
+    return True, None
+
+async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    queue = context.user_data.get('daily_queue', [])
+    pool = context.user_data.get('question_pool', [])
+    total = context.user_data.get('session_total_target', 0)
+    current_idx = context.user_data.get('session_current_index', 0) + 1
+    
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+    
+    print(f"DEBUG: trigger_daily_question. Queue: {len(queue)}, Pool: {len(pool)}")
 
     if not pool and not queue:
         # Session Complete
@@ -76,58 +143,28 @@ async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_T
         context.user_data['is_daily'] = False
         return
 
-    # If pool is empty, generate a batch
+    # If pool is empty, generate a batch synchronously
     if not pool:
-        batch_size = min(5, len(queue))
-        selected_for_batch = [queue.pop(0) for _ in range(batch_size)]
-        context.user_data['daily_queue'] = queue
-        
-        batch_patterns_info = []
-        for pid in selected_for_batch:
-            res = db.execute_query("SELECT p.id, p.name, p.description, t.name as topic_name FROM patterns p JOIN topics t ON p.topic_id = t.id WHERE p.id = %s", (pid,))
-            if res:
-                p = res[0]
-                current_diff = db.get_current_difficulty(user_id, pid)
-                batch_patterns_info.append({
-                    'id': p['id'],
-                    'name': p['name'],
-                    'topic_name': p['topic_name'],
-                    'description': p['description'],
-                    'difficulty': current_diff,
-                    'avoid_questions': db.get_recent_questions(p['id'])
-                })
-
-        status_msg = await context.bot.send_message(chat_id, f"<i>Batch generating {batch_size} questions... ⏳</i>", parse_mode='HTML')
-        
-        questions, error_msg = generator.generate_batch(batch_patterns_info, count=batch_size)
+        status_msg = await context.bot.send_message(chat_id, f"<i>Batch generating {min(5, len(queue))} questions... ⏳</i>", parse_mode='HTML')
+        success, error_msg = await _fill_daily_pool(update, context)
         await status_msg.delete()
 
-        if not questions:
-            await context.bot.send_message(chat_id, f"❌ <b>Batch Generation Failed:</b>\n\n{html.escape(error_msg or 'Unknown Error')}", parse_mode='HTML')
+        if not success:
+            await context.bot.send_message(chat_id, f"❌ <b>Batch Generation Failed:</b>\n\n{html.escape(str(error_msg) or 'Unknown Error')}", parse_mode='HTML')
             return
         
-        # Save generated questions to DB and context
-        for q in questions:
-            pattern_id = q.get('pattern_id')
-            db.save_question(
-                pattern_id,
-                q['question_text'],
-                q['options'],
-                q['correct_option_index'],
-                q['explanation'],
-                q.get('difficulty', 3)
-            )
-            pool.append({
-                'data': q,
-                'pattern_id': pattern_id
-            })
-        context.user_data['question_pool'] = pool
+        pool = context.user_data.get('question_pool', [])
 
     # Serve from pool
     q_entry = pool.pop(0)
     context.user_data['question_pool'] = pool
     q_data = q_entry['data']
     pattern_id = q_entry['pattern_id']
+
+    # PREFETCH: If pool is now empty but more items in queue, start fetching next batch
+    if not pool and context.user_data.get('daily_queue'):
+        print("DEBUG: Prefetching next daily batch in background...")
+        asyncio.create_task(_fill_daily_pool(update, context))
 
     context.user_data['current_question'] = q_data
     context.user_data['current_pattern_id'] = pattern_id

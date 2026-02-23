@@ -78,5 +78,5 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         from handlers.daily_practice_handler import trigger_daily_question
         await trigger_daily_question(update, context)
 
-    elif data == "ans_":
+    elif data.startswith("ans_"):
         await handle_answer(update, context)

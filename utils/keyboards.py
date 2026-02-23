@@ -3,8 +3,7 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMa
 def main_menu_keyboard():
     keyboard = [
         [KeyboardButton("Daily Practice 🕒"), KeyboardButton("Custom Practice 🛠️")],
-        [KeyboardButton("Add a topic ➕"), KeyboardButton("My Profile 👤")],
-        [KeyboardButton("Help ❓")]
+        [KeyboardButton("Add a topic ➕"), KeyboardButton("My Profile 👤")]
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 

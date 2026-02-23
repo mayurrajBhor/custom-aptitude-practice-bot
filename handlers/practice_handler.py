@@ -6,6 +6,7 @@ from utils.keyboards import question_keyboard, main_menu_keyboard, session_compl
 import json
 import html
 import random
+import asyncio
 
 async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TYPE, pattern_ids: list):
     # Initialize session
@@ -33,12 +34,51 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
 
 import time
 
+async def _fill_question_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Internal helper to fill the question pool via LLM batch."""
+    pattern_ids = context.user_data.get('session_patterns', [])
+    if not pattern_ids:
+        return
+        
+    # Prepare patterns for the batch (try to be diverse)
+    selected_for_batch = []
+    if len(pattern_ids) >= 5:
+        selected_for_batch = random.sample(pattern_ids, 5)
+    else:
+        # Cycle through available patterns to fill 5 slots
+        selected_for_batch = (pattern_ids * (5 // len(pattern_ids) + 1))[:5]
+        
+    batch_patterns_info = []
+    user_id = update.effective_user.id
+    for pid in selected_for_batch:
+        res = db.execute_query("SELECT p.id, p.name, p.description, p.difficulty_level, t.name as topic_name FROM patterns p JOIN topics t ON p.topic_id = t.id WHERE p.id = %s", (pid,))
+        if res:
+            p = res[0]
+            current_diff = db.get_current_difficulty(user_id, pid)
+            batch_patterns_info.append({
+                'id': p['id'],
+                'name': p['name'],
+                'topic_name': p['topic_name'],
+                'description': p['description'],
+                'difficulty': current_diff,
+                'avoid_questions': db.get_recent_questions(p['id'])
+            })
+    
+    questions, error = generator.generate_batch(batch_patterns_info, count=5)
+    if questions:
+        # Add to existing pool if any (unlikely to have any due to logic, but safer)
+        if 'question_pool' not in context.user_data:
+            context.user_data['question_pool'] = []
+        context.user_data['question_pool'].extend(questions)
+        return True, None
+    return False, error
+
 async def trigger_next_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     current_count = context.user_data.get('session_current_index', 0)
     target_count = context.user_data.get('session_total_target', 5)
     
     if current_count >= target_count:
-        # Session Complete
+        # Session Complete logic...
         score = context.user_data.get('session_score', 0)
         final_msg = (
             f"🏁 <b>Session Complete!</b>\n\n"
@@ -50,48 +90,29 @@ async def trigger_next_question(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     # Check question pool
-    if not context.user_data.get('question_pool'):
-        # Generate batch of 5
+    pool = context.user_data.get('question_pool', [])
+    if not pool:
+        # Generate batch of 5 synchronously
         chat_id = update.effective_chat.id
-        status_msg = await context.bot.send_message(chat_id, "<i>Generating a batch of questions to speed up your session... ⏳</i>", parse_mode='HTML')
+        status_msg = await context.bot.send_message(chat_id, "<i>Generating a batch of questions... ⏳</i>", parse_mode='HTML')
         
-        pattern_ids = context.user_data['session_patterns']
-        
-        # Prepare patterns for the batch (try to be diverse)
-        selected_for_batch = []
-        if len(pattern_ids) >= 5:
-            selected_for_batch = random.sample(pattern_ids, 5)
-        else:
-            # Cycle through available patterns to fill 5 slots
-            selected_for_batch = (pattern_ids * (5 // len(pattern_ids) + 1))[:5]
-            
-        batch_patterns_info = []
-        user_id = update.effective_user.id
-        for pid in selected_for_batch:
-            res = db.execute_query("SELECT p.id, p.name, p.description, p.difficulty_level, t.name as topic_name FROM patterns p JOIN topics t ON p.topic_id = t.id WHERE p.id = %s", (pid,))
-            if res:
-                p = res[0]
-                current_diff = db.get_current_difficulty(user_id, pid)
-                batch_patterns_info.append({
-                    'id': p['id'],
-                    'name': p['name'],
-                    'topic_name': p['topic_name'],
-                    'description': p['description'],
-                    'difficulty': current_diff,
-                    'avoid_questions': db.get_recent_questions(p['id'])
-                })
-        
-        questions, error = generator.generate_batch(batch_patterns_info, count=5)
+        success, error = await _fill_question_pool(update, context)
         await status_msg.delete()
         
-        if not questions:
+        if not success:
             await context.bot.send_message(chat_id, f"❌ <b>Batch Generation Error:</b>\n\n{html.escape(error or 'Empty response')}", parse_mode='HTML')
             return
-            
-        context.user_data['question_pool'] = questions
+        
+        pool = context.user_data.get('question_pool', [])
 
     # Get next question from pool
-    q_data = context.user_data['question_pool'].pop(0)
+    q_data = pool.pop(0)
+    context.user_data['question_pool'] = pool # Update pool in context
+    
+    # Check if we should prefetch (if pool is empty and we have more questions to go)
+    if not pool and (current_count + 1 < target_count):
+        print("DEBUG: Prefetching next batch in background...")
+        asyncio.create_task(_fill_question_pool(update, context))
     
     # Save to context for answer checking
     context.user_data['current_question'] = q_data
@@ -127,6 +148,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     user_ans = int(query.data.split('_')[1])
     q_data = context.user_data.get('current_question')
+    print(f"DEBUG: handle_answer current_question: {bool(q_data)}")
     
     if not q_data:
         await query.message.reply_text("No active question found.")
@@ -136,21 +158,33 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     correct_option = q_data['options'][q_data['correct_option_index']]
     
     if is_correct:
+        context.user_data.setdefault('session_score', 0)
         context.user_data['session_score'] += 1
         res_msg = "✅ <b>Correct!</b>"
     else:
-        res_msg = f"❌ <b>Incorrect.</b>\n\nCorrect Answer: {html.escape(correct_option)}"
+        res_msg = f"❌ <b>Incorrect.</b>\n\nCorrect Answer: {html.escape(str(correct_option))}"
     
+    context.user_data.setdefault('session_current_index', 0)
     context.user_data['session_current_index'] += 1
     
+    pattern_id = context.user_data.get('current_pattern_id')
+    print(f"DEBUG: handle_answer pattern_id: {pattern_id}, is_correct: {is_correct}")
+    
     # Update DB Progress (SRS)
-    db.update_user_progress(
-        update.effective_user.id,
-        context.user_data['current_pattern_id'],
-        is_correct,
-        5 if is_correct else 2,
-        time_taken=time_taken
-    )
+    if pattern_id:
+        try:
+            db.update_user_progress(
+                update.effective_user.id,
+                pattern_id,
+                is_correct,
+                5 if is_correct else 2,
+                time_taken=time_taken
+            )
+        except Exception as db_err:
+            print(f"DEBUG: db.update_user_progress error: {db_err}")
+            await query.message.reply_text(f"⚠️ <b>Database Error:</b> {html.escape(str(db_err))}", parse_mode='HTML')
+    else:
+        print("DEBUG: Missing current_pattern_id in session")
     
     explanation = f"\n\n<b>Explanation:</b>\n{html.escape(q_data['explanation'])}"
     time_msg = f"\n\n⏱️ <b>Time taken:</b> {time_taken:.1f}s"
