@@ -31,16 +31,9 @@ def seed_gmat_data():
     
     for cat_name, topics in syllabus.items():
         cat_id = cat_map[cat_name]
-        for topic_name, patterns in topics.items():
+        for topic_name, patterns_list in topics.items():
             db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (cat_id, topic_name))
-            topic_res = db.execute_query("SELECT id FROM topics WHERE category_id = %s AND name = %s", (cat_id, topic_name))
-            topic_id = topic_res[0]['id']
-            
-            for p_name, p_desc in patterns:
-                db.execute_query(
-                    "INSERT INTO patterns (topic_id, name, description, is_unlocked) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
-                    (topic_id, p_name, p_desc, True)
-                )
+            # Patterns removed as requested.
 
 if __name__ == "__main__":
     seed_gmat_data()

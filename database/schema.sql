@@ -1,4 +1,4 @@
--- GMAT Practice Bot Schema
+-- GMAT Practice Bot Schema (PostgreSQL)
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
@@ -14,10 +14,10 @@ CREATE TABLE IF NOT EXISTS users (
 -- Categories (Quant, Reasoning, Data Insights)
 CREATE TABLE IF NOT EXISTS categories (
     id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL -- 'Quant', 'Reasoning', 'Data Insights'
+    name TEXT UNIQUE NOT NULL
 );
 
--- Topics (linked to categories)
+-- Topics
 CREATE TABLE IF NOT EXISTS topics (
     id SERIAL PRIMARY KEY,
     category_id INT REFERENCES categories(id),
@@ -26,24 +26,24 @@ CREATE TABLE IF NOT EXISTS topics (
     UNIQUE(category_id, name)
 );
 
--- Patterns (Specific question types within topics)
+-- Patterns
 CREATE TABLE IF NOT EXISTS patterns (
     id SERIAL PRIMARY KEY,
     topic_id INT REFERENCES topics(id),
     name TEXT NOT NULL,
     description TEXT,
-    difficulty_level INT DEFAULT 1, -- 1 to 5
-    is_unlocked BOOLEAN DEFAULT FALSE, -- Some might be locked by default
-    prompt_guideline TEXT, -- Specific instructions for LLM to generate this pattern
+    difficulty_level INT DEFAULT 1,
+    is_unlocked BOOLEAN DEFAULT FALSE,
+    prompt_guideline TEXT,
     UNIQUE(topic_id, name)
 );
 
--- Generated Questions
+-- Questions
 CREATE TABLE IF NOT EXISTS questions (
     id SERIAL PRIMARY KEY,
     pattern_id INT REFERENCES patterns(id),
     question_text TEXT NOT NULL,
-    options JSONB NOT NULL, -- list of strings
+    options JSONB NOT NULL,
     correct_option_index INT NOT NULL,
     explanation TEXT,
     difficulty INT,
@@ -55,20 +55,31 @@ CREATE TABLE IF NOT EXISTS user_progress (
     id SERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
     pattern_id INT REFERENCES patterns(id),
-    mastery_score FLOAT DEFAULT 0.0, -- 0 to 1
+    mastery_score FLOAT DEFAULT 0.0,
     total_attempts INT DEFAULT 0,
     correct_attempts INT DEFAULT 0,
     last_practiced_at TIMESTAMP WITH TIME ZONE,
     next_review_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    srs_interval INT DEFAULT 1, -- Days
-    easiness_factor FLOAT DEFAULT 2.5
+    srs_interval INT DEFAULT 1,
+    easiness_factor FLOAT DEFAULT 2.5,
+    avg_time_seconds FLOAT DEFAULT 0.0,
+    last_difficulty_level INT DEFAULT 1
+);
+
+-- Tracking when a user adds a pattern for the 9-day rule
+CREATE TABLE IF NOT EXISTS user_added_patterns (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    pattern_id INT REFERENCES patterns(id),
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, pattern_id)
 );
 
 -- Practice Sessions
 CREATE TABLE IF NOT EXISTS practice_sessions (
     id SERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
-    session_type TEXT, -- 'daily', 'custom'
+    session_type TEXT,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
     score INT,
@@ -76,4 +87,4 @@ CREATE TABLE IF NOT EXISTS practice_sessions (
 );
 
 -- Insert Initial Categories
-INSERT INTO categories (name) VALUES ('Quant'), ('Reasoning'), ('Data Insights') ON CONFLICT DO NOTHING;
+INSERT INTO categories (name) VALUES ('Quant'), ('Reasoning'), ('Data Insights') ON CONFLICT (name) DO NOTHING;
