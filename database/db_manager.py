@@ -97,7 +97,9 @@ class DatabaseManager:
         INSERT INTO questions (pattern_id, question_text, options, correct_option_index, explanation, difficulty)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        self.execute_query(query, (pattern_id, question_text, json.dumps(options), correct_index, explanation, difficulty))
+        # Ensure options is a JSON string for SQLite, let psycopg2 handle JSONB for Postgres
+        opts_processed = json.dumps(options)
+        self.execute_query(query, (pattern_id, question_text, opts_processed, correct_index, explanation, difficulty))
 
     def get_recent_questions(self, pattern_id, limit=50):
         query = "SELECT question_text FROM questions WHERE pattern_id = %s ORDER BY created_at DESC LIMIT %s"
@@ -167,13 +169,15 @@ class DatabaseManager:
                     last_difficulty_level = %s
                 WHERE id = %s
                 """
+                new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
+                params = (1 if is_correct else 0, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
             else:
                 query = """
                 UPDATE user_progress SET
                     total_attempts = total_attempts + 1,
                     correct_attempts = correct_attempts + %s,
                     last_practiced_at = CURRENT_TIMESTAMP,
-                    next_review_at = CURRENT_TIMESTAMP + interval '%s days',
+                    next_review_at = CURRENT_TIMESTAMP + (%s * interval '1 day'),
                     srs_interval = %s,
                     easiness_factor = %s,
                     mastery_score = %s,
@@ -181,10 +185,7 @@ class DatabaseManager:
                     last_difficulty_level = %s
                 WHERE id = %s
                 """
-                
-            new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
-            params = (1 if is_correct else 0, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
-            if self.db_type == "postgres":
+                new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
                 params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
             
             self.execute_query(query, params)
@@ -216,19 +217,32 @@ class DatabaseManager:
         return pattern_id
 
     def record_pattern_addition(self, user_id, pattern_id):
-        query = "INSERT OR IGNORE INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s)"
+        if self.db_type == "postgres":
+            query = "INSERT INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s) ON CONFLICT DO NOTHING"
+        else:
+            query = "INSERT OR IGNORE INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s)"
         self.execute_query(query, (user_id, pattern_id))
 
     def get_new_patterns_in_cycle(self, user_id):
         """Patterns added in the last 9 days."""
-        query = """
-        SELECT p.*, t.name as topic_name, uap.added_at
-        FROM user_added_patterns uap
-        JOIN patterns p ON uap.pattern_id = p.id
-        JOIN topics t ON p.topic_id = t.id
-        WHERE uap.user_id = %s 
-        AND uap.added_at >= datetime('now', '-9 days')
-        """
+        if self.db_type == "postgres":
+            query = """
+            SELECT p.*, t.name as topic_name, uap.added_at
+            FROM user_added_patterns uap
+            JOIN patterns p ON uap.pattern_id = p.id
+            JOIN topics t ON p.topic_id = t.id
+            WHERE uap.user_id = %s 
+            AND uap.added_at >= CURRENT_TIMESTAMP - interval '9 days'
+            """
+        else:
+            query = """
+            SELECT p.*, t.name as topic_name, uap.added_at
+            FROM user_added_patterns uap
+            JOIN patterns p ON uap.pattern_id = p.id
+            JOIN topics t ON p.topic_id = t.id
+            WHERE uap.user_id = %s 
+            AND uap.added_at >= datetime('now', '-9 days')
+            """
         return self.execute_query(query, (user_id,))
 
     def get_srs_due_patterns(self, user_id):
