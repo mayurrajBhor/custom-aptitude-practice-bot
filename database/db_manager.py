@@ -22,6 +22,11 @@ class DatabaseManager:
                 self.conn.row_factory = sqlite3.Row
             else:
                 self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
+                # Schema Isolation for project safety
+                with self.conn.cursor() as cur:
+                    cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
+                    cur.execute("SET search_path TO aptitude_practice, public")
+                    self.conn.commit()
         return self.conn
 
     def execute_query(self, query, params=None):
@@ -58,7 +63,9 @@ class DatabaseManager:
         if self.db_type == "sqlite":
             conn.executescript(schema_sql)
         else:
-            self.execute_query(schema_sql)
+            with conn.cursor() as cur:
+                cur.execute(schema_sql)
+                conn.commit()
 
     def get_user(self, user_id):
         return self.execute_query("SELECT * FROM users WHERE user_id = %s", (user_id,))
