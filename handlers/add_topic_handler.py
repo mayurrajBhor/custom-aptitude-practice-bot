@@ -85,7 +85,7 @@ async def confirm_restructuring(update: Update, context: ContextTypes.DEFAULT_TY
     
     if query.data == "confirm_pattern":
         p = context.user_data['temp_pattern']
-        db.add_pattern(
+        pattern_id = db.add_pattern(
             context.user_data['add_topic_id'],
             p['name'],
             p['description'],
@@ -93,11 +93,19 @@ async def confirm_restructuring(update: Update, context: ContextTypes.DEFAULT_TY
             user_id=update.effective_user.id
         )
         
-        await query.message.edit_text(
-            f"✅ <b>Successfully added!</b>\n"
-            f"'{html.escape(p['name'])}' is now available in your practice list.",
-            parse_mode='HTML'
-        )
+        if pattern_id:
+            await query.message.edit_text(
+                f"✅ <b>Successfully added!</b>\n"
+                f"'{html.escape(p['name'])}' is now available in your practice list.",
+                parse_mode='HTML'
+            )
+        else:
+            await query.message.edit_text(
+                "❌ <b>Database Error</b>\n"
+                "I couldn't save this pattern to the database. Please try again later.",
+                parse_mode='HTML'
+            )
+        
         # Reset context
         del context.user_data['temp_pattern']
         return ConversationHandler.END

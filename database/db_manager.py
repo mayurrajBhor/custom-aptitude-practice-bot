@@ -14,7 +14,8 @@ class DatabaseManager:
         self.conn = None
 
     def get_connection(self):
-        if self.conn is None:
+        # Check if connection exists and is alive
+        if self.conn is None or (self.db_type == "postgres" and self.conn.closed != 0):
             if self.db_type == "sqlite":
                 # For SQLite, we get the file path from the URL like sqlite:///gmat.db
                 db_path = self.conn_url.replace("sqlite:///", "")
@@ -97,7 +98,7 @@ class DatabaseManager:
         return self.execute_query("SELECT * FROM patterns WHERE topic_id = %s", (topic_id,))
 
     def unlock_pattern(self, pattern_id):
-        self.execute_query("UPDATE patterns SET is_unlocked = 1 WHERE id = %s", (pattern_id,))
+        self.execute_query("UPDATE patterns SET is_unlocked = %s WHERE id = %s", (True, pattern_id))
 
     def save_question(self, pattern_id, question_text, options, correct_index, explanation, difficulty):
         query = """
@@ -209,18 +210,23 @@ class DatabaseManager:
     def add_pattern(self, topic_id, name, description, difficulty, user_id=None):
         query = """
         INSERT INTO patterns (topic_id, name, description, difficulty_level, is_unlocked)
-        VALUES (%s, %s, %s, %s, 1)
+        VALUES (%s, %s, %s, %s, %s)
         """
-        pattern_id = self.execute_query(query, (topic_id, name, description, difficulty))
+        if self.db_type == "postgres":
+            query += " RETURNING id"
+            
+        res = self.execute_query(query, (topic_id, name, description, difficulty, True))
+        
+        if res and self.db_type == "postgres":
+            pattern_id = res[0]['id']
+        else:
+            # For SQLite or fallback
+            check = self.execute_query("SELECT id FROM patterns WHERE topic_id=%s AND name=%s", (topic_id, name))
+            pattern_id = check[0]['id'] if check else None
         
         # If user_id is provided, record it for the 9-day rule
-        if user_id:
-            # We need the last inserted ID. For SQLite/Postgres we can get it from the insert result if we use RETURNING
-            # but for now, let's assume successful insert and fetch it if needed.
-            # Actually, let's just fetch the ID of what we just inserted.
-            res = self.execute_query("SELECT id FROM patterns WHERE topic_id=%s AND name=%s", (topic_id, name))
-            if res:
-                self.record_pattern_addition(user_id, res[0]['id'])
+        if user_id and pattern_id:
+            self.record_pattern_addition(user_id, pattern_id)
         return pattern_id
 
     def record_pattern_addition(self, user_id, pattern_id):
