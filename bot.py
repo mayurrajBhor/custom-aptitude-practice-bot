@@ -1,6 +1,8 @@
 import os
 import logging
 import html
+import threading
+import http.server
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from dotenv import load_dotenv
@@ -11,6 +13,27 @@ load_dotenv()
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+# Silence frequent httpx logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+# Heartbeat Server to keep Render awake
+def run_heartbeat():
+    class HeartbeatHandler(http.server.SimpleHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"Bot is alive!")
+
+        def log_message(self, format, *args):
+            return # Silence server logs
+
+    port = int(os.environ.get("PORT", 10000))
+    server = http.server.HTTPServer(("0.0.0.0", port), HeartbeatHandler)
+    print(f"Heartbeat server started on port {port}")
+    server.serve_forever()
+
+# Start heartbeat in a separate thread
+threading.Thread(target=run_heartbeat, daemon=True).start()
 
 from handlers.menu_handler import show_categories, handle_callback
 from handlers.daily_practice_handler import start_daily_practice
