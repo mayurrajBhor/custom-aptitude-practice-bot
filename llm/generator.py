@@ -3,6 +3,7 @@ import random
 import json
 from groq import Groq
 from dotenv import load_dotenv
+from llm.hybrid_gen import hybrid_generator
 
 load_dotenv()
 
@@ -11,7 +12,31 @@ class QuestionGenerator:
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "openai/gpt-oss-120b" # Latest model
 
+    def _get_hybrid_type(self, pattern_name):
+        """Map exact pattern names to hybrid generator methods (case-insensitive)."""
+        pn = pattern_name.strip().lower()
+        if pn == "mix fraction":
+            return "mixed_fraction"
+        if pn == "fraction subtraction":
+            return "fraction_subtraction"
+        if pn == "per to fraction and vice versa":
+            return "random_conv"
+        if pn == "basic fraction to per":
+            return "benchmark_conv"
+        return None
+
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
+        # Check for Hybrid Patterns first
+        hybrid_type = self._get_hybrid_type(pattern_name)
+        if hybrid_type == "mixed_fraction":
+            return hybrid_generator.generate_mixed_fraction(), None
+        elif hybrid_type == "fraction_subtraction":
+            return hybrid_generator.generate_fraction_subtraction(), None
+        elif hybrid_type == "random_conv":
+            return hybrid_generator.generate_random_conv(), None
+        elif hybrid_type == "benchmark_conv":
+            return hybrid_generator.generate_benchmark_conv(), None
+
         if not os.getenv("GROQ_API_KEY"):
             return None, "Groq API key is missing. Please check your .env file."
 
@@ -78,13 +103,33 @@ class QuestionGenerator:
 
     def generate_batch(self, patterns_info, count=5):
         """
-        patterns_info: List of dicts with {topic_name, name, description, difficulty, avoid_questions}
+        patterns_info: List of dicts with {topic_name, name, description, difficulty, avoid_questions, id}
         """
+        results = []
+        ai_patterns = []
+        
+        # Split into Hybrid and AI
+        for p in patterns_info:
+            ht = self._get_hybrid_type(p['name'])
+            if ht == "mixed_fraction":
+                results.append({**hybrid_generator.generate_mixed_fraction(), "pattern_id": p['id']})
+            elif ht == "fraction_subtraction":
+                results.append({**hybrid_generator.generate_fraction_subtraction(), "pattern_id": p['id']})
+            elif ht == "random_conv":
+                results.append({**hybrid_generator.generate_random_conv(), "pattern_id": p['id']})
+            elif ht == "benchmark_conv":
+                results.append({**hybrid_generator.generate_benchmark_conv(), "pattern_id": p['id']})
+            else:
+                ai_patterns.append(p)
+
+        if not ai_patterns:
+            return results, None
+
         if not os.getenv("GROQ_API_KEY"):
-            return None, "Groq API key is missing."
+            return results, "Groq API key is missing."
 
         patterns_text = ""
-        for i, p in enumerate(patterns_info):
+        for p in ai_patterns:
             avoid_text = ""
             if p.get('avoid_questions'):
                 avoid_text = "\n   - Avoid these previous scenarios: " + ", ".join([q[:200] for q in p['avoid_questions']])
@@ -99,7 +144,7 @@ Difficulty: {p['difficulty']}/5{avoid_text}
 
         prompt = f"""
         You are a GMAT and CAT (Common Admission Test) Master Tutor. 
-        Your task is to generate exactly {count} unique, high-quality, exam-standard MCQs.
+        Your task is to generate exactly {len(ai_patterns)} unique, high-quality, exam-standard MCQs.
         
         CRITICAL INSTRUCTIONS:
         1. For EACH Pattern ID listed below, you must generate EXACTLY ONE original question.
@@ -120,14 +165,6 @@ Difficulty: {p['difficulty']}/5{avoid_text}
            "explanation": "detailed reasoning",
            "difficulty": integer 1-5,
            "pattern_id": integer (MUST MATCH THE PATTERN ID FROM THE LIST ABOVE)
-
-        Example response format:
-        {{
-          "questions": [
-            {{"pattern_id": 12, "question_text": "...", ...}},
-            ...
-          ]
-        }}
         """
         
         try:
@@ -139,20 +176,17 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                 model=self.model,
                 response_format={"type": "json_object"}, 
             )
-            # Some models/proxies might need specific handling, but we rely on standard groq client here
             content = chat_completion.choices[0].message.content
-            # Groq model 'openai/gpt-oss-120b' might require JSON mode via response_format
-            # but usually it's better to just parse if the prompt is strong.
+            batch_res = json.loads(content)
             
-            result = json.loads(content)
-            # If the model wraps it in a key like "questions", extract it
-            if isinstance(result, dict) and "questions" in result:
-                return result["questions"], None
-            elif isinstance(result, list):
-                return result, None
-            return [result], None # Fallback if single object
+            if isinstance(batch_res, dict) and "questions" in batch_res:
+                results.extend(batch_res["questions"])
+            elif isinstance(batch_res, list):
+                results.extend(batch_res)
+            
+            return results, None
         except Exception as e:
-            return None, str(e)
+            return results, str(e)
 
     def restructure_pattern(self, raw_text):
         prompt = f"""

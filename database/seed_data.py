@@ -8,33 +8,23 @@ def seed_gmat_data():
     res = db.get_categories()
     cat_map = {row['name']: row['id'] for row in res}
     
-    # 2. Topics and Patterns
-    syllabus = {
-        'Quant': {
-            'Number Properties': [('Integers', 'Properties of integers, prime numbers, etc.')],
-            'Percentages': [('Percent Change', 'Calculating percentage increases and decreases.')],
-            'Profit & Loss': [('Cost/Price/Margin', 'Calculating markups and margins.')],
-            'Ratios & Proportions': [('Division of Quantities', 'Splitting values based on ratios.')],
-            'Algebra': [('Linear Equations', 'Single and double variable equations.')],
-            'Geometry': [('Triangles & Circles', 'Area and perimeter formulas.')],
-            'Work & Rate': [('Combined Work', 'Problems involving rates of multiple people.')],
-        },
-        'Reasoning': {
-            'Critical Reasoning': [('Strengthen/Weaken', 'Evaluate arguments.')],
-            'Sentence Correction': [('Grammar & Style', 'Subject-verb agreement and more.')],
-        },
-        'Data Insights': {
-            'Data Sufficiency': [('Value DS', 'Determining sufficiency for values.')],
-            'Graphics Interpretation': [('Trend Analysis', 'Reading data from charts.')],
-        }
-    }
+    # 2. Minimal Syllabus
+    quant_id = cat_map['Quant']
+    db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (quant_id, "Percentages"))
     
-    for cat_name, topics in syllabus.items():
-        cat_id = cat_map[cat_name]
-        for topic_name, patterns_list in topics.items():
-            db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (cat_id, topic_name))
-            # Patterns removed as requested.
+    res = db.execute_query("SELECT id FROM topics WHERE name = %s", ("Percentages",))
+    topic_id = res[0]['id']
+    
+    patterns = [
+        ("Mix fraction", "Convert improper fractions to mixed fractions and vice versa."),
+        ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
+        ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
+        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40).")
+    ]
+    
+    for name, desc in patterns:
+        db.add_pattern(topic_id, name, desc, 2)
 
 if __name__ == "__main__":
     seed_gmat_data()
-    print("Database seeded successfully with initial GMAT syllabus.")
+    print("Database seeded successfully with minimal FOUNDATIONAL syllabus.")

@@ -15,44 +15,77 @@ class DatabaseManager:
 
     def get_connection(self):
         # Check if connection exists and is alive
-        if self.conn is None or (self.db_type == "postgres" and self.conn.closed != 0):
+        should_reconnect = False
+        if self.conn is None:
+            should_reconnect = True
+        else:
+            try:
+                if self.db_type == "sqlite":
+                    # SQLite doesn't have a reliable .closed flag like psycopg2, 
+                    # but check_same_thread=False handles most issues.
+                    pass 
+                else:
+                    # For Postgres, poll the connection to see if it's still alive
+                    if self.conn.closed != 0:
+                        should_reconnect = True
+                    else:
+                        self.conn.poll()
+            except (psycopg2.OperationalError, psycopg2.InterfaceError):
+                should_reconnect = True
+
+        if should_reconnect:
+            print("Re-establishing database connection...")
             if self.db_type == "sqlite":
-                # For SQLite, we get the file path from the URL like sqlite:///gmat.db
                 db_path = self.conn_url.replace("sqlite:///", "")
                 self.conn = sqlite3.connect(db_path, check_same_thread=False)
                 self.conn.row_factory = sqlite3.Row
             else:
-                self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
-                # Schema Isolation for project safety
-                with self.conn.cursor() as cur:
-                    cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
-                    cur.execute("SET search_path TO aptitude_practice, public")
-                    self.conn.commit()
+                try:
+                    self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
+                    with self.conn.cursor() as cur:
+                        cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
+                        cur.execute("SET search_path TO aptitude_practice, public")
+                        self.conn.commit()
+                except Exception as e:
+                    print(f"Failed to connect to Postgres: {e}")
+                    self.conn = None
         return self.conn
 
-    def execute_query(self, query, params=None):
-        conn = self.get_connection()
-        try:
-            cur = conn.cursor()
-            if self.db_type == "postgres":
-                cur.execute(query, params)
-                conn.commit()
-                if cur.description:
-                    return cur.fetchall()
-            else:
-                # SQLite parameter placeholder is ? instead of %s
-                sqlite_query = query.replace("%s", "?")
-                cur.execute(sqlite_query, params or ())
-                conn.commit()
-                if cur.description:
-                    rows = cur.fetchall()
-                    return [dict(row) for row in rows]
-            return None
-        except Exception as e:
-            print(f"Database error: {e}")
-            if self.db_type == "postgres" and conn:
-                conn.rollback()
-            return None
+    def execute_query(self, query, params=None, retries=1):
+        for attempt in range(retries + 1):
+            conn = self.get_connection()
+            if not conn:
+                return None
+                
+            try:
+                cur = conn.cursor()
+                if self.db_type == "postgres":
+                    cur.execute(query, params)
+                    conn.commit()
+                    if cur.description:
+                        return cur.fetchall()
+                else:
+                    sqlite_query = query.replace("%s", "?")
+                    cur.execute(sqlite_query, params or ())
+                    conn.commit()
+                    if cur.description:
+                        rows = cur.fetchall()
+                        return [dict(row) for row in rows]
+                return None
+            except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+                print(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
+                self.conn = None # Force reconnection on next get_connection()
+                if attempt == retries:
+                    return None
+            except Exception as e:
+                print(f"Database error: {e}")
+                if self.db_type == "postgres" and conn:
+                    try:
+                        conn.rollback()
+                    except psycopg2.InterfaceError:
+                        pass # Connection already closed, nothing to rollback
+                return None
+        return None
 
     def init_db(self):
         schema_file = "schema_sqlite.sql" if self.db_type == "sqlite" else "schema.sql"
