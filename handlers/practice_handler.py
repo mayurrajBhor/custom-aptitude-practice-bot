@@ -14,7 +14,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data['session_score'] = 0
     context.user_data['session_total_target'] = 5
     context.user_data['session_current_index'] = 0
-    context.user_data['question_pool'] = [] # Pool for batched questions
+    context.user_data['custom_pool'] = [] # Pool for batched questions
     
     # Selection Summary
     pattern_names = []
@@ -34,7 +34,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
 
 import time
 
-async def _fill_question_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def _fill_custom_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Internal helper to fill the question pool via LLM batch."""
     pattern_ids = context.user_data.get('session_patterns', [])
     if not pattern_ids:
@@ -67,9 +67,9 @@ async def _fill_question_pool(update: Update, context: ContextTypes.DEFAULT_TYPE
     questions, error = generator.generate_batch(batch_patterns_info, count=5)
     if questions:
         # Add to existing pool if any (unlikely to have any due to logic, but safer)
-        if 'question_pool' not in context.user_data:
-            context.user_data['question_pool'] = []
-        context.user_data['question_pool'].extend(questions)
+        if 'custom_pool' not in context.user_data:
+            context.user_data['custom_pool'] = []
+        context.user_data['custom_pool'].extend(questions)
         return True, None
     return False, error
 
@@ -90,29 +90,29 @@ async def trigger_next_question(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     # Check question pool
-    pool = context.user_data.get('question_pool', [])
+    pool = context.user_data.get('custom_pool', [])
     if not pool:
         # Generate batch of 5 synchronously
         chat_id = update.effective_chat.id
         status_msg = await context.bot.send_message(chat_id, "<i>Generating a batch of questions... ⏳</i>", parse_mode='HTML')
         
-        success, error = await _fill_question_pool(update, context)
+        success, error = await _fill_custom_pool(update, context)
         await status_msg.delete()
         
         if not success:
             await context.bot.send_message(chat_id, f"❌ <b>Batch Generation Error:</b>\n\n{html.escape(error or 'Empty response')}", parse_mode='HTML')
             return
         
-        pool = context.user_data.get('question_pool', [])
+        pool = context.user_data.get('custom_pool', [])
 
     # Get next question from pool
     q_data = pool.pop(0)
-    context.user_data['question_pool'] = pool # Update pool in context
+    context.user_data['custom_pool'] = pool # Update pool in context
     
     # Check if we should prefetch (if pool is empty and we have more questions to go)
     if not pool and (current_count + 1 < target_count):
         print("DEBUG: Prefetching next batch in background...")
-        asyncio.create_task(_fill_question_pool(update, context))
+        asyncio.create_task(_fill_custom_pool(update, context))
     
     # Save to context for answer checking
     context.user_data['current_question'] = q_data

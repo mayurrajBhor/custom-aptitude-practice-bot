@@ -52,22 +52,11 @@ async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data['session_score'] = 0
     context.user_data['session_total_target'] = len(queue)
     context.user_data['session_current_index'] = 0
-    context.user_data['question_pool'] = []
+    context.user_data['daily_pool'] = []
     context.user_data['is_daily'] = True
     
     keyboard = [[InlineKeyboardButton("Start Practice 🚀", callback_data="start_daily_session")]]
     await update.message.reply_text(plan_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
-
-async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    queue = context.user_data.get('daily_queue', [])
-    pool = context.user_data.get('question_pool', [])
-    total = context.user_data.get('session_total_target', 0)
-    current_idx = context.user_data.get('session_current_index', 0) + 1
-    
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-    
-    print(f"DEBUG: trigger_daily_question. Queue: {len(queue)}, Pool: {len(pool)}")
 
 async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Helper to fill the daily question pool in background or foreground."""
@@ -103,7 +92,7 @@ async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data['daily_queue'] = selected_for_batch + context.user_data['daily_queue']
         return False, error_msg
         
-    pool = context.user_data.get('question_pool', [])
+    pool = context.user_data.get('daily_pool', [])
     for q in questions:
         pattern_id = q.get('pattern_id') or selected_for_batch[0]
         db.save_question(
@@ -118,12 +107,12 @@ async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'data': q,
             'pattern_id': pattern_id
         })
-    context.user_data['question_pool'] = pool
+    context.user_data['daily_pool'] = pool
     return True, None
 
 async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     queue = context.user_data.get('daily_queue', [])
-    pool = context.user_data.get('question_pool', [])
+    pool = context.user_data.get('daily_pool', [])
     total = context.user_data.get('session_total_target', 0)
     current_idx = context.user_data.get('session_current_index', 0) + 1
     
@@ -153,11 +142,11 @@ async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_T
             await context.bot.send_message(chat_id, f"❌ <b>Batch Generation Failed:</b>\n\n{html.escape(str(error_msg) or 'Unknown Error')}", parse_mode='HTML')
             return
         
-        pool = context.user_data.get('question_pool', [])
+        pool = context.user_data.get('daily_pool', [])
 
     # Serve from pool
     q_entry = pool.pop(0)
-    context.user_data['question_pool'] = pool
+    context.user_data['daily_pool'] = pool
     q_data = q_entry['data']
     pattern_id = q_entry['pattern_id']
 
