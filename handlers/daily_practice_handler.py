@@ -55,6 +55,7 @@ async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYP
     # Clear any existing pools to ensure the new flat format is used
     context.user_data['daily_pool'] = []
     context.user_data['custom_pool'] = []
+    context.user_data['is_daily'] = True
     
     keyboard = [[InlineKeyboardButton("Start Practice 🚀", callback_data="start_daily_session")]]
     await update.message.reply_text(plan_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
