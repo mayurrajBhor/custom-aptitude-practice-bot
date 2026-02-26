@@ -37,7 +37,8 @@ threading.Thread(target=run_heartbeat, daemon=True).start()
 
 from handlers.menu_handler import show_categories, handle_callback
 from handlers.daily_v2_handler import start_daily_practice
-print(">>> V2 BOT INITIALIZED (v1.0.4-PURGE) <<<")
+print(">>> v1.0.5 ACTIVE <<<")
+print("DEBUG HANDLERS:", os.listdir('handlers'))
 from handlers.profile_handler import show_profile
 from handlers.practice_handler import handle_answer
 from handlers.add_topic_handler import add_topic_conv
@@ -49,7 +50,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     first_name = html.escape(user.first_name)
     welcome_msg = (
-        f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.0.4-PURGE)!\n\n"
+        f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.0.5-FINAL)!\n\n"
         f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.\n\n"
         "Choose a mode to start:"
     )
