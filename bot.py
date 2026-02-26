@@ -48,7 +48,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     first_name = html.escape(user.first_name)
     welcome_msg = (
-        f"Welcome 🎓 <b>GMAT Mastery Bot</b>!\n\n"
+        f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.0.2-fix)!\n\n"
         f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.\n\n"
         "Choose a mode to start:"
     )
