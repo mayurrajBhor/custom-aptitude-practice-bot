@@ -17,7 +17,7 @@ logging.getLogger("httpx").setLevel(logging.WARNING)
 # No Heartbeat Server needed for local testing
 
 from handlers.menu_handler import show_categories, handle_callback
-from handlers.daily_practice_handler import start_daily_practice
+from handlers.daily_v2_handler import start_daily_practice
 from handlers.profile_handler import show_profile
 from handlers.practice_handler import handle_answer
 from handlers.add_topic_handler import add_topic_conv
