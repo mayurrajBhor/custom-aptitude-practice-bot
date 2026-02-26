@@ -52,8 +52,9 @@ async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data['session_score'] = 0
     context.user_data['session_total_target'] = len(queue)
     context.user_data['session_current_index'] = 0
+    # Clear any existing pools to ensure the new flat format is used
     context.user_data['daily_pool'] = []
-    context.user_data['is_daily'] = True
+    context.user_data['custom_pool'] = []
     
     keyboard = [[InlineKeyboardButton("Start Practice 🚀", callback_data="start_daily_session")]]
     await update.message.reply_text(plan_text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode='HTML')
@@ -94,19 +95,17 @@ async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     pool = context.user_data.get('daily_pool', [])
     for q in questions:
-        pattern_id = q.get('pattern_id') or selected_for_batch[0]
+        p_id = q.get('pattern_id') or selected_for_batch[0]
         db.save_question(
-            pattern_id,
+            p_id,
             q['question_text'],
             q['options'],
             q['correct_option_index'],
             q['explanation'],
             q.get('difficulty', 3)
         )
-        pool.append({
-            'data': q,
-            'pattern_id': pattern_id
-        })
+        # Add the question directly without wrapping it in a 'data' key
+        pool.append(q)
     context.user_data['daily_pool'] = pool
     return True, None
 
@@ -145,10 +144,9 @@ async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_T
         pool = context.user_data.get('daily_pool', [])
 
     # Serve from pool
-    q_entry = pool.pop(0)
+    q_data = pool.pop(0)
     context.user_data['daily_pool'] = pool
-    q_data = q_entry['data']
-    pattern_id = q_entry['pattern_id']
+    pattern_id = q_data.get('pattern_id')
 
     # PREFETCH: If pool is now empty but more items in queue, start fetching next batch
     if not pool and context.user_data.get('daily_queue'):
