@@ -198,7 +198,7 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Auto trigger next
     if context.user_data.get('is_daily'):
-        from handlers.daily_practice_handler import trigger_daily_question
+        from handlers.daily_v2_handler import trigger_daily_question
         await trigger_daily_question(update, context)
     else:
         await trigger_next_question(update, context)

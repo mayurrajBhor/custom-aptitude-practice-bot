@@ -36,7 +36,8 @@ def run_heartbeat():
 threading.Thread(target=run_heartbeat, daemon=True).start()
 
 from handlers.menu_handler import show_categories, handle_callback
-from handlers.daily_practice_handler import start_daily_practice
+from handlers.daily_v2_handler import start_daily_practice
+print(">>> V2 BOT INITIALIZED (v1.0.3-NUCLEAR) <<<")
 from handlers.profile_handler import show_profile
 from handlers.practice_handler import handle_answer
 from handlers.add_topic_handler import add_topic_conv
@@ -64,6 +65,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_categories(update, context)
     elif text == "My Profile 👤":
         await show_profile(update, context)
+
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     import traceback

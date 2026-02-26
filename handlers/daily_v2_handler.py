@@ -111,6 +111,7 @@ async def _fill_daily_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return True, None
 
 async def trigger_daily_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("!!! TRACE ATTEMPT: trigger_daily_question in V2 HANDLER called !!!")
     queue = context.user_data.get('daily_queue', [])
     pool = context.user_data.get('daily_pool', [])
     total = context.user_data.get('session_total_target', 0)

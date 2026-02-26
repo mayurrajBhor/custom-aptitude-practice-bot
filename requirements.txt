@@ -3,4 +3,3 @@ groq
 python-dotenv
 psycopg2-binary
 pydantic
-asyncio

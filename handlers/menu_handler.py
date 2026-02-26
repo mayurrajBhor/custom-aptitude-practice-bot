@@ -75,7 +75,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await start_custom_practice(update, context, selected_ids)
 
     elif data == "start_daily_session":
-        from handlers.daily_practice_handler import trigger_daily_question
+        from handlers.daily_v2_handler import trigger_daily_question
         await trigger_daily_question(update, context)
 
     elif data.startswith("ans_"):
