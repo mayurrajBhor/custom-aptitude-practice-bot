@@ -1,6 +1,5 @@
 import os
 import json
-import sqlite3
 import psycopg2
 import logging
 from psycopg2.extras import RealDictCursor
@@ -11,7 +10,6 @@ load_dotenv()
 class DatabaseManager:
     def __init__(self):
         self.conn_url = os.getenv("DATABASE_URL")
-        self.db_type = "sqlite" if self.conn_url.startswith("sqlite") else "postgres"
         self.conn = None
 
     def get_connection(self):
@@ -21,35 +19,25 @@ class DatabaseManager:
             should_reconnect = True
         else:
             try:
-                if self.db_type == "sqlite":
-                    # SQLite doesn't have a reliable .closed flag like psycopg2, 
-                    # but check_same_thread=False handles most issues.
-                    pass 
+                # For Postgres, poll the connection to see if it's still alive
+                if self.conn.closed != 0:
+                    should_reconnect = True
                 else:
-                    # For Postgres, poll the connection to see if it's still alive
-                    if self.conn.closed != 0:
-                        should_reconnect = True
-                    else:
-                        self.conn.poll()
+                    self.conn.poll()
             except (psycopg2.OperationalError, psycopg2.InterfaceError):
                 should_reconnect = True
 
         if should_reconnect:
-            print("Re-establishing database connection...")
-            if self.db_type == "sqlite":
-                db_path = self.conn_url.replace("sqlite:///", "")
-                self.conn = sqlite3.connect(db_path, check_same_thread=False)
-                self.conn.row_factory = sqlite3.Row
-            else:
-                try:
-                    self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
-                    with self.conn.cursor() as cur:
-                        cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
-                        cur.execute("SET search_path TO aptitude_practice, public")
-                        self.conn.commit()
-                except Exception as e:
-                    logging.error(f"Failed to connect to Postgres: {e}")
-                    self.conn = None
+            logging.info("Re-establishing database connection...")
+            try:
+                self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
+                with self.conn.cursor() as cur:
+                    cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
+                    cur.execute("SET search_path TO aptitude_practice, public")
+                    self.conn.commit()
+            except Exception as e:
+                logging.error(f"Failed to connect to Postgres: {e}")
+                self.conn = None
         return self.conn
 
     def execute_query(self, query, params=None, retries=1):
@@ -60,18 +48,10 @@ class DatabaseManager:
                 
             try:
                 cur = conn.cursor()
-                if self.db_type == "postgres":
-                    cur.execute(query, params)
-                    conn.commit()
-                    if cur.description:
-                        return cur.fetchall()
-                else:
-                    sqlite_query = query.replace("%s", "?")
-                    cur.execute(sqlite_query, params or ())
-                    conn.commit()
-                    if cur.description:
-                        rows = cur.fetchall()
-                        return [dict(row) for row in rows]
+                cur.execute(query, params)
+                conn.commit()
+                if cur.description:
+                    return cur.fetchall()
                 return None
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
                 logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
@@ -80,46 +60,36 @@ class DatabaseManager:
                     return None
             except Exception as e:
                 logging.error(f"Database error executing query: {e}\nQuery: {query}")
-                if self.db_type == "postgres" and conn:
+                if conn:
                     try:
                         conn.rollback()
-                    except psycopg2.InterfaceError:
-                        pass # Connection already closed, nothing to rollback
+                    except (psycopg2.InterfaceError, psycopg2.InternalError):
+                        pass
                 return None
         return None
 
     def init_db(self):
-        schema_file = "schema_sqlite.sql" if self.db_type == "sqlite" else "schema.sql"
-        schema_path = os.path.join(os.path.dirname(__file__), schema_file)
+        schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
         with open(schema_path, "r") as f:
             schema_sql = f.read()
             
         conn = self.get_connection()
-        if self.db_type == "sqlite":
-            conn.executescript(schema_sql)
-        else:
-            with conn.cursor() as cur:
-                cur.execute(schema_sql)
-                conn.commit()
+        with conn.cursor() as cur:
+            cur.execute(schema_sql)
+            conn.commit()
 
     def get_user(self, user_id):
         return self.execute_query("SELECT * FROM users WHERE user_id = %s", (user_id,))
 
     def register_user(self, user_id, username, first_name, last_name):
-        if self.db_type == "postgres":
-            query = """
-            INSERT INTO users (user_id, username, first_name, last_name)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (user_id) DO UPDATE SET
-                username = EXCLUDED.username,
-                first_name = EXCLUDED.first_name,
-                last_name = EXCLUDED.last_name
-            """
-        else:
-            query = """
-            INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
-            VALUES (%s, %s, %s, %s)
-            """
+        query = """
+        INSERT INTO users (user_id, username, first_name, last_name)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (user_id) DO UPDATE SET
+            username = EXCLUDED.username,
+            first_name = EXCLUDED.first_name,
+            last_name = EXCLUDED.last_name
+        """
         return self.execute_query(query, (user_id, username, first_name, last_name)) is not None
 
     def get_categories(self):
@@ -139,9 +109,8 @@ class DatabaseManager:
         INSERT INTO questions (pattern_id, question_text, options, correct_option_index, explanation, difficulty)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        # Ensure options is a JSON string for SQLite, let psycopg2 handle JSONB for Postgres
-        opts_processed = json.dumps(options)
-        self.execute_query(query, (pattern_id, question_text, opts_processed, correct_index, explanation, difficulty))
+        # psycopg2 handles dicts/lists for JSONB columns automatically
+        self.execute_query(query, (pattern_id, question_text, options, correct_index, explanation, difficulty))
 
     def get_recent_questions(self, pattern_id, limit=50):
         query = "SELECT question_text FROM questions WHERE pattern_id = %s ORDER BY created_at DESC LIMIT %s"
@@ -152,11 +121,9 @@ class DatabaseManager:
         progress = self.execute_query("SELECT * FROM user_progress WHERE user_id = %s AND pattern_id = %s", (user_id, pattern_id))
         
         if not progress:
-            # First time: start at pattern's base difficulty or 2
             res = self.execute_query("SELECT difficulty_level FROM patterns WHERE id = %s", (pattern_id,))
             base_diff = res[0]['difficulty_level'] if res else 2
             
-            # Adjust difficulty for next time based on first performance
             next_diff = base_diff
             if is_correct and time_taken < 90: next_diff = min(5, base_diff + 1)
             elif not is_correct: next_diff = max(1, base_diff - 1)
@@ -172,17 +139,15 @@ class DatabaseManager:
             old_ef = p['easiness_factor']
             new_ef = max(1.3, old_ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)))
             
-            # Update average time
             new_avg_time = (p['avg_time_seconds'] * p['total_attempts'] + time_taken) / (p['total_attempts'] + 1)
             
-            # Adaptive Difficulty Logic
             current_diff = p['last_difficulty_level'] or 1
             if is_correct:
-                if time_taken < 90: # Fast correct -> Increase
+                if time_taken < 90:
                     new_diff = min(5, current_diff + 1)
-                else: # Slow correct -> Stay same
+                else:
                     new_diff = current_diff
-            else: # Incorrect -> Decrease
+            else:
                 new_diff = max(1, current_diff - 1)
 
             if is_correct:
@@ -195,40 +160,21 @@ class DatabaseManager:
             else:
                 new_interval = 1
             
-            interval_str = f"+{new_interval} days" if self.db_type == "sqlite" else f"{new_interval} days"
-            
-            if self.db_type == "sqlite":
-                query = f"""
-                UPDATE user_progress SET
-                    total_attempts = total_attempts + 1,
-                    correct_attempts = correct_attempts + %s,
-                    last_practiced_at = CURRENT_TIMESTAMP,
-                    next_review_at = datetime('now', '{interval_str}'),
-                    srs_interval = %s,
-                    easiness_factor = %s,
-                    mastery_score = %s,
-                    avg_time_seconds = %s,
-                    last_difficulty_level = %s
-                WHERE id = %s
-                """
-                new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
-                params = (1 if is_correct else 0, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
-            else:
-                query = """
-                UPDATE user_progress SET
-                    total_attempts = total_attempts + 1,
-                    correct_attempts = correct_attempts + %s,
-                    last_practiced_at = CURRENT_TIMESTAMP,
-                    next_review_at = CURRENT_TIMESTAMP + (%s * interval '1 day'),
-                    srs_interval = %s,
-                    easiness_factor = %s,
-                    mastery_score = %s,
-                    avg_time_seconds = %s,
-                    last_difficulty_level = %s
-                WHERE id = %s
-                """
-                new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
-                params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
+            query = """
+            UPDATE user_progress SET
+                total_attempts = total_attempts + 1,
+                correct_attempts = correct_attempts + %s,
+                last_practiced_at = CURRENT_TIMESTAMP,
+                next_review_at = CURRENT_TIMESTAMP + (%s * interval '1 day'),
+                srs_interval = %s,
+                easiness_factor = %s,
+                mastery_score = %s,
+                avg_time_seconds = %s,
+                last_difficulty_level = %s
+            WHERE id = %s
+            """
+            new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
+            params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
             
             self.execute_query(query, params)
 
@@ -237,7 +183,6 @@ class DatabaseManager:
         if res and res[0]['last_difficulty_level']:
             return res[0]['last_difficulty_level']
         
-        # Fallback to pattern default
         res = self.execute_query("SELECT difficulty_level FROM patterns WHERE id = %s", (pattern_id,))
         return res[0]['difficulty_level'] if res else 2
 
@@ -245,51 +190,33 @@ class DatabaseManager:
         query = """
         INSERT INTO patterns (topic_id, name, description, difficulty_level, is_unlocked)
         VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
         """
-        if self.db_type == "postgres":
-            query += " RETURNING id"
-            
         res = self.execute_query(query, (topic_id, name, description, difficulty, True))
         
-        if res and self.db_type == "postgres":
+        if res:
             pattern_id = res[0]['id']
         else:
-            # For SQLite or fallback
-            check = self.execute_query("SELECT id FROM patterns WHERE topic_id=%s AND name=%s", (topic_id, name))
-            pattern_id = check[0]['id'] if check else None
+            return None
         
-        # If user_id is provided, record it for the 9-day rule
         if user_id and pattern_id:
             self.record_pattern_addition(user_id, pattern_id)
         return pattern_id
 
     def record_pattern_addition(self, user_id, pattern_id):
-        if self.db_type == "postgres":
-            query = "INSERT INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s) ON CONFLICT DO NOTHING"
-        else:
-            query = "INSERT OR IGNORE INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s)"
+        query = "INSERT INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s) ON CONFLICT DO NOTHING"
         self.execute_query(query, (user_id, pattern_id))
 
     def get_new_patterns_in_cycle(self, user_id):
         """Patterns added in the last 9 days."""
-        if self.db_type == "postgres":
-            query = """
-            SELECT p.*, t.name as topic_name, uap.added_at
-            FROM user_added_patterns uap
-            JOIN patterns p ON uap.pattern_id = p.id
-            JOIN topics t ON p.topic_id = t.id
-            WHERE uap.user_id = %s 
-            AND uap.added_at >= CURRENT_TIMESTAMP - interval '9 days'
-            """
-        else:
-            query = """
-            SELECT p.*, t.name as topic_name, uap.added_at
-            FROM user_added_patterns uap
-            JOIN patterns p ON uap.pattern_id = p.id
-            JOIN topics t ON p.topic_id = t.id
-            WHERE uap.user_id = %s 
-            AND uap.added_at >= datetime('now', '-9 days')
-            """
+        query = """
+        SELECT p.*, t.name as topic_name, uap.added_at
+        FROM user_added_patterns uap
+        JOIN patterns p ON uap.pattern_id = p.id
+        JOIN topics t ON p.topic_id = t.id
+        WHERE uap.user_id = %s 
+        AND uap.added_at >= CURRENT_TIMESTAMP - interval '9 days'
+        """
         return self.execute_query(query, (user_id,))
 
     def get_srs_due_patterns(self, user_id):
