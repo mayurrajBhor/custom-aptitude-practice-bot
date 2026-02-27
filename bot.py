@@ -46,12 +46,14 @@ from telegram.ext import CallbackQueryHandler
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db.register_user(user.id, user.username, user.first_name, user.last_name)
+    db_ok = db.register_user(user.id, user.username, user.first_name, user.last_name)
     
     first_name = html.escape(user.first_name)
+    status_tag = "" if db_ok else "\n\n⚠️ <b>Warning:</b> Database connection error. Many features may not work."
+    
     welcome_msg = (
         f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.0.5-FINAL)!\n\n"
-        f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.\n\n"
+        f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.{status_tag}\n\n"
         "Choose a mode to start:"
     )
     
@@ -66,6 +68,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_categories(update, context)
     elif text == "My Profile 👤":
         await show_profile(update, context)
+
+async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    conn = db.get_connection()
+    status = "Connected ✅" if conn else "Disconnected ❌"
+    categories = db.get_categories()
+    cat_count = len(categories) if isinstance(categories, list) else "Error"
+    
+    msg = (
+        f"🖥️ <b>Database Status:</b>\n"
+        f"Connectivity: {status}\n"
+        f"Type: {db.db_type}\n"
+        f"Category Count: {cat_count}\n"
+        f"Schema Path: aptitude_practice"
+    )
+    await update.message.reply_text(msg, parse_mode='HTML')
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -105,6 +122,7 @@ if __name__ == '__main__':
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
     
     application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('db_status', db_status))
     application.add_handler(add_topic_conv)
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(handle_callback))

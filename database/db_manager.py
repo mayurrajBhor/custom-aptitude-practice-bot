@@ -2,6 +2,7 @@ import os
 import json
 import sqlite3
 import psycopg2
+import logging
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
@@ -47,7 +48,7 @@ class DatabaseManager:
                         cur.execute("SET search_path TO aptitude_practice, public")
                         self.conn.commit()
                 except Exception as e:
-                    print(f"Failed to connect to Postgres: {e}")
+                    logging.error(f"Failed to connect to Postgres: {e}")
                     self.conn = None
         return self.conn
 
@@ -73,12 +74,12 @@ class DatabaseManager:
                         return [dict(row) for row in rows]
                 return None
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
-                print(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
+                logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
                 self.conn = None # Force reconnection on next get_connection()
                 if attempt == retries:
                     return None
             except Exception as e:
-                print(f"Database error: {e}")
+                logging.error(f"Database error executing query: {e}\nQuery: {query}")
                 if self.db_type == "postgres" and conn:
                     try:
                         conn.rollback()
@@ -119,7 +120,7 @@ class DatabaseManager:
             INSERT OR REPLACE INTO users (user_id, username, first_name, last_name)
             VALUES (%s, %s, %s, %s)
             """
-        self.execute_query(query, (user_id, username, first_name, last_name))
+        return self.execute_query(query, (user_id, username, first_name, last_name)) is not None
 
     def get_categories(self):
         return self.execute_query("SELECT * FROM categories")

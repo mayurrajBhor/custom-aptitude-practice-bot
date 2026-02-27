@@ -9,6 +9,10 @@ SELECT_CATEGORY, SELECT_TOPIC, INPUT_PATTERN, CONFIRM_RESTRUCTURING = range(4)
 
 async def start_add_topic(update: Update, context: ContextTypes.DEFAULT_TYPE):
     categories = db.get_categories()
+    if categories is None:
+        await update.message.reply_text("❌ <b>Database Error:</b> I couldn't fetch categories. Please check your database connection.", parse_mode='HTML')
+        return ConversationHandler.END
+        
     keyboard = [[InlineKeyboardButton(cat['name'], callback_data=f"addcat_{cat['id']}")] for cat in categories]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -26,6 +30,10 @@ async def category_choice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['add_topic_cat_id'] = cat_id
     
     topics = db.get_topics(cat_id)
+    if topics is None:
+        await query.message.edit_text("❌ <b>Database Error:</b> I couldn't fetch topics. Session aborted.", parse_mode='HTML')
+        return ConversationHandler.END
+        
     keyboard = [[InlineKeyboardButton(t['name'], callback_data=f"addtopic_{t['id']}")] for t in topics]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
