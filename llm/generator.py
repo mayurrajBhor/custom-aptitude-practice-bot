@@ -23,6 +23,14 @@ class QuestionGenerator:
             return "random_conv"
         if pn == "basic fraction to per":
             return "benchmark_conv"
+        if pn == "find original number":
+            return "find_original_number"
+        if pn == "fraction to decimal":
+            return "fraction_to_decimal"
+        if pn == "swap of percentage":
+            return "swap_percentage"
+        if pn == "breakdown percentage":
+            return "breakdown_percentage"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -36,6 +44,14 @@ class QuestionGenerator:
             return hybrid_generator.generate_random_conv(), None
         elif hybrid_type == "benchmark_conv":
             return hybrid_generator.generate_benchmark_conv(), None
+        elif hybrid_type == "find_original_number":
+            return hybrid_generator.generate_find_original_number(), None
+        elif hybrid_type == "fraction_to_decimal":
+            return hybrid_generator.generate_fraction_to_decimal(), None
+        elif hybrid_type == "swap_percentage":
+            return hybrid_generator.generate_swap_percentage(), None
+        elif hybrid_type == "breakdown_percentage":
+            return hybrid_generator.generate_breakdown_percentage(), None
 
         if not os.getenv("GROQ_API_KEY"):
             return None, "Groq API key is missing. Please check your .env file."
@@ -119,6 +135,14 @@ class QuestionGenerator:
                 results.append({**hybrid_generator.generate_random_conv(), "pattern_id": p['id']})
             elif ht == "benchmark_conv":
                 results.append({**hybrid_generator.generate_benchmark_conv(), "pattern_id": p['id']})
+            elif ht == "find_original_number":
+                results.append({**hybrid_generator.generate_find_original_number(), "pattern_id": p['id']})
+            elif ht == "fraction_to_decimal":
+                results.append({**hybrid_generator.generate_fraction_to_decimal(), "pattern_id": p['id']})
+            elif ht == "swap_percentage":
+                results.append({**hybrid_generator.generate_swap_percentage(), "pattern_id": p['id']})
+            elif ht == "breakdown_percentage":
+                results.append({**hybrid_generator.generate_breakdown_percentage(), "pattern_id": p['id']})
             else:
                 ai_patterns.append(p)
 

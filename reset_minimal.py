@@ -30,7 +30,11 @@ def reset_and_seed_minimal():
         ("Mix fraction", "Convert improper fractions to mixed fractions and vice versa."),
         ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
         ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
-        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40).")
+        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40)."),
+        ("Find original number", "Solve equations where a number is changed by a percentage of itself."),
+        ("Fraction to decimal", "Advanced drills for benchmark fraction-to-decimal conversions."),
+        ("Swap of percentage", "Utilize the commutative and scaling properties ($a\%$ of $b = b\%$ of $a$)."),
+        ("Breakdown percentage", "Decompose complex percentages into manageable benchmark blocks.")
     ]
     
     for name, desc in patterns:
