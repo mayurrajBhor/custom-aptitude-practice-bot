@@ -31,6 +31,12 @@ class QuestionGenerator:
             return "swap_percentage"
         if pn == "breakdown percentage":
             return "breakdown_percentage"
+        if pn == "percentage equations and ratios":
+            return "percentage_equations"
+        if pn == "base comparisons and successive chains":
+            return "base_comparisons"
+        if pn == "applied scenarios and complex calculations":
+            return "applied_percentages"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -52,6 +58,12 @@ class QuestionGenerator:
             return hybrid_generator.generate_swap_percentage(), None
         elif hybrid_type == "breakdown_percentage":
             return hybrid_generator.generate_breakdown_percentage(), None
+        elif hybrid_type == "percentage_equations":
+            return hybrid_generator.generate_percentage_equations(), None
+        elif hybrid_type == "base_comparisons":
+            return hybrid_generator.generate_base_comparisons(), None
+        elif hybrid_type == "applied_percentages":
+            return hybrid_generator.generate_applied_percentages(), None
 
         if not os.getenv("GROQ_API_KEY"):
             return None, "Groq API key is missing. Please check your .env file."
@@ -143,6 +155,12 @@ class QuestionGenerator:
                 results.append({**hybrid_generator.generate_swap_percentage(), "pattern_id": p['id']})
             elif ht == "breakdown_percentage":
                 results.append({**hybrid_generator.generate_breakdown_percentage(), "pattern_id": p['id']})
+            elif ht == "percentage_equations":
+                results.append({**hybrid_generator.generate_percentage_equations(), "pattern_id": p['id']})
+            elif ht == "base_comparisons":
+                results.append({**hybrid_generator.generate_base_comparisons(), "pattern_id": p['id']})
+            elif ht == "applied_percentages":
+                results.append({**hybrid_generator.generate_applied_percentages(), "pattern_id": p['id']})
             else:
                 ai_patterns.append(p)
 

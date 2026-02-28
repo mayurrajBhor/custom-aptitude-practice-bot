@@ -19,7 +19,14 @@ def seed_gmat_data():
         ("Mix fraction", "Convert improper fractions to mixed fractions and vice versa."),
         ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
         ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
-        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40).")
+        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40)."),
+        ("find original number", "Solve percentage equations added or subtracted from themselves."),
+        ("fraction to decimal and vice versa", "Advanced benchmark conversions."),
+        ("swap of percentage", "a% of b equals b% of a, and scaling tricks."),
+        ("breakdown percentage", "Decomposition, shifting, and repeating decimals."),
+        ("percentage equations and ratios", "Multi-variable percentage equality, ratio conversions, and third-anchor constraints."),
+        ("base comparisons and successive chains", "Direct base comparisons, missing values, and successive percentage chains."),
+        ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks.")
     ]
     
     for name, desc in patterns:
