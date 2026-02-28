@@ -207,6 +207,16 @@ class DatabaseManager:
         query = "INSERT INTO user_added_patterns (user_id, pattern_id) VALUES (%s, %s) ON CONFLICT DO NOTHING"
         self.execute_query(query, (user_id, pattern_id))
 
+    def sync_9_day_cycle(self, user_id):
+        """Ensure all unlocked patterns are tracked in user_added_patterns for the 9-day rule."""
+        query = """
+        INSERT INTO user_added_patterns (user_id, pattern_id)
+        SELECT %s, id FROM patterns 
+        WHERE is_unlocked = TRUE
+        ON CONFLICT (user_id, pattern_id) DO NOTHING
+        """
+        self.execute_query(query, (user_id,))
+
     def get_new_patterns_in_cycle(self, user_id):
         """Patterns added in the last 9 days."""
         query = """

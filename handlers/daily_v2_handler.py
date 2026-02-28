@@ -10,7 +10,10 @@ import asyncio
 
 async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    
+
+    # Ensure all unlocked patterns are linked to the user's 9‑day cycle
+    db.sync_9_day_cycle(user_id)
+
     # 1. Fetch 9-Day New Patterns
     new_patterns = db.get_new_patterns_in_cycle(user_id)
     # 2. Fetch SRS Due Patterns

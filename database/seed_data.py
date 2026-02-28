@@ -1,4 +1,4 @@
-from db_manager import db
+from database.db_manager import db
 
 def seed_gmat_data():
     # 1. Categories
