@@ -29,7 +29,7 @@ class HybridGenerator:
         
         # Distractors
         options = [correct]
-        while len(options) < 5:
+        while len(options) < 4:
             w = max(1, whole + random.randint(-2, 2))
             r = max(1, rem + random.randint(-3, 3)) % denom
             if r == 0: r = 1
@@ -66,7 +66,7 @@ class HybridGenerator:
         correct = str(correct_frac)
         
         options = [correct]
-        while len(options) < 5:
+        while len(options) < 4:
             # Common errors: subtracting numerators and denominators
             if len(options) == 1:
                 alt = f"{abs(f1.numerator - f2.numerator)}/{abs(f1.denominator - f2.denominator)}" if f1.denominator != f2.denominator else "Error"
@@ -103,7 +103,7 @@ class HybridGenerator:
             correct = str(f)
             
         options = [correct]
-        while len(options) < 5:
+        while len(options) < 4:
             if to_percentage:
                 val = f"{random.randint(5, 95)}%"
             else:
@@ -130,7 +130,7 @@ class HybridGenerator:
                 
         options = [correct]
         # Distractors from other benchmarks to make it challenging
-        while len(options) < 5:
+        while len(options) < 4:
             _, _, p_alt = random.choice(self.benchmarks)
             if p_alt not in options:
                 options.append(p_alt)
@@ -196,7 +196,7 @@ class HybridGenerator:
             correct = str(x)
 
         options = [correct]
-        while len(options) < 5:
+        while len(options) < 4:
             val = str(int(correct) + random.randint(-10, 10) * (5 if int(correct) > 100 else 1))
             if val not in options and int(val) > 0:
                 options.append(val)
@@ -228,7 +228,7 @@ class HybridGenerator:
             correct = f"{num}/{den}"
             
         options = [correct]
-        while len(options) < 5:
+        while len(options) < 4:
             if to_decimal:
                 alt = str(round(decimal + random.uniform(-0.02, 0.02), 4))
             else:
@@ -281,7 +281,7 @@ class HybridGenerator:
 
         correct_str = str(int(correct)) if correct == int(correct) else str(round(correct, 2))
         options = [correct_str]
-        while len(options) < 5:
+        while len(options) < 4:
             alt = float(correct_str) + random.randint(-10, 10) * (2 if float(correct_str) > 50 else 0.5)
             alt_str = str(int(alt)) if alt == int(alt) else str(round(alt, 2))
             if alt_str not in options:
@@ -336,7 +336,7 @@ class HybridGenerator:
 
         correct_str = str(int(correct)) if correct == int(correct) else str(round(correct, 3))
         options = [correct_str]
-        while len(options) < 5:
+        while len(options) < 4:
             alt = float(correct_str) + random.randint(-10, 10) * (2 if float(correct_str) > 50 else 0.5)
             alt_str = str(int(alt)) if alt == int(alt) else str(round(alt, 3))
             if alt_str not in options:

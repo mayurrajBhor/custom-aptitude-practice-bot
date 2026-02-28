@@ -15,8 +15,10 @@ async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYP
     new_patterns = db.get_new_patterns_in_cycle(user_id)
     # 2. Fetch SRS Due Patterns
     srs_patterns = db.get_srs_due_patterns(user_id)
+    # 3. Fetch Unpracticed Unlocked Patterns (Base foundational patterns)
+    unpracticed_patterns = db.get_unpracticed_patterns(user_id)
     
-    if not new_patterns and not srs_patterns:
+    if not new_patterns and not srs_patterns and not unpracticed_patterns:
         await update.message.reply_text("✨ <b>Your Daily Practice is clear!</b>\n\nGo to 'Custom Practice' to add more topics or wait for your SRS reviews to become due.", parse_mode='HTML')
         return
 
@@ -41,8 +43,17 @@ async def start_daily_practice(update: Update, context: ContextTypes.DEFAULT_TYP
         if new_patterns: plan_text += "\n"
         plan_text += "🧠 <b>SRS Review Topics:</b>\n"
         for p in srs_patterns:
-            # For SRS, we'll do 1 question per due topic to cover more ground
             plan_text += f"• {html.escape(p['name'])}: 1 question\n"
+            queue.append(p['id'])
+
+    if unpracticed_patterns:
+        if new_patterns or srs_patterns: plan_text += "\n"
+        plan_text += "🌟 <b>Discovery Topics (New):</b>\n"
+        # Pick top 3 unpracticed patterns to avoid overwhelming the user
+        to_add = unpracticed_patterns[:3]
+        for p in to_add:
+            plan_text += f"• {html.escape(p['name'])}: 2 questions\n"
+            queue.append(p['id'])
             queue.append(p['id'])
             
     plan_text += f"\nTotal Questions: <b>{len(queue)}</b>"

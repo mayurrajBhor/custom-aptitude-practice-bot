@@ -47,7 +47,13 @@ def session_complete_keyboard():
 
 def question_keyboard(options):
     keyboard = []
-    labels = ['A', 'B', 'C', 'D', 'E']
-    for i, opt in enumerate(options):
-        keyboard.append([InlineKeyboardButton(f"{labels[i]}: {opt}", callback_data=f"ans_{i}")])
+    labels = ['A', 'B', 'C', 'D']
+    
+    # Process options in chunks of 2 for a 2x2 grid
+    for i in range(0, len(options), 2):
+        row = []
+        for j in range(i, min(i + 2, len(options))):
+            row.append(InlineKeyboardButton(f"{labels[j]}: {options[j]}", callback_data=f"ans_{j}"))
+        keyboard.append(row)
+        
     return InlineKeyboardMarkup(keyboard)

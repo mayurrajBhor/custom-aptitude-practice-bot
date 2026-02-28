@@ -75,11 +75,11 @@ class QuestionGenerator:
         3. The explanation MUST be deep, covering the logic of the correct answer and a refutation of all wrong answers.
         
         Rules:
-        1. Always provide exactly 5 options (A, B, C, D, E).
+        1. Always provide exactly 4 options (A, B, C, D).
         2. Output format MUST be a valid JSON object with the following keys:
            "question_text": "text",
-           "options": ["A", "B", "C", "D", "E"],
-           "correct_option_index": 0-4,
+           "options": ["A", "B", "C", "D"],
+           "correct_option_index": 0-3,
            "explanation": "detailed reasoning",
            "difficulty": integer 1-5
         
@@ -179,13 +179,13 @@ Difficulty: {p['difficulty']}/5{avoid_text}
         {patterns_text}
 
         Rules:
-        1. Always provide 5 options (A, B, C, D, E).
+        1. Always provide 4 options (A, B, C, D).
         2. Output format MUST be a valid JSON object with a key "questions" containing an array of objects.
         
         Each object should have:
            "question_text": "text",
-           "options": ["A", "B", "C", "D", "E"],
-           "correct_option_index": 0-4 Integer,
+           "options": ["A", "B", "C", "D"],
+           "correct_option_index": 0-3 Integer,
            "explanation": "detailed reasoning",
            "difficulty": integer 1-5,
            "pattern_id": integer (MUST MATCH THE PATTERN ID FROM THE LIST ABOVE)

@@ -12,7 +12,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
     # Initialize session
     context.user_data['session_patterns'] = pattern_ids
     context.user_data['session_score'] = 0
-    context.user_data['session_total_target'] = 5
+    context.user_data['session_total_target'] = 20
     context.user_data['session_current_index'] = 0
     context.user_data['custom_pool'] = [] # Pool for batched questions
     
@@ -25,7 +25,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
     
     summary_text = "📋 <b>Your Selection:</b>\n"
     summary_text += "\n".join([f"• {html.escape(name)}" for name in pattern_names])
-    summary_text += f"\n\n🚀 Starting a session of 5 questions!"
+    summary_text += f"\n\n🚀 Starting a session of 20 questions!"
     
     chat_id = update.effective_chat.id
     await context.bot.send_message(chat_id, summary_text, parse_mode='HTML')

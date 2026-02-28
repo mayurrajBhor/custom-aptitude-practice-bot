@@ -52,7 +52,7 @@ class DatabaseManager:
                 conn.commit()
                 if cur.description:
                     return cur.fetchall()
-                return None
+                return True # Success for non-SELECT queries
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
                 logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
                 self.conn = None # Force reconnection on next get_connection()
@@ -227,6 +227,17 @@ class DatabaseManager:
         JOIN patterns p ON up.pattern_id = p.id
         JOIN topics t ON p.topic_id = t.id
         WHERE up.user_id = %s AND up.next_review_at <= CURRENT_TIMESTAMP
+        """
+        return self.execute_query(query, (user_id,))
+
+    def get_unpracticed_patterns(self, user_id):
+        """Patterns that are unlocked but have no user progress yet."""
+        query = """
+        SELECT p.*, t.name as topic_name
+        FROM patterns p
+        JOIN topics t ON p.topic_id = t.id
+        LEFT JOIN user_progress up ON p.id = up.pattern_id AND up.user_id = %s
+        WHERE p.is_unlocked = TRUE AND up.id IS NULL
         """
         return self.execute_query(query, (user_id,))
 
