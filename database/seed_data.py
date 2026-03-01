@@ -26,7 +26,8 @@ def seed_gmat_data():
         ("breakdown percentage", "Decomposition, shifting, and repeating decimals."),
         ("percentage equations and ratios", "Multi-variable percentage equality, ratio conversions, and third-anchor constraints."),
         ("base comparisons and successive chains", "Direct base comparisons, missing values, and successive percentage chains."),
-        ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks.")
+        ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks."),
+        ("alligation and shift applications", "Mixtures, population splits, value overlaps, and double-shift nested percentages.")
     ]
     
     for name, desc in patterns:

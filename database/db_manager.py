@@ -100,6 +100,10 @@ class DatabaseManager:
 
     def get_patterns(self, topic_id):
         return self.execute_query("SELECT * FROM patterns WHERE topic_id = %s", (topic_id,))
+        
+    def get_all_pattern_ids_for_topic(self, topic_id):
+        res = self.execute_query("SELECT id FROM patterns WHERE topic_id = %s", (topic_id,))
+        return [row['id'] for row in res] if res else []
 
     def unlock_pattern(self, pattern_id):
         self.execute_query("UPDATE patterns SET is_unlocked = %s WHERE id = %s", (True, pattern_id))
@@ -173,10 +177,26 @@ class DatabaseManager:
                 last_difficulty_level = %s
             WHERE id = %s
             """
-            new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
+            新mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
             params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
             
             self.execute_query(query, params)
+
+    def record_question_attempt(self, user_id, pattern_id, is_correct, time_taken_seconds):
+        query = """
+        INSERT INTO question_attempts (user_id, pattern_id, is_correct, time_taken_seconds)
+        VALUES (%s, %s, %s, %s)
+        """
+        self.execute_query(query, (user_id, pattern_id, is_correct, time_taken_seconds))
+        
+    def get_today_solved_count(self, user_id):
+        query = """
+        SELECT COUNT(*) as count 
+        FROM question_attempts 
+        WHERE user_id = %s AND created_at >= CURRENT_DATE
+        """
+        res = self.execute_query(query, (user_id,))
+        return res[0]['count'] if res else 0
 
     def get_current_difficulty(self, user_id, pattern_id):
         res = self.execute_query("SELECT last_difficulty_level FROM user_progress WHERE user_id = %s AND pattern_id = %s", (user_id, pattern_id))

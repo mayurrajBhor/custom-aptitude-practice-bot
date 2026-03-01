@@ -57,10 +57,13 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     avg_speed = s['avg_time'] or 0
     speed_icon = "⚡" if avg_speed < 90 else "⏳"
+    
+    today_solved = db.get_today_solved_count(user_id)
 
     profile_msg = (
         f"👤 <b>Profile: {first_name}</b>\n\n"
         f"📊 <b>Core Performance:</b>\n"
+        f"• Today's Solved: <b>{today_solved}</b>\n"
         f"• Total Questions: <b>{s['total_attempts']}</b>\n"
         f"• Accuracy: <b>{accuracy:.1f}%</b>\n"
         f"• Overall Mastery: <b>{round(s['avg_mastery']*100 if s['avg_mastery'] else 0)}%</b>\n"

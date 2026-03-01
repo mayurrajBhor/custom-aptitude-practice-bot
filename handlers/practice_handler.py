@@ -8,13 +8,14 @@ import html
 import random
 import asyncio
 
-async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TYPE, pattern_ids: list):
+async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TYPE, pattern_ids: list, target_count: int = 20):
     # Initialize session
     context.user_data['session_patterns'] = pattern_ids
     context.user_data['session_score'] = 0
-    context.user_data['session_total_target'] = 20
+    context.user_data['session_total_target'] = target_count
     context.user_data['session_current_index'] = 0
     context.user_data['custom_pool'] = [] # Pool for batched questions
+    context.user_data['session_wrong_patterns'] = [] # Track wrong answers
     
     # Selection Summary
     pattern_names = []
@@ -25,7 +26,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
     
     summary_text = "📋 <b>Your Selection:</b>\n"
     summary_text += "\n".join([f"• {html.escape(name)}" for name in pattern_names])
-    summary_text += f"\n\n🚀 Starting a session of 20 questions!"
+    summary_text += f"\n\n🚀 Starting a session of {target_count} questions!"
     
     chat_id = update.effective_chat.id
     await context.bot.send_message(chat_id, summary_text, parse_mode='HTML')
@@ -80,13 +81,31 @@ async def trigger_next_question(update: Update, context: ContextTypes.DEFAULT_TY
     if current_count >= target_count:
         # Session Complete logic...
         score = context.user_data.get('session_score', 0)
+        wrong_patterns = context.user_data.get('session_wrong_patterns', [])
+        
         final_msg = (
             f"🏁 <b>Session Complete!</b>\n\n"
             f"Your Final Score: <b>{score}/{target_count}</b>\n\n"
-            f"What would you like to do next?"
         )
+        
+        if wrong_patterns:
+            final_msg += "📉 <b>Areas for Improvement:</b>\n"
+            from collections import Counter
+            counts = Counter(wrong_patterns)
+            
+            # Fetch names
+            names_msg = ""
+            for pid, count in counts.items():
+                res = db.execute_query("SELECT name FROM patterns WHERE id = %s", (pid,))
+                if res:
+                    names_msg += f"• {html.escape(res[0]['name'])}: {count} wrong\n"
+            
+            final_msg += names_msg + "\n"
+            
+        final_msg += "What would you like to do next?"
+        
         chat_id = update.effective_chat.id
-        await context.bot.send_message(chat_id, final_msg, reply_markup=session_complete_keyboard(), parse_mode='HTML')
+        await context.bot.send_message(chat_id, final_msg, reply_markup=session_complete_keyboard(target_count=target_count), parse_mode='HTML')
         return
 
     # Check question pool
@@ -163,6 +182,10 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         res_msg = "✅ <b>Correct!</b>"
     else:
         res_msg = f"❌ <b>Incorrect.</b>\n\nCorrect Answer: {html.escape(str(correct_option))}"
+        
+        pattern_id = context.user_data.get('current_pattern_id')
+        if pattern_id:
+            context.user_data.setdefault('session_wrong_patterns', []).append(pattern_id)
     
     context.user_data.setdefault('session_current_index', 0)
     context.user_data['session_current_index'] += 1
@@ -179,6 +202,13 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 is_correct,
                 5 if is_correct else 2,
                 time_taken=time_taken
+            )
+            # Record explicit question attempt with timing
+            db.record_question_attempt(
+                update.effective_user.id, 
+                pattern_id, 
+                is_correct, 
+                time_taken
             )
         except Exception as db_err:
             print(f"DEBUG: db.update_user_progress error: {db_err}")

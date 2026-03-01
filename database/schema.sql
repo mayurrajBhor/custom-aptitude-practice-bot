@@ -86,5 +86,15 @@ CREATE TABLE IF NOT EXISTS practice_sessions (
     total_questions INT
 );
 
+-- Question Attempts (Timing and specific history)
+CREATE TABLE IF NOT EXISTS question_attempts (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    pattern_id INT REFERENCES patterns(id),
+    is_correct BOOLEAN NOT NULL,
+    time_taken_seconds FLOAT DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Insert Initial Categories
 INSERT INTO categories (name) VALUES ('Quant'), ('Reasoning'), ('Data Insights') ON CONFLICT (name) DO NOTHING;

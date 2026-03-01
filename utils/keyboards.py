@@ -25,6 +25,12 @@ def pattern_keyboard(patterns, selected_ids=None):
         selected_ids = []
     
     keyboard = []
+    
+    # Add Random/All Patterns button at the top
+    if patterns:
+        topic_id = patterns[0]['topic_id']
+        keyboard.append([InlineKeyboardButton("🔀 Any Pattern (Random Mixed)", callback_data=f"start_random_topic_{topic_id}")])
+
     for p in patterns:
         is_selected = p['id'] in selected_ids
         btn_text = f"{'✅ ' if is_selected else ''}{p['name']}"
@@ -32,15 +38,17 @@ def pattern_keyboard(patterns, selected_ids=None):
     
     # Selection Controls
     if selected_ids:
-        keyboard.append([InlineKeyboardButton("🚀 Generate 20 Questions", callback_data="start_practice_session")])
+        keyboard.append([InlineKeyboardButton("🚀 Generate 5 Questions", callback_data="start_practice_session_5")])
+        keyboard.append([InlineKeyboardButton("🚀 Generate 10 Questions", callback_data="start_practice_session_10")])
+        keyboard.append([InlineKeyboardButton("🚀 Generate 20 Questions", callback_data="start_practice_session_20")])
         keyboard.append([InlineKeyboardButton("➕ Add More Topics", callback_data="back_to_cats")])
     
     keyboard.append([InlineKeyboardButton("🔙 Back to Topic", callback_data=f"back_to_topics_{patterns[0]['topic_id'] if patterns else ''}")])
     return InlineKeyboardMarkup(keyboard)
 
-def session_complete_keyboard():
+def session_complete_keyboard(target_count=20):
     keyboard = [
-        [InlineKeyboardButton("🔄 Retest (Same Topics)", callback_data="retest_session")],
+        [InlineKeyboardButton("🔄 Retest (Same Topics)", callback_data=f"retest_session_{target_count}")],
         [InlineKeyboardButton("🔍 Reselect Topics", callback_data="back_to_cats")]
     ]
     return InlineKeyboardMarkup(keyboard)

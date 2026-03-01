@@ -63,16 +63,28 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         selected_ids = context.user_data['selected_patterns']
         await query.message.edit_text("Select Question Patterns:", reply_markup=pattern_keyboard(patterns, selected_ids))
 
-    elif data == "start_practice_session":
+    elif data.startswith("start_random_topic_"):
+        topic_id = int(data.split('_')[-1])
+        pattern_ids = db.get_all_pattern_ids_for_topic(topic_id)
+        
+        if not pattern_ids:
+            await query.answer("No patterns found for this topic.", show_alert=True)
+            return
+            
+        await start_custom_practice(update, context, pattern_ids)
+
+    elif data.startswith("start_practice_session_"):
+        target_count = int(data.split('_')[-1])
         selected_ids = context.user_data.get('selected_patterns', [])
         if not selected_ids:
             await query.answer("Please select at least one pattern.", show_alert=True)
             return
-        await start_custom_practice(update, context, selected_ids)
+        await start_custom_practice(update, context, selected_ids, target_count=target_count)
 
-    elif data == "retest_session":
+    elif data.startswith("retest_session_"):
+        target_count = int(data.split('_')[-1])
         selected_ids = context.user_data.get('selected_patterns', [])
-        await start_custom_practice(update, context, selected_ids)
+        await start_custom_practice(update, context, selected_ids, target_count=target_count)
 
     elif data == "start_daily_session":
         from handlers.daily_v2_handler import trigger_daily_question
