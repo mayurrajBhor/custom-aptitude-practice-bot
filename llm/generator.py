@@ -39,6 +39,10 @@ class QuestionGenerator:
             return "applied_percentages"
         if pn == "alligation and shift applications":
             return "alligation_shifts"
+        if pn == "percentage comparisons":
+            return "percentage_comparisons"
+        if pn == "percentage calculations":
+            return "percentage_calculations"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -68,6 +72,10 @@ class QuestionGenerator:
             return hybrid_generator.generate_applied_percentages(), None
         elif hybrid_type == "alligation_shifts":
             return hybrid_generator.generate_alligation_shifts(), None
+        elif hybrid_type == "percentage_comparisons":
+            return hybrid_generator.generate_percentage_comparisons(), None
+        elif hybrid_type == "percentage_calculations":
+            return hybrid_generator.generate_percentage_calculations(), None
 
         if not os.getenv("GROQ_API_KEY"):
             return None, "Groq API key is missing. Please check your .env file."
@@ -167,6 +175,10 @@ class QuestionGenerator:
                 results.append({**hybrid_generator.generate_applied_percentages(), "pattern_id": p['id']})
             elif ht == "alligation_shifts":
                 results.append({**hybrid_generator.generate_alligation_shifts(), "pattern_id": p['id']})
+            elif ht == "percentage_comparisons":
+                results.append({**hybrid_generator.generate_percentage_comparisons(), "pattern_id": p['id']})
+            elif ht == "percentage_calculations":
+                results.append({**hybrid_generator.generate_percentage_calculations(), "pattern_id": p['id']})
             else:
                 ai_patterns.append(p)
 

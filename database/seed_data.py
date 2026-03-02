@@ -27,7 +27,9 @@ def seed_gmat_data():
         ("percentage equations and ratios", "Multi-variable percentage equality, ratio conversions, and third-anchor constraints."),
         ("base comparisons and successive chains", "Direct base comparisons, missing values, and successive percentage chains."),
         ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks."),
-        ("alligation and shift applications", "Mixtures, population splits, value overlaps, and double-shift nested percentages.")
+        ("alligation and shift applications", "Mixtures, population splits, value overlaps, and double-shift nested percentages."),
+        ("percentage comparisons", "Nested variable chains, sum-based relativity, ratio equalization, weight fractions, donation differences, and fractional populations."),
+        ("percentage calculations", "Product constancy, work & productivity, geometric scaling, error multipliers, salary remainders, property value chains, and spoiled subset problems.")
     ]
     
     for name, desc in patterns:

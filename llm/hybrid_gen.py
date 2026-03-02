@@ -876,4 +876,534 @@ class HybridGenerator:
             "difficulty": 4
         }
 
+    def generate_percentage_comparisons(self):
+        """Phase 20 Cat 1: Percentage Comparisons
+        Covers Q2, Q3, Q4, Q5, Q6, Q9, Q12, Q13, Q16 style questions.
+        Uses Python for math, varied wording for context.
+        """
+        sub = random.choice([
+            'nested_variable_chain',  # Q6, Q13 A>B>C>D style
+            'sum_relativity',         # Q2 C is X% less than sum(A+B), A is Y% more than B
+            'basic_diff_equation',    # Q4, Q12  X% less than Y% by Z
+            'ratio_equalization',     # Q5 ratios / volumes
+            'weight_fraction',        # Q9 sum of weights, X% of A = Y*B
+            'multi_person_donations', # Q3 salary same, different donation%, find C's salary
+            'fractional_population',  # Q16 4/9 males, 50% married, etc.
+        ])
+
+        def make_options(correct_val, step=None):
+            opts = [str(correct_val)]
+            step = step or max(5, abs(correct_val) // 5)
+            while len(opts) < 4:
+                alt = correct_val + random.choice([-3,-2,-1,1,2,3]) * step
+                s = str(alt)
+                if s not in opts: opts.append(s)
+            random.shuffle(opts)
+            return opts, opts.index(str(correct_val))
+
+        if sub == 'nested_variable_chain':
+            # A is P% more than B, B is Q% more than C, C is R% less than D
+            # Given A - C = Z, find B
+            templates = [
+                ("A obtained {p}% more marks than B, B obtained {q}% more marks than C, C obtained {r}% less marks than D. If A obtained {diff} more marks than C, how much did B score?", "marks"),
+                ("Store A's sales are {p}% higher than store B's. Store B's sales are {q}% higher than store C's. Store C's sales are {r}% less than store D's. If A sells {diff} more units than C, find B's sales.", "units"),
+                ("Ravi earns {p}% more than Suresh. Suresh earns {q}% more than Mohan. Mohan earns {r}% less than Kiran. If Ravi earns Rs.{diff} more than Mohan, find Suresh's salary.", "Rs."),
+            ]
+            # pick clean numbers
+            # let C = base, B = C*(1+q/100), A = B*(1+p/100)
+            C = random.randint(4, 20) * 100
+            q = random.choice([10, 20, 25, 50])
+            p = random.choice([10, 20, 25, 50])
+            B = int(C * (1 + q/100))
+            A = int(B * (1 + p/100))
+            diff = A - C
+            r = random.choice([10, 20, 25])
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(p=p, q=q, r=r, diff=diff)
+            correct = B
+            explanation = (f"Let C = {C}.\nB = C × (1 + {q}/100) = {C} × {1+q/100} = {B}.\n"
+                           f"A = B × (1 + {p}/100) = {B} × {1+p/100} = {A}.\n"
+                           f"A - C = {A} - {C} = {diff}. ✓\nSo B = {B} {unit}.")
+
+        elif sub == 'sum_relativity':
+            # A is P% more than B; C is Q% less than (A+B). How much % is C less than A?
+            templates = [
+                ("A is {p}% more than B, and C is {q}% less than the sum of A and B. By what percent is C less than A?", ""),
+                ("Product X is {p}% more expensive than product Y. Product Z costs {q}% less than the combined price of X and Y. By what percent is Z cheaper than X?", ""),
+                ("Raj's score is {p}% more than Priya's. Kiran's score is {q}% less than the total of Raj and Priya. By what percent is Kiran's score less than Raj's?", ""),
+            ]
+            B = 100  # normalise
+            p = random.choice([80, 50, 25, 20, 10])
+            A = B * (1 + p/100)
+            q_choices = [round(100 * x / 14, 2) for x in [1]] + [10, 20, 25, 40, 48, 50]
+            # use a clean fraction: 48(4/7)% = 340/7 % is from original question
+            q_str = random.choice(['48(4/7)', '25', '20', '40', '10'])
+            q_map = {'48(4/7)': 340/7, '25': 25, '20': 20, '40': 40, '10': 10}
+            q_val = q_map[q_str]
+            S = A + B
+            C = S * (1 - q_val/100)
+            pct_less_than_A = round((A - C) / A * 100, 2)
+            # round to clean
+            pct_less_than_A_display = round(pct_less_than_A, 2)
+            tmpl, _ = random.choice(templates)
+            question = tmpl.format(p=p, q=q_str)
+            correct = f"{pct_less_than_A_display}%"
+            explanation = (f"Let B = 100. A = B × (1+{p}/100) = {A}.\n"
+                           f"Sum A+B = {S}. C = {S} × (1 - {q_val:.2f}/100) = {C:.2f}.\n"
+                           f"C is less than A by: ({A} - {C:.2f})/{A} × 100 = {pct_less_than_A_display}%.")
+            opts = [correct]
+            alts = [f"{round(pct_less_than_A_display + d, 2)}%" for d in [-10, -5, 5, 10, 15, -15] if d != 0]
+            random.shuffle(alts)
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {
+                "question_text": question,
+                "options": opts,
+                "correct_option_index": opts.index(correct),
+                "explanation": explanation,
+                "difficulty": 5
+            }
+
+        elif sub == 'basic_diff_equation':
+            # X% of N < Y% of N by Z; find W% of N
+            templates = [
+                ("If {y}% of a number is more than its {x}% by {z}, then {w}% of that number is:", ""),
+                ("A number's {y}% exceeds its {x}% by {z}. What is {w}% of the number?", ""),
+                ("{y}% of a certain number is {z} more than {x}% of the same number. Find {w}% of that number.", ""),
+            ]
+            x, y = sorted(random.sample([20, 30, 40, 60, 70, 80], 2))
+            N = random.randint(5, 20) * 10
+            z = int((y - x) * N / 100)
+            w = random.choice([5, 10, 20, 25, 50])
+            ans = int(w * N / 100)
+            tmpl, _ = random.choice(templates)
+            question = tmpl.format(x=x, y=y, z=z, w=w)
+            correct = ans
+            explanation = (f"({y}% - {x}%) of N = {z}.\n{y-x}% of N = {z}.\nN = {z} × 100 / {y-x} = {N}.\n{w}% of {N} = {ans}.")
+
+        elif sub == 'ratio_equalization':
+            # Tank A:B = P:Q. A increases by X%. What % must B increase so A=B?
+            templates = [
+                ("The volume of water in two tanks A and B is in the ratio {p}:{q}. The volume in tank A is increased by {x}%. By what percent must the volume in tank B be increased so that both tanks become equal?", ""),
+                ("Two factories A and B produce in ratio {p}:{q}. Factory A increases output by {x}%. By what percent should factory B increase to match A?", ""),
+                ("Two cities have population in ratio {p}:{q}. City A's population rises by {x}%. What percentage increase does city B need to have the same population as city A?", ""),
+            ]
+            p, q = random.choice([(6,5),(4,3),(3,2),(5,4),(7,5)])
+            x = random.choice([20, 25, 30, 40, 50])
+            # A_new = p*(1+x/100), need B_new = A_new, so %inc = (A_new - q)/q * 100
+            A_new = p * (1 + x/100)
+            pct_B = round((A_new - q) / q * 100, 2)
+            tmpl, _ = random.choice(templates)
+            question = tmpl.format(p=p, q=q, x=x)
+            correct = f"{pct_B}%"
+            explanation = (f"A_new = {p} × (1 + {x}/100) = {A_new}.\n"
+                           f"We need B_new = {A_new}. B original = {q}.\n"
+                           f"% increase in B = ({A_new} - {q})/{q} × 100 = {pct_B}%.")
+            opts = [correct]
+            alts = [f"{round(pct_B + d, 2)}%" for d in [-10,-5,5,10,15,-15]]
+            random.shuffle(alts)
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {
+                "question_text": question, "options": opts,
+                "correct_option_index": opts.index(correct),
+                "explanation": explanation, "difficulty": 4
+            }
+
+        elif sub == 'weight_fraction':
+            # Sum of A+B = S. P% of A = (m/n) * B. Find diff.
+            templates = [
+                ("The sum of weights of A and B is {s} kg. {p}% of A's weight is {frac} times the weight of B. Find the difference between their weights.", "kg"),
+                ("The combined salary of X and Y is Rs.{s}. {p}% of X's salary equals {frac} of Y's salary. What is the difference in their salaries?", "Rs."),
+                ("The total score of P and Q in an exam is {s}. {p}% of P's score is {frac} of Q's score. Find the difference in their scores.", "marks"),
+            ]
+            # pick m/n from benchmarks
+            num, den = random.choice([(5,6),(2,3),(3,4),(4,5),(1,2),(5,8)])
+            frac_str = f"{num}/{den}"
+            # p% of A = (num/den) * B:  (p/100)*A = (num/den)*B => A/B = 100*num/(den*p)
+            p = random.choice([25, 50, 40, 60, 75, 20])
+            # ratio A/B = (100*num)/(den*p)
+            A_part = 100 * num
+            B_part = den * p
+            from math import gcd
+            g = gcd(A_part, B_part)
+            Ar, Br = A_part // g, B_part // g
+            total_parts = Ar + Br
+            S = random.randint(3, 10) * total_parts
+            A = S * Ar // total_parts
+            B = S * Br // total_parts
+            diff = abs(A - B)
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(s=S, p=p, frac=frac_str)
+            correct = diff
+            explanation = (f"{p}% of A = {frac_str} × B => A/B = (100×{num})/(100×{den}×{p}/100) = wait:\n"
+                           f"(p/100)·A = ({num}/{den})·B => A/B = {num}×100/({den}×{p}) = {Ar}/{Br}.\n"
+                           f"A = {S}×{Ar}/{total_parts} = {A}. B = {S}×{Br}/{total_parts} = {B}.\n"
+                           f"Difference = |{A}-{B}| = {diff} {unit}.")
+
+        elif sub == 'multi_person_donations':
+            # A and B same salary S. A donates a%, B donates b%, C donates c%.
+            # |donation_A - donation_B| = D1. TotalDon_A+B - Don_C = D2. Find C's salary.
+            templates = [
+                ("The monthly salaries of A and B are equal. A donates {a}%, B donates {b}%, and C donates {c}% of their salaries to charity. The difference between A's and B's donations is Rs.{d1}. The total donation by A and B is Rs.{d2} more than C's donation. What is C's monthly salary?", "Rs."),
+                ("Workers P and Q earn the same monthly wage. P contributes {a}%, Q contributes {b}%, and R contributes {c}% to a welfare fund. |P's - Q's contribution| = Rs.{d1}. P+Q's total contribution exceeds R's by Rs.{d2}. Find R's salary.", "Rs."),
+            ]
+            a, b = sorted(random.sample([8, 9, 10, 12, 15, 6], 2), reverse=True)
+            c = random.choice([7, 8, 9, 10, 12, 14])
+            S_AB = random.randint(5, 20) * 1000   # same salary for A,B
+            d1 = abs(a - b) * S_AB // 100
+            don_A = a * S_AB // 100
+            don_B = b * S_AB // 100
+            total_AB = don_A + don_B
+            d2 = random.randint(1, 5) * 100
+            don_C = total_AB - d2
+            S_C = don_C * 100 // c
+            # round to nearest hundred for clean answer
+            S_C = (S_C // 100) * 100
+            don_C_actual = c * S_C // 100
+            d2_actual = total_AB - don_C_actual
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(a=a, b=b, c=c, d1=d1, d2=d2_actual)
+            correct = S_C
+            explanation = (f"Since A and B have same salary S.\n"
+                           f"({a}% - {b}%) of S = {d1} => {a-b}% of S = {d1} => S = {S_AB}.\n"
+                           f"A donates {don_A}, B donates {don_B}. Total A+B = {total_AB}.\n"
+                           f"Total A+B - C's donation = {d2_actual} => C's donation = {don_C_actual}.\n"
+                           f"C salary = {don_C_actual} × 100 / {c} = {S_C}.")
+
+        elif sub == 'fractional_population':
+            # Total = T. M/N are men, rest women. P% men are married. Q% women are married.
+            # Find % married population OR % married women
+            templates_dbl = [
+                ("The population of a town is {t}. {num}/{den} of them are males and the rest are females. {p}% of the males are married. Find (i) the percentage of married population, and (ii) the percentage of married females if the total married population is {mp}.", ""),
+                ("A school has {t} students. {num}/{den} are boys and the rest are girls. {p}% of the boys are prefects. If total prefects are {mp}, find the percent of prefects among all students and percent of girl prefects.", ""),
+            ]
+            den = random.choice([3, 4, 5, 7, 9])
+            num = random.randint(1, den-1)
+            T = random.randint(10, 40) * den * 1000 // 1000 * 1000  # multiple of den*1000
+            while T % den != 0: T += 1
+            males = T * num // den
+            females = T - males
+            p = random.choice([40, 50, 60, 75, 80, 25])
+            married_males = males * p // 100
+            q = random.choice([20, 30, 40, 50, 60])  # % married females
+            married_females = females * q // 100
+            total_married = married_males + married_females
+            pct_married_total = round(total_married / T * 100, 2)
+            pct_married_female = round(married_females / females * 100, 2)
+            question = (f"The population of a town is {T}. {num}/{den} of them are males and the rest are females. "
+                        f"{p}% of males are married and {q}% of females are married. Find: "
+                        f"(i) % of the total population that is married, and (ii) % of married females out of all females.")
+            correct = f"{pct_married_total}% total married; {pct_married_female}% females married"
+            explanation = (f"Males = {T}×{num}/{den} = {males}. Females = {T}-{males} = {females}.\n"
+                           f"Married males = {p}% of {males} = {married_males}.\n"
+                           f"Married females = {q}% of {females} = {married_females}.\n"
+                           f"Total married = {total_married}. % of total = {total_married}/{T}×100 = {pct_married_total}%.\n"
+                           f"% of females married = {married_females}/{females}×100 = {pct_married_female}%.")
+            opts = [correct]
+            alts_total = [round(pct_married_total + d, 2) for d in [-10,-5,5,10]]
+            alts_fem   = [round(pct_married_female + d, 2) for d in [-10,-5,5,10]]
+            for dt, df in zip(alts_total, alts_fem):
+                alt = f"{dt}% total married; {df}% females married"
+                if alt not in opts: opts.append(alt)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {
+                "question_text": question, "options": opts,
+                "correct_option_index": opts.index(correct),
+                "explanation": explanation, "difficulty": 5
+            }
+
+        # Build options for integer answers
+        opts, idx = make_options(correct)
+        return {
+            "question_text": question,
+            "options": opts,
+            "correct_option_index": idx,
+            "explanation": explanation,
+            "difficulty": 4
+        }
+
+    def generate_percentage_calculations(self):
+        """Phase 20 Cat 2: Percentage Calculations
+        Covers Q1, Q7, Q8, Q10, Q11, Q14, Q15, Q17 style questions.
+        Uses Python math for exact calculations.
+        """
+        sub = random.choice([
+            'product_constancy',      # Q7, Q15 rate/hours, price/consumption
+            'work_productivity',      # Q8 work increase + productivity increase
+            'geometry_scaling',       # Q17 cube/square/circle edge % increase => area/volume
+            'error_multiplier',       # Q14 multiply by wrong fraction
+            'salary_remainder',       # Q11 spend X% on A, Y% on B, borrows Z, find salary
+            'property_value_chain',   # Q1 owns X% of property, Y% of that = Z, find W% total
+            'spoiled_fruit_subsets',  # Q10 1 per N, X% sold, total sold = Z, find total
+        ])
+
+        def make_options(correct_val, step=None):
+            opts = [str(correct_val)]
+            step = step or max(5, abs(correct_val) // 5)
+            while len(opts) < 4:
+                alt = correct_val + random.choice([-3,-2,-1,1,2,3]) * step
+                if alt > 0:
+                    s = str(alt)
+                    if s not in opts: opts.append(s)
+            random.shuffle(opts)
+            return opts, opts.index(str(correct_val))
+
+        if sub == 'product_constancy':
+            # Factor A increases by X%, Factor B changes by Y%. Net change = ?
+            # contexts: wages/hours, price/consumption, speed/time
+            contexts = [
+                ("A labour works {h} hr/week and earns Rs.{w} as wages. His hourly rate is increased by {x}% and his work duration is reduced by {y}%. Find the percentage change in his income.",
+                 "wages", "hours"),
+                ("The price of a commodity is increased by {x}%. A family reduces its consumption by {y}%. Find the percentage change in their expenditure.",
+                 "price", "consumption"),
+                ("A car's speed is increased by {x}%. The driver reduces travel time by {y}%. By what percent does total distance change?",
+                 "speed", "time"),
+                ("A factory worker's rate per unit is hiked by {x}%. The worker reduces output by {y}%. Find the net % change in earnings.",
+                 "rate", "output"),
+            ]
+            x = random.choice([20, 25, 30, 40, 50])
+            # y is such that reduction = 1/(n+1) style
+            y_choices = {
+                'clean': [10, 20, 25, 50],
+                'fraction': [16, 11, 33]
+            }
+            y_frac_str_map = {
+                16: '16(2/3)', 11: '11(1/9)', 33: '33(1/3)'
+            }
+            y = random.choice([10, 20, 25])
+            # Net change = (1 + x/100)(1 - y/100) - 1
+            net = round(((1 + x/100) * (1 - y/100) - 1) * 100, 2)
+            direction = "increase" if net > 0 else "decrease"
+            abs_net = abs(net)
+            tmpl, f1, f2 = random.choice(contexts)
+            h = random.choice([40, 48, 50, 60])
+            rate = random.randint(25, 80)
+            w = h * rate
+            question = tmpl.format(h=h, w=w, x=x, y=y)
+            correct = f"{abs_net}% {direction}"
+            explanation = (f"Let original {f1} = 1, {f2} = 1. Original value = 1.\n"
+                           f"New {f1} = 1 + {x}/100 = {1+x/100:.3f}.\n"
+                           f"New {f2} = 1 - {y}/100 = {1-y/100:.3f}.\n"
+                           f"New value = {(1+x/100)*(1-y/100):.4f}.\n"
+                           f"Change = {net:.2f}% => {abs_net}% {direction}.")
+            opts = [correct]
+            alts = [f"{round(abs_net+d,2)}% {direction}" for d in [-5,-2,3,8] if round(abs_net+d,2)!=abs_net]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            opp = "decrease" if direction == "increase" else "increase"
+            if len(opts) < 4: opts.append(f"{abs_net}% {opp}")
+            random.shuffle(opts)
+            return {
+                "question_text": question, "options": opts,
+                "correct_option_index": opts.index(correct),
+                "explanation": explanation, "difficulty": 4
+            }
+
+        elif sub == 'work_productivity':
+            templates = [
+                ("The amount of work in a factory is increased by {w}%. By what percent must the number of workers be increased to complete the work in the same time, if the productivity of new workers is {p}% more than the existing workers?", ""),
+                ("A company's total tasks increased by {w}%. New hires are {p}% more efficient than existing staff. By what percent must the headcount be increased to finish all tasks on time?", ""),
+                ("A project's scope increased by {w}%. Newly recruited engineers are {p}% more productive. What percent increase in team size is needed to meet the same deadline?", ""),
+            ]
+            w = random.choice([25, 50, 60, 75, 100])
+            p = random.choice([20, 25, 50])
+            # Required workers_new = (1+w/100) / (1+p/100).  % increase from 1:
+            new_W = (1 + w/100) / (1 + p/100)
+            pct_inc = round((new_W - 1) * 100, 2)
+            tmpl, _ = random.choice(templates)
+            question = tmpl.format(w=w, p=p)
+            correct = f"{pct_inc}%"
+            explanation = (f"New work = (1+{w}/100) = {1+w/100:.3f} times.\n"
+                           f"Each new worker does (1+{p}/100) = {1+p/100:.3f} times.\n"
+                           f"Workers needed = {1+w/100:.3f}/{1+p/100:.3f} = {new_W:.4f}.\n"
+                           f"% increase = ({new_W:.4f}-1)×100 = {pct_inc}%.")
+            opts = [correct]
+            alts = [f"{round(pct_inc+d,2)}%" for d in [-10,-5,5,10,15] if d!=0]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'geometry_scaling':
+            shapes = [
+                ("cube", "surface area",  lambda x: round((1+x/100)**2 * 6 - 6, 4), "6a²", "all 4 faces are squares: SA = 6a²"),
+                ("square", "area",        lambda x: round((1+x/100)**2 - 1, 4)*100, "a²", "Area = a²"),
+                ("circle", "area",        lambda x: round((1+x/100)**2 - 1, 4)*100, "πr²", "Area = πr²"),
+                ("sphere", "surface area",lambda x: round((1+x/100)**2 - 1, 4)*100, "4πr²", "SA = 4πr²"),
+                ("cube", "volume",        lambda x: round((1+x/100)**3 - 1, 4)*100, "a³", "Volume = a³"),
+            ]
+            shape, measure, formula, formula_str, note = random.choice(shapes)
+            x = random.choice([10, 20, 25, 50])
+            pct_change = round(formula(x), 2)
+            templates = [
+                f"If each edge of a {shape} is increased by {x}%, find the percentage increase in its {measure}.",
+                f"Every dimension of a {shape} increases by {x}%. What is the % change in {measure}?",
+                f"The side of a {shape} is increased by {x}%. By what % does the {measure} change?",
+            ]
+            question = random.choice(templates)
+            correct = f"{pct_change}%"
+            explanation = (f"Formula: {measure} ∝ {formula_str} ({note}).\n"
+                           f"If side increases by {x}%, new {measure} = original × (1+{x}/100)² = original × {(1+x/100)**2:.4f}.\n"
+                           f"% increase = ({(1+x/100)**2:.4f} - 1) × 100 = {pct_change}%.")
+            opts = [correct]
+            alts = [f"{round(pct_change+d,2)}%" for d in [-5,-2,3,10] if d!=0]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'error_multiplier':
+            # multiply by a/b instead of c/d, find % error
+            templates = [
+                ("A man multiplied a number by {a}/{b} instead of {c}/{d}. What is the percentage error in the result?", ""),
+                ("Instead of multiplying by {c}/{d}, a student multiplied by {a}/{b}. Find the % error.", ""),
+                ("A calculation required multiplying by {c}/{d}, but {a}/{b} was used instead. What is the % change in the result?", ""),
+            ]
+            # make sure a/b != c/d. Use benchmarks
+            pairs = [(7,4,3,5),(3,2,4,7),(5,3,2,5),(5,4,4,5),(9,4,3,4)]
+            a,b,c,d = random.choice(pairs)
+            # correct result = N * c/d, actual = N * a/b
+            # error % = (actual - correct)/correct * 100 = (a/b - c/d)/(c/d)*100 = (a*d - b*c)/(b*c)*100
+            num = a*d - b*c
+            den = b*c
+            from fractions import Fraction
+            frac = Fraction(num, den)
+            pct = round(float(frac) * 100, 2)
+            direction = "increase" if pct > 0 else "decrease"
+            tmpl, _ = random.choice(templates)
+            question = tmpl.format(a=a, b=b, c=c, d=d)
+            correct = f"{abs(pct)}% {direction}"
+            explanation = (f"Correct multiplier = {c}/{d}. Used = {a}/{b}.\n"
+                           f"% change = ({a}/{b} - {c}/{d}) / ({c}/{d}) × 100\n"
+                           f"= ({a*d} - {b*c}) / {b*c} × 100 = {num}/{den} × 100 = {pct}%.\n"
+                           f"So the result is {abs(pct)}% {'more' if pct>0 else 'less'} than correct.")
+            opts = [correct]
+            alts = [f"{round(abs(pct)+d,2)}% {direction}" for d in [-10,-5,5,10] if d!=0]
+            for a_ in alts:
+                if a_ not in opts: opts.append(a_)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'salary_remainder':
+            # Ramesh spends a%, b%, c%, d% of salary. Borrows E to meet an expense of F. Find salary.
+            spend_items = [
+                ("food", "house rent", "entertainment", "conveyance"),
+                ("groceries", "transport", "clothing", "utilities"),
+                ("education", "medical", "travel", "dining"),
+            ]
+            items = random.choice(spend_items)
+            a = random.choice([30, 35, 40, 45])
+            b = random.choice([15, 18, 20])
+            c = random.choice([10, 12, 15])
+            d = random.choice([5, 6, 8])
+            total_spent_pct = a + b + c + d
+            saved_pct = 100 - total_spent_pct
+            # Family function expense = F, borrows E
+            E = random.choice([8000, 10000, 12000, 16000])
+            F = E + random.choice([2000, 4000, 5000, 8000])
+            # savings - available = F - E => salary * saved_pct/100 = F - E... wait
+            # He borrowed E to meet TOTAL expense of F.
+            # So from salary S, he spent on items: total_spent_pct% .
+            # Remaining = (100-total_spent_pct)% = saved_pct%.
+            # He uses ALL remaining for the function BUT still needs MORE = borrows E.
+            # So: S*saved_pct/100 + E = F => S = (F-E)*100/saved_pct
+            S = (F - E) * 100 // saved_pct
+            templates = [
+                (f"{{name}} spends {a}% of monthly salary on {items[0]}, {b}% on {items[1]}, {c}% on {items[2]}, and {d}% on {items[3]}. Due to a family function, he borrows Rs.{E} to meet an expense of Rs.{F}. What is his monthly salary?", "Rs."),
+                (f"{{name}} allocates {a}% of income to {items[0]}, {b}% to {items[1]}, {c}% to {items[2]}, {d}% to {items[3]}. For a special event costing Rs.{F}, she borrows Rs.{E}. What is her monthly income?", "Rs."),
+            ]
+            names = ["Ramesh", "Priya", "Amit", "Neha", "Suresh"]
+            name = random.choice(names)
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(name=name)
+            correct = S
+            explanation = (f"Total spent = {a}+{b}+{c}+{d} = {total_spent_pct}%.\n"
+                           f"Remaining (savings) = 100-{total_spent_pct} = {saved_pct}%.\n"
+                           f"He uses savings + borrows {E} to pay {F}.\n"
+                           f"Savings from salary = {F} - {E} = {F-E}.\n"
+                           f"{saved_pct}% of S = {F-E} => S = {F-E}×100/{saved_pct} = {S}.")
+
+        elif sub == 'property_value_chain':
+            # Anuja owns X% of property. Y% of her share = Z. Find W% of total.
+            templates = [
+                ("{name} owns {x}% of a property. {y}% of the property she owns is worth Rs.{z}. What is {w}% of the total value of the property?", "Rs."),
+                ("A company holds {x}% of a real estate. {y}% of its share is valued at Rs.{z}. Find {w}% of the total property value.", "Rs."),
+                ("{name} has {x}% stake in a business. {y}% of her stake is worth Rs.{z}. What is {w}% of the total business value?", "Rs."),
+            ]
+            x = random.choice([50, 60, 75, 66])  # including 66(2/3)%
+            x_str = "66(2/3)" if x == 66 else str(x)
+            x_val = 200/3 if x == 66 else x
+            y = random.choice([20, 25, 30, 40, 50])
+            w = random.choice([40, 45, 50, 60, 75])
+            # y% of (x_val% of T) = Z => T = Z*100*100/(y*x_val)
+            Z = random.choice([10000, 25000, 50000, 75000, 100000, 125000])
+            T = Z * 100 * 100 / (y * x_val)
+            ans = round(w * T / 100)
+            names = ["Anuja", "Priya", "Meena", "Sunita"]
+            name = random.choice(names)
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(name=name, x=x_str, y=y, z=Z, w=w)
+            correct = ans
+            explanation = (f"{name} owns {x_str}% of T = {x_val:.2f}% × T.\n"
+                           f"{y}% of ({x_val:.2f}% of T) = {Z}.\n"
+                           f"T = {Z}×100×100/({y}×{x_val:.2f}) = {T:.2f}.\n"
+                           f"{w}% of T = {w}×{T:.2f}/100 = {ans}.")
+
+        elif sub == 'spoiled_fruit_subsets':
+            templates = [
+                ("A crate of fruits contains 1 spoiled fruit for every {n} fruits. {p}% of the spoiled fruits were sold. If the seller sold {k} spoiled fruits, how many fruits were there in total?", "fruits"),
+                ("A warehouse has 1 defective item for every {n} items. {p}% of defective items are shipped. If {k} defective items were shipped, how many items are in the warehouse?", "items"),
+                ("In a shipment, 1 in every {n} apples is rotten. {p}% of rotten apples were dispatched. If {k} rotten apples were dispatched, find the total number of apples.", "apples"),
+            ]
+            n = random.choice([10, 20, 25, 50])
+            p = random.choice([30, 40, 50, 60, 80])
+            k = random.choice([24, 36, 48, 60, 72, 90])
+            # spoiled = k / (p/100) = k*100/p
+            spoiled = k * 100 // p
+            total = spoiled * n
+            tmpl, unit = random.choice(templates)
+            question = tmpl.format(n=n, p=p, k=k)
+            correct = total
+            explanation = (f"1 spoiled per {n} fruits => spoiled fraction = 1/{n}.\n"
+                           f"{p}% of spoiled = {k}.\n"
+                           f"Total spoiled = {k}×100/{p} = {spoiled}.\n"
+                           f"Total {unit} = {spoiled}×{n} = {total}.")
+
+        # Build integer options
+        def make_options_int(v, step=None):
+            opts = [str(v)]
+            step = step or max(100, abs(v)//5)
+            while len(opts) < 4:
+                alt = v + random.choice([-3,-2,-1,1,2,3]) * step
+                if alt > 0:
+                    s = str(alt)
+                    if s not in opts: opts.append(s)
+            random.shuffle(opts)
+            return opts, opts.index(str(v))
+
+        opts, idx = make_options_int(correct)
+        return {
+            "question_text": question,
+            "options": opts,
+            "correct_option_index": idx,
+            "explanation": explanation,
+            "difficulty": 4
+        }
+
 hybrid_generator = HybridGenerator()
