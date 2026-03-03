@@ -16,6 +16,7 @@ async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data['session_current_index'] = 0
     context.user_data['custom_pool'] = [] # Pool for batched questions
     context.user_data['session_wrong_patterns'] = [] # Track wrong answers
+    context.user_data['session_wrong_questions'] = [] # Track wrong question texts
     
     # Selection Summary
     pattern_names = []
@@ -102,9 +103,26 @@ async def trigger_next_question(update: Update, context: ContextTypes.DEFAULT_TY
             
             final_msg += names_msg + "\n"
             
+        wrong_questions = context.user_data.get('session_wrong_questions', [])
+        chat_id = update.effective_chat.id
+        
+        if wrong_questions:
+            wq_msg = "❌ <b>Review Your Incorrect Answers:</b>\n"
+            for idx, wq in enumerate(wrong_questions):
+                # Ensure we don't exceed message limits, clip if needed
+                wq_str = f"\n<b>Q{idx+1}:</b> {wq}\n"
+                if len(wq_msg) + len(wq_str) > 4000:
+                    wq_msg += "\n<i>...and more questions omitted.</i>"
+                    break
+                wq_msg += wq_str
+                
+            try:
+                await context.bot.send_message(chat_id, wq_msg, parse_mode='HTML')
+            except Exception as e:
+                print(f"DEBUG: Failed to send wrong questions msg: {e}")
+                
         final_msg += "What would you like to do next?"
         
-        chat_id = update.effective_chat.id
         await context.bot.send_message(chat_id, final_msg, reply_markup=session_complete_keyboard(target_count=target_count), parse_mode='HTML')
         return
 
@@ -186,6 +204,8 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pattern_id = context.user_data.get('current_pattern_id')
         if pattern_id:
             context.user_data.setdefault('session_wrong_patterns', []).append(pattern_id)
+            
+        context.user_data.setdefault('session_wrong_questions', []).append(html.escape(q_data['question_text']))
     
     context.user_data.setdefault('session_current_index', 0)
     context.user_data['session_current_index'] += 1

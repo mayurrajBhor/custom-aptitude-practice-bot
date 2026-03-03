@@ -177,7 +177,7 @@ class DatabaseManager:
                 last_difficulty_level = %s
             WHERE id = %s
             """
-            新mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
+            new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
             params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
             
             self.execute_query(query, params)
