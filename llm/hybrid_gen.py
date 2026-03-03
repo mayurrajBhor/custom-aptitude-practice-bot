@@ -1406,4 +1406,399 @@ class HybridGenerator:
             "difficulty": 4
         }
 
+    def generate_income_expenditure(self):
+        """Phase 21 Cat 1: Income, Expenditure, and Savings Chains
+        Covers successive changes tracking back/forth via I = E + S.
+        """
+        sub = random.choice([
+            'direct_savings_pct',         # Q1, Q2, Q3, Q10
+            'net_decimal_variation',      # Q5
+            'backtrack_target_amt_str',   # Q4
+            'missing_savings_rate'        # Q11
+        ])
+        
+        def make_options(correct_val, step=None):
+            opts = [str(correct_val)]
+            step = step or max(5, abs(correct_val) // 5)
+            while len(opts) < 4:
+                alt = correct_val + random.choice([-3, -2, -1, 1, 2, 3]) * step
+                if alt > 0:
+                    s = str(alt)
+                    if s not in opts: opts.append(s)
+            random.shuffle(opts)
+            return opts, opts.index(str(correct_val))
+
+        if sub == 'direct_savings_pct' or sub == 'net_decimal_variation':
+            # Sub types based on Q1,2,3,5,10.
+            # Base logic: I = E + S. dI, dE -> find dS
+            names = ["A", "Rahul", "Priya", "Amit"]
+            name = random.choice(names)
+            e_pct = random.choice([60, 65, 75, 80]) # percent spent
+            s_pct = 100 - e_pct                     # percent saved
+            i_inc = random.choice([15, 19, 20, 25, 29, 20.1])
+            e_inc = random.choice([10, 13, 15, 20, 25])
+            
+            # Using base Income = 1000 for standard % equations.
+            I0 = 1000
+            E0 = I0 * e_pct / 100
+            S0 = I0 - E0
+            
+            I1 = I0 * (1 + i_inc / 100)
+            E1 = E0 * (1 + e_inc / 100)
+            S1 = I1 - E1
+            
+            s_change_pct = round(( (S1 - S0) / S0 ) * 100, 1)
+            diff = abs(s_change_pct)
+            direction = "increase" if s_change_pct > 0 else "decrease"
+
+            # Formatting
+            if sub == 'net_decimal_variation':
+                question = f"{name} saves {s_pct}% of his income. If his income increases by {i_inc}% and his expenditure increases by {e_inc}%, then by what percentage do his savings restrictively {direction}? (round to 1 decimal point)"
+                correct = f"{diff}% {direction}"
+            else:
+                question = f"{name} spends {e_pct}% of his income. His income is increased by {i_inc}% and his expenditure is increased by {e_inc}%. Find the % change in his savings."
+                correct_val = int(diff) if diff.is_integer() else diff
+                correct = f"{correct_val}% {direction}"
+
+            explanation = (f"Let Income = 1000. Expenditure = {e_pct}% = {E0}. Savings = {S0}.\n"
+                           f"New Income = 1000 × {1 + i_inc/100:.3f} = {I1:.1f}.\n"
+                           f"New Expenditure = {E0} × {1 + e_inc/100:.3f} = {E1:.1f}.\n"
+                           f"New Savings = {I1:.1f} - {E1:.1f} = {S1:.1f}.\n"
+                           f"{direction.title()} in savings = ({S1:.1f} - {S0}) / {S0} × 100 = {s_change_pct}%")
+                           
+            opts = [correct]
+            alts = [round(diff + d, 1) for d in [-5.5, -2.1, 3.0, 5.0, 8.5] if round(diff + d, 1) > 0]
+            for a in alts:
+                a_str = f"{int(a) if a.is_integer() else a}% {direction}"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) >= 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'backtrack_target_amt_str': 
+            # Q4: Expenses = I * (1 + x%). Income + A%, Expenses + B% -> Savings + Z -> Find Init Expense 
+            e_base = 100
+            templates = [
+                "The monthly expenses of a person are {p}% OF her monthly income. If her monthly income increases by {i_inc}% and her monthly expenses increase by {e_inc}%, there is an increase of Rs. {z} in her monthly savings. What is the initial expenditure?",
+            ]
+            
+            fraction_str = random.choice([("66(2/3)", 200/3), ("75", 75), ("80", 80), ("60", 60)])
+            p_str, p_val = fraction_str
+            
+            i_inc = random.choice([20, 25, 40, 44, 50])
+            e_inc = random.choice([30, 40, 50, 60, 80])
+            
+            # Use base 300 to clear 66(2/3)% cleanly
+            base = 300
+            # Scale
+            I_b = base
+            E_b = I_b * p_val / 100
+            S_b = I_b - E_b
+            
+            I_n = I_b * (1 + i_inc/100)
+            E_n = E_b * (1 + e_inc/100)
+            S_n = I_n - E_n
+            
+            unit_change = S_n - S_b
+            
+            # Scale total up to target amount logically
+            mult = random.choice([4, 5, 10, 20])
+            Z = int(unit_change * mult)
+            
+            # Calculate target
+            Target_Exp = int(E_b * mult)
+            
+            question = templates[0].format(p=p_str, i_inc=i_inc, e_inc=e_inc, z=Z)
+            correct = Target_Exp
+            explanation = (f"Let Income = {base} units. Expenses = {p_str}% of {base} = {E_b} units. Savings = {S_b} units.\n"
+                           f"New Income = {base} × 1.{i_inc} = {I_n}. New Expenses = {E_b} × 1.{e_inc} = {E_n}.\n"
+                           f"New Savings = {I_n} - {E_n} = {S_n} units.\n"
+                           f"Increase in savings = {unit_change:.2f} units.\n"
+                           f"Given increase = Rs. {Z}. Therefore 1 unit = {Z} / {unit_change:.2f} = {mult}.\n"
+                           f"Initial expenditure = {E_b} × {mult} = Rs. {Target_Exp}.")
+            
+            opts, idx = make_options(correct, step=Target_Exp//4)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": idx,
+                    "explanation": explanation, "difficulty": 5}
+
+        elif sub == 'missing_savings_rate':
+            # Q11: saves x%, income + i%, exp + e% -> savings + s%
+            i_inc = random.choice([20, 26, 30])
+            e_inc = random.choice([15, 20, 25])
+            s_inc_target = random.choice([40, 50, 60])
+            
+            # Equation: 
+            # I1 = I0(1 + i/100), E1 = (I0 - S0)*(1 + e/100)
+            # S1 = I1 - E1
+            # We want (S1 - S0)/S0 = s_target/100
+            # S1 = S0 * (1 + s_target/100)
+            # I0(1+i) - (I0-S0)(1+e) = S0(1+s)
+            # I0(1+i) - I0(1+e) + S0(1+e) = S0(1+s)
+            # I0(i - e) = S0(s - e)
+            # S0/I0 = (i - e) / (s - e) => x / 100
+            # Needs clean divisions:
+            while True:
+                num = i_inc - e_inc
+                den = s_inc_target - e_inc
+                if den > 0 and num > 0 and (num * 100 % den == 0):
+                    x_target = (num * 100) // den
+                    break
+                else:
+                    i_inc = random.choice([20, 26, 30, 40, 50])
+                    e_inc = random.choice([10, 15, 20, 25])
+                    s_inc_target = random.choice([40, 50, 60, 75])
+
+            question = f"Rishu saves x% of her income. If her income increases by {i_inc}% and her expenditure increases by {e_inc}%, her savings increase by {s_inc_target}%. What is the value of x?"
+            correct = f"{x_target}%"
+            explanation = (f"Let Income = I and Savings = S. Expenditure E = I - S.\n"
+                           f"S0/I0 = (Income % increase - Expense % increase) / (Savings % increase - Expense % increase)\n"
+                           f"S/I = ({i_inc} - {e_inc}) / ({s_inc_target} - {e_inc}) = {num}/{den}.\n"
+                           f"Value of x = ({num}/{den}) × 100 = {x_target}%.")
+            
+            opts = [correct]
+            alts = [f"{x_target + d}%" for d in [-10, -5, 5, 10, 15] if x_target+d > 0]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 5}
+
+    def generate_pass_fail_aggregates(self):
+        """Phase 21 Cat 2: Pass/Fail and Aggregate Scaling distributions
+        """
+        sub = random.choice([
+            'split_pass_fail_ratios',     # Q6
+            'weighted_pass_fail',         # Q7, Q8
+            'missing_weighted_component', # Q13
+            'margin_work_scaling',        # Q9
+            'absentee_splits'             # Q12
+        ])
+        
+        def make_options(correct_val, step=None):
+            opts = [str(correct_val)]
+            step = step or max(5, abs(int(correct_val)) // 5)
+            while len(opts) < 4:
+                alt = correct_val + random.choice([-3, -2, -1, 1, 2, 3]) * step
+                if alt > 0:
+                    s = str(alt)
+                    if s not in opts: opts.append(s)
+            random.shuffle(opts)
+            return opts, opts.index(str(correct_val))
+
+        if sub == 'split_pass_fail_ratios':
+            # Q6: Y has P% more students than X. X has F1% fail. Total pass is P_tot%. Find Y's fail %.
+            P = random.choice([20, 50, 100, 150])
+            F1 = random.choice([20, 25, 30, 40])
+            
+            # X passes
+            P1 = 100 - F1
+            
+            # Build valid Y fail rate and calculate P_tot
+            while True:
+                F2 = random.choice([10, 15, 20, 25, 30])
+                P2 = 100 - F2
+                
+                # Math: X students = 100, Y students = 100 * (1 + P/100)
+                nx = 100
+                ny = int(100 * (1 + P / 100))
+                
+                total_students = nx + ny
+                total_pass = nx * P1 / 100 + ny * P2 / 100
+                P_tot = (total_pass / total_students) * 100
+                
+                if P_tot.is_integer() and P_tot > 0 and P_tot < 100:
+                    P_tot = int(P_tot)
+                    break 
+
+            question = f"A certain number of students from school X appeared in an examination and {F1}% of the students failed. {P}% more students than school X appeared in school Y. If {P_tot}% of the total number of students who appeared from X and Y passed, then what is the percentage of students who failed from Y?"
+            correct = f"{F2}%"
+            explanation = (f"Let students from X = 100. Fail = {F1}%, so Pass from X = {P1}.\n"
+                           f"Students from Y = 100 + {P}% = {ny}.\n"
+                           f"Total students = 100 + {ny} = {nx + ny}.\n"
+                           f"Total passed = {P_tot}% of {nx + ny} = {int(total_pass)}.\n"
+                           f"Pass from Y = Total pass - Pass from X = {int(total_pass)} - {P1} = {int(total_pass - P1)}.\n"
+                           f"Fail from Y = Total from Y - Pass from Y = {ny} - {int(total_pass - P1)} = {int(ny - (total_pass - P1))}.\n"
+                           f"Fail % from Y = ({int(ny - (total_pass - P1))} / {ny}) * 100 = {F2}%.")
+            
+            opts = [correct]
+            alts = [f"{F2 + d}%" for d in [-10, -5, 5, 8, 10, 15] if F2+d > 0]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 5}
+
+        elif sub == 'weighted_pass_fail':
+            # Q7/8: Weighted average pass rates. 
+            # Sub-variation: raw numbers vs maximum marks.
+            v = random.choice([1, 2])
+            if v == 1:
+                # Q7 style (raw numbers)
+                n1 = random.choice([40, 60, 80, 100])
+                n2 = random.choice([40, 60, 80, 120])
+                p1 = random.choice([50, 60, 75, 80])
+                p2 = random.choice([50, 60, 75, 80])
+                
+                tot_passed = (n1 * p1 / 100) + (n2 * p2 / 100)
+                tot_students = n1 + n2
+                avg_rate = (tot_passed / tot_students) * 100
+                
+                question = f"In two successive years, {n1} and {n2} students of a school appeared at the final examination, of which {p1}% and {p2}% passed respectively. The average rate of students passed is:"
+                correct = f"{round(avg_rate, 2)}%"
+                explanation = (f"Total students = {n1} + {n2} = {tot_students}.\n"
+                               f"Total passed = ({p1}% of {n1}) + ({p2}% of {n2}) = {int(n1 * p1 / 100)} + {int(n2 * p2 / 100)} = {int(tot_passed)}.\n"
+                               f"Average pass rate = ({int(tot_passed)} / {tot_students}) * 100 = {round(avg_rate, 2)}%.")
+                diff = round(avg_rate, 2)
+                
+            else:
+                # Q8 style (max marks)
+                n1 = random.choice([500, 600, 800, 900])
+                n2 = random.choice([400, 600, 700])
+                p1 = random.choice([60, 70, 72, 80])
+                p2 = random.choice([70, 80, 85, 90])
+                
+                tot_scored = (n1 * p1 / 100) + (n2 * p2 / 100)
+                tot_max = n1 + n2
+                avg_rate = (tot_scored / tot_max) * 100
+                
+                question = f"A scored {p1}% in a paper with maximum marks of {n1} and {p2}% in another paper with maximum marks of {n2}. If the result is based on the combined percentage of the two papers, the combined percentage is:"
+                correct = f"{round(avg_rate, 2)}%"
+                explanation = (f"Marks obtained = ({p1}% of {n1}) + ({p2}% of {n2}) = {int(n1 * p1 / 100)} + {int(n2 * p2 / 100)} = {int(tot_scored)}.\n"
+                               f"Total maximum marks = {n1} + {n2} = {tot_max}.\n"
+                               f"Combined percentage = ({int(tot_scored)} / {tot_max}) * 100 = {round(avg_rate, 2)}%.")
+                diff = round(avg_rate, 2)
+
+            opts = [correct]
+            alts = [round(diff + d, 2) for d in [-3.5, -2.0, 1.5, 3.0, 5.0]]
+            for a in alts:
+                a_str = f"{a}%"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) >= 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'missing_weighted_component':
+            # Q13: A student scored P1% in S1 out of M1. Needs P_tot% overall of M_tot. Find P2%.
+            M1 = random.choice([200, 300, 400])
+            M2 = random.choice([100, 200, 300])
+            M_tot = M1 + M2
+            
+            P1 = random.choice([32, 40, 50, 60])
+            P_tot = random.choice([46, 55, 65, 75])
+            
+            marks1 = (P1 * M1) / 100
+            marks_target = (P_tot * M_tot) / 100
+            
+            marks2_needed = marks_target - marks1
+            P2_req = (marks2_needed / M2) * 100
+            
+            question = f"A student scored {P1}% marks in science subjects out of {M1}. How much percentage should he score in language papers out of {M2} if he is to get an overall {P_tot}% marks?"
+            correct = f"{round(P2_req, 1)}%"
+            explanation = (f"Marks in Science = {P1}% of {M1} = {int(marks1)}.\n"
+                           f"Target marks overall = {P_tot}% of {M_tot} = {int(marks_target)}.\n"
+                           f"Marks needed in Language = {int(marks_target)} - {int(marks1)} = {int(marks2_needed)}.\n"
+                           f"Required % = ({int(marks2_needed)} / {M2}) * 100 = {round(P2_req, 1)}%.")
+
+            opts = [correct]
+            alts = [round(P2_req + d, 1) for d in [-10, -5, 5, 10, 15] if P2_req+d > 0]
+            for a in alts:
+                a_str = f"{a}%"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) >= 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'margin_work_scaling':
+            # Q9: T1 mins for L1 lines, M1% margin. Time T2 for N pages of L2 lines, M2% = M1*(1+X%).
+            # Actually, "25% MORE margin of before" means M2 = M1 * 1.25. (e.g. 8% * 1.25 = 10%)
+            M1 = random.choice([8, 10, 12, 16])
+            margin_increase = random.choice([20, 25, 50])
+            M2 = int(M1 * (1 + margin_increase / 100))
+            
+            T1 = random.choice([10, 15, 20])
+            L1 = random.choice([20, 30, 40])
+            
+            Pages = random.choice([23, 30, 40])
+            L2_per_page = random.choice([40, 50, 60])
+            L2_total = Pages * L2_per_page
+            
+            # Rate of typing raw text: Raw = L1 * (100 - M1) / 100 in T1 mins.
+            raw_text_1 = L1 * (100 - M1)
+            raw_rate = raw_text_1 / T1 
+            
+            # Needed raw text to type: Raw_2 = L2_total * (100 - M2)
+            raw_text_2 = L2_total * (100 - M2)
+            T2 = raw_text_2 / raw_rate
+            
+            question = f"A man can type {L1} lines in {T1} minutes, but he leaves an {M1}% margin on each line. In how much time will he type {Pages} pages, each containing {L2_per_page} lines, on which he leaves {margin_increase}% more margin than before?"
+            correct = f"{round(T2)} minutes"
+            explanation = (f"Actual text per line typed initially = {(100 - M1)}% of a full line.\n"
+                           f"Work rate = {L1} × {(100 - M1)} / {T1} = {raw_rate} units/min.\n"
+                           f"New margin = {M1} + ({margin_increase}% of {M1}) = {M2}%.\n"
+                           f"Actual text per new line = {(100 - M2)}% of a full line.\n"
+                           f"Total lines = {Pages} × {L2_per_page} = {L2_total} lines.\n"
+                           f"Total work needed = {L2_total} × {(100 - M2)} = {raw_text_2} units.\n"
+                           f"Time = {raw_text_2} / {raw_rate} = {round(T2)} minutes.")
+                           
+            opts = [correct]
+            alts = [round(T2 + d) for d in [-30, -10, 10, 20, 30]]
+            for a in alts:
+                a_str = f"{a} minutes"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) >= 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 5}
+
+        elif sub == 'absentee_splits':
+            # Q12: 88(1/3)% of students are girls & rest boys. 60% boys & 80% girls present. Find % absent overall.
+            frac_str = random.choice([("83(1/3)", 250/3), ("66(2/3)", 200/3), ("75", 75), ("80", 80), ("87.5", 87.5)])
+            p_str, p_val = frac_str
+            
+            boys_val = 100 - p_val
+            
+            b_present = random.choice([60, 70, 75, 80])
+            g_present = random.choice([70, 75, 80, 90])
+            
+            absent_pct = (boys_val * (100 - b_present) / 100) + (p_val * (100 - g_present) / 100)
+            
+            question = f"In a class, {p_str}% of the number of students are girls and the rest are boys. If {b_present}% of the number of boys and {g_present}% of the girls are present, then what percentage of the total number of students in the class is absent?"
+            correct = f"{round(absent_pct, 2)}%"
+            
+            explanation = (f"Let total students = 100.\n"
+                           f"Girls = {p_str}% of 100 = {round(p_val, 2)}. Boys = 100 - {round(p_val, 2)} = {round(boys_val, 2)}.\n"
+                           f"Absent boys = (100 - {b_present})% of {round(boys_val, 2)} = {round(boys_val * (100 - b_present)/100, 2)}.\n"
+                           f"Absent girls = (100 - {g_present})% of {round(p_val, 2)} = {round(p_val * (100 - g_present)/100, 2)}.\n"
+                           f"Total absent = {round(boys_val * (100 - b_present)/100, 2)} + {round(p_val * (100 - g_present)/100, 2)} = {round(absent_pct, 2)}%.")
+            
+            opts = [correct]
+            alts = [round(absent_pct + d, 2) for d in [-5.5, -2.0, 2.0, 5.0, 10.0] if absent_pct+d > 0]
+            for a in alts:
+                a_str = f"{a}%"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) >= 4: break
+            random.shuffle(opts)
+            
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
 hybrid_generator = HybridGenerator()

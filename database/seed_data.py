@@ -29,7 +29,9 @@ def seed_gmat_data():
         ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks."),
         ("alligation and shift applications", "Mixtures, population splits, value overlaps, and double-shift nested percentages."),
         ("percentage comparisons", "Nested variable chains, sum-based relativity, ratio equalization, weight fractions, donation differences, and fractional populations."),
-        ("percentage calculations", "Product constancy, work & productivity, geometric scaling, error multipliers, salary remainders, property value chains, and spoiled subset problems.")
+        ("percentage calculations", "Product constancy, work & productivity, geometric scaling, error multipliers, salary remainders, property value chains, and spoiled subset problems."),
+        ("income expenditure saving", "Successive scaling, constant equations, finding percentage changes and backtracking original values across Income = Expenditure + Savings."),
+        ("pass fail aggregates", "Complex weighted averages, multi-object sizing, scaling productivity margins, and subset presence distributions.")
     ]
     
     for name, desc in patterns:

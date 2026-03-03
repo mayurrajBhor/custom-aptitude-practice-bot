@@ -43,6 +43,10 @@ class QuestionGenerator:
             return "percentage_comparisons"
         if pn == "percentage calculations":
             return "percentage_calculations"
+        if pn == "income expenditure saving":
+            return "income_expenditure"
+        if pn == "pass fail aggregates":
+            return "pass_fail_aggregates"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -76,6 +80,10 @@ class QuestionGenerator:
             return hybrid_generator.generate_percentage_comparisons(), None
         elif hybrid_type == "percentage_calculations":
             return hybrid_generator.generate_percentage_calculations(), None
+        elif hybrid_type == "income_expenditure":
+            return hybrid_generator.generate_income_expenditure(), None
+        elif hybrid_type == "pass_fail_aggregates":
+            return hybrid_generator.generate_pass_fail_aggregates(), None
 
         if not os.getenv("GROQ_API_KEY"):
             return None, "Groq API key is missing. Please check your .env file."
@@ -179,6 +187,10 @@ class QuestionGenerator:
                 results.append({**hybrid_generator.generate_percentage_comparisons(), "pattern_id": p['id']})
             elif ht == "percentage_calculations":
                 results.append({**hybrid_generator.generate_percentage_calculations(), "pattern_id": p['id']})
+            elif ht == "income_expenditure":
+                results.append({**hybrid_generator.generate_income_expenditure(), "pattern_id": p['id']})
+            elif ht == "pass_fail_aggregates":
+                results.append({**hybrid_generator.generate_pass_fail_aggregates(), "pattern_id": p['id']})
             else:
                 ai_patterns.append(p)
 
