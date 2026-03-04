@@ -1411,10 +1411,14 @@ class HybridGenerator:
         Covers successive changes tracking back/forth via I = E + S.
         """
         sub = random.choice([
-            'direct_savings_pct',         # Q1, Q2, Q3, Q10
-            'net_decimal_variation',      # Q5
-            'backtrack_target_amt_str',   # Q4
-            'missing_savings_rate'        # Q11
+            'direct_savings_pct',           # Q1: spends X%, income +A%, exp +B% -> savings change
+            'net_decimal_variation',        # Q2: saves X%, income +A%, exp +B% -> savings change (decimal)
+            'backtrack_target_amt_str',     # Q3: savings increase by Rs.Z, find initial expenditure
+            'missing_savings_rate',         # Q4: saves x%, i+A%, e+B%, s+C% -> find x
+            'fixed_savings_find_income',    # Q5: spends fixed Rs.X, saves Rs.Y, income + P% -> new savings
+            'compare_two_persons',          # Q6: A earns more than B by P%, A spends more than B by Q% -> compare savings
+            'exp_as_pct_of_savings',        # Q7: income + A%, exp unchanged -> expenditure is now X% of savings
+            'savings_absolute_change',      # Q8: income + A%, exp + B%, savings change by Rs.Z -> find income
         ])
         
         def make_options(correct_val, step=None):
@@ -1570,15 +1574,158 @@ class HybridGenerator:
                     "correct_option_index": opts.index(correct),
                     "explanation": explanation, "difficulty": 5}
 
+        elif sub == 'fixed_savings_find_income':
+            # Q5: Person spends Rs.A exactly and saves Rs.B. Income increases by P%. Find new savings.
+            spend_abs = random.choice([800, 1200, 1500, 2000, 2500])
+            save_abs = random.choice([200, 400, 500, 600, 800])
+            i_inc = random.choice([10, 15, 20, 25, 30])
+            income_orig = spend_abs + save_abs
+            new_income = income_orig * (1 + i_inc / 100)
+            new_savings = new_income - spend_abs  # expenditure stays fixed
+            
+            names = ["Asha", "Ramesh", "David", "Pooja"]
+            name = random.choice(names)
+            question = (
+                f"{name} spends Rs.{spend_abs} and saves Rs.{save_abs} per month. "
+                f"If the income increases by {i_inc}%, what will be the new monthly savings?"
+            )
+            correct = f"Rs.{int(new_savings)}"
+            explanation = (
+                f"Original Income = Spend + Save = {spend_abs} + {save_abs} = Rs.{income_orig}.\n"
+                f"New Income = {income_orig} × {1 + i_inc/100} = Rs.{new_income}.\n"
+                f"Expenditure remains fixed at Rs.{spend_abs}.\n"
+                f"New Savings = {new_income} - {spend_abs} = Rs.{int(new_savings)}."
+            )
+            opts = [correct]
+            alts = [f"Rs.{int(new_savings) + d}" for d in [-200, -100, 100, 200, 300] if new_savings + d > 0]
+            for a in alts:
+                if a not in opts: opts.append(a)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 3}
+
+        elif sub == 'compare_two_persons':
+            # Q6: A's income is P% more than B's. A spends Q% more than B. Find ratio of savings or who saves more.
+            p_more_income = random.choice([10, 20, 25, 50])
+            q_more_spend = random.choice([5, 10, 20, 30])
+            spend_B = random.choice([600, 800, 1000, 1200])
+            income_B = random.choice([1000, 1200, 1500, 2000])
+            while income_B <= spend_B:
+                income_B = spend_B + random.choice([200, 400, 500])
+            income_A = income_B * (1 + p_more_income / 100)
+            spend_A = spend_B * (1 + q_more_spend / 100)
+            save_A = income_A - spend_A
+            save_B = income_B - spend_B
+            from fractions import Fraction
+            r = Fraction(int(save_A * 100), int(save_B * 100))
+            names_pair = random.choice([("Ravi", "Suresh"), ("Meena", "Tina"), ("Ankit", "Vikas")])
+            question = (
+                f"The monthly income of {names_pair[0]} is {p_more_income}% more than that of {names_pair[1]}. "
+                f"{names_pair[0]}'s monthly expenditure is {q_more_spend}% more than {names_pair[1]}'s. "
+                f"If {names_pair[1]}'s monthly income is Rs.{income_B} and expenditure is Rs.{spend_B}, "
+                f"what is the ratio of {names_pair[0]}'s to {names_pair[1]}'s monthly savings?"
+            )
+            correct = f"{r.numerator}:{r.denominator}"
+            explanation = (
+                f"{names_pair[0]}'s income = {income_B} × {1 + p_more_income/100} = Rs.{income_A}.\n"
+                f"{names_pair[0]}'s expenditure = {spend_B} × {1 + q_more_spend/100} = Rs.{spend_A}.\n"
+                f"{names_pair[0]}'s savings = {income_A} - {spend_A} = Rs.{save_A}.\n"
+                f"{names_pair[1]}'s savings = {income_B} - {spend_B} = Rs.{save_B}.\n"
+                f"Ratio = {save_A}:{save_B} = {r.numerator}:{r.denominator}."
+            )
+            opts = [correct]
+            parts = [r.numerator, r.denominator]
+            for d in [1, -1, 2]:
+                alt = f"{parts[0]+d}:{parts[1]+d}"
+                if alt not in opts: opts.append(alt)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'exp_as_pct_of_savings':
+            # Q7: Expenditure is E% of income. Income increases by I%. Expenditure unchanged. What % is exp of new savings?
+            e_pct = random.choice([60, 64, 70, 75, 80])
+            i_inc = random.choice([15, 20, 25, 30])
+            I0 = 100
+            E0 = e_pct
+            S0 = 100 - e_pct
+            I1 = 100 * (1 + i_inc / 100)
+            S1 = I1 - E0
+            exp_as_pct_savings = round((E0 / S1) * 100, 2)
+            question = (
+                f"A person's expenditure is {e_pct}% of his income. If his income is increased by {i_inc}% "
+                f"while his expenditure remains unchanged, then his expenditure is what percent of his savings?"
+            )
+            correct = f"{exp_as_pct_savings}%"
+            explanation = (
+                f"Let Income = 100. Expenditure = {e_pct}. Savings = {S0}.\n"
+                f"New Income = 100 × {1 + i_inc/100} = {I1}.\n"
+                f"Expenditure unchanged = {e_pct}.\n"
+                f"New Savings = {I1} - {e_pct} = {S1}.\n"
+                f"Exp as % of Savings = ({e_pct} / {S1}) × 100 = {exp_as_pct_savings}%."
+            )
+            opts = [correct]
+            alts = [round(exp_as_pct_savings + d, 2) for d in [-10, -5, 5, 10, 15] if exp_as_pct_savings + d > 0]
+            for a in alts:
+                a_str = f"{a}%"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'savings_absolute_change':
+            # Q8: Income + I%, Expenditure + E%, Savings increases by Rs.Z -> Find original income
+            i_inc = random.choice([20, 25, 30, 40])
+            e_inc = random.choice([10, 15, 20, 25])
+            e_pct = random.choice([50, 60, 70, 75, 80])
+            I0 = 1000  # base
+            E0 = I0 * e_pct / 100
+            S0 = I0 - E0
+            I1 = I0 * (1 + i_inc / 100)
+            E1 = E0 * (1 + e_inc / 100)
+            S1 = I1 - E1
+            unit_change = S1 - S0
+            mult = random.choice([2, 3, 4, 5, 10])
+            Z = int(unit_change * mult)
+            Income_actual = int(I0 * mult)
+            question = (
+                f"A person spends {e_pct}% of his income. If his income increases by {i_inc}% "
+                f"and expenditure increases by {e_inc}%, his savings increase by Rs.{Z}. "
+                f"What is his original income?"
+            )
+            correct = f"Rs.{Income_actual}"
+            explanation = (
+                f"Let Income = {I0}. Expenditure = {e_pct}% = {E0}. Savings = {S0}.\n"
+                f"New Income = {I1}. New Expenditure = {E1}. New Savings = {S1}.\n"
+                f"Increase in savings = {unit_change} per {I0} of income.\n"
+                f"Given increase = Rs.{Z}, so multiplier = {Z}/{int(unit_change)} = {mult}.\n"
+                f"Original Income = {I0} × {mult} = Rs.{Income_actual}."
+            )
+            opts, idx = make_options(Income_actual, step=Income_actual // 4)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": idx,
+                    "explanation": explanation, "difficulty": 5}
+
     def generate_pass_fail_aggregates(self):
         """Phase 21 Cat 2: Pass/Fail and Aggregate Scaling distributions
         """
         sub = random.choice([
-            'split_pass_fail_ratios',     # Q6
-            'weighted_pass_fail',         # Q7, Q8
-            'missing_weighted_component', # Q13
-            'margin_work_scaling',        # Q9
-            'absentee_splits'             # Q12
+            'split_pass_fail_ratios',     # Q1: school X/Y ratio with total pass%
+            'weighted_pass_fail',         # Q2: weighted avg of pass% across two years
+            'missing_weighted_component', # Q3: find required % in second paper for overall target
+            'margin_work_scaling',        # Q4: typing lines with margin calculation
+            'absentee_splits',            # Q5: % absent given boys/girls present%
+            'fail_by_marks',              # Q6: student fails by N marks, find pass marks
+            'pass_by_marks',              # Q7: student passes by N marks, find max marks
+            'two_students_fail_pass',     # Q8: A fails by X, B passes by Y, find pass marks
+            'pass_pct_given_marks',       # Q9: find pass% given marks scored and pass mark
+            'find_max_marks',             # Q10: student scores X%, gets Y more than pass marks, find max
         ])
         
         def make_options(correct_val, step=None):
@@ -1800,5 +1947,164 @@ class HybridGenerator:
             return {"question_text": question, "options": opts,
                     "correct_option_index": opts.index(correct),
                     "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'fail_by_marks':
+            # Q6: Student scores X marks and fails by Y marks. Find pass marks.
+            pass_marks = random.choice([150, 200, 240, 250, 300, 360])
+            fail_by = random.choice([10, 15, 20, 25, 30, 40])
+            scored = pass_marks - fail_by
+            templates = [
+                f"A student scores {scored} marks in an examination and fails by {fail_by} marks. What are the pass marks?",
+                f"In an exam, a candidate obtained {scored} marks but failed by {fail_by} marks. What is the minimum marks required to pass?",
+                f"Rohan got {scored} marks in an examination but could not pass. He fell short by {fail_by} marks. Find the pass mark.",
+            ]
+            question = random.choice(templates)
+            correct = str(pass_marks)
+            explanation = (
+                f"Pass marks = Marks scored + Marks short of passing\n"
+                f"= {scored} + {fail_by} = {pass_marks}."
+            )
+            opts = [correct]
+            for d in [-fail_by * 2, -fail_by, fail_by, fail_by * 2]:
+                alt = str(pass_marks + d)
+                if alt not in opts and int(alt) > 0: opts.append(alt)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 2}
+
+        elif sub == 'pass_by_marks':
+            # Q7: Student passes by Y marks, scored is given, find pass marks or max marks.
+            pass_pct = random.choice([33, 40, 50, 60])
+            max_marks = random.choice([300, 400, 500, 600, 800])
+            pass_marks = (pass_pct * max_marks) // 100
+            pass_by = random.choice([10, 15, 20, 30, 40])
+            scored = pass_marks + pass_by
+            find_what = random.choice(['pass_marks', 'max_marks'])
+            if find_what == 'pass_marks':
+                templates = [
+                    f"A candidate scored {scored} marks in an exam with maximum marks of {max_marks} and passed by {pass_by} marks. What are the passing marks?",
+                    f"Sunita scored {scored} marks in an exam of {max_marks} marks. She passed by {pass_by} marks. What is the minimum marks required to pass?",
+                ]
+                question = random.choice(templates)
+                correct = str(pass_marks)
+                explanation = (
+                    f"Pass marks = Scored - Excess over pass marks\n"
+                    f"= {scored} - {pass_by} = {pass_marks}."
+                )
+            else:
+                templates = [
+                    f"A student scored {scored} marks in an exam and passed by {pass_by} marks. The pass percentage is {pass_pct}%. Find the maximum marks.",
+                    f"Vikram got {scored} marks in an exam. He passed by {pass_by} marks. If the pass percentage is {pass_pct}%, what are the total marks?",
+                ]
+                question = random.choice(templates)
+                correct = str(max_marks)
+                explanation = (
+                    f"Pass marks = Scored - Excess = {scored} - {pass_by} = {pass_marks}.\n"
+                    f"{pass_pct}% of Max = {pass_marks}\n"
+                    f"Max = {pass_marks} × 100 / {pass_pct} = {max_marks}."
+                )
+            opts = [correct]
+            step = int(correct) // 5
+            for d in [-2, -1, 1, 2]:
+                alt = str(int(correct) + d * step)
+                if alt not in opts and int(alt) > 0: opts.append(alt)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 3}
+
+        elif sub == 'two_students_fail_pass':
+            # Q8: A fails by X marks. B passes by Y marks. A scored N more/less than B. Find pass marks.
+            pass_marks = random.choice([200, 240, 300, 360, 400])
+            fail_A_by = random.choice([10, 15, 20, 25])
+            pass_B_by = random.choice([10, 15, 20, 25])
+            scored_A = pass_marks - fail_A_by
+            scored_B = pass_marks + pass_B_by
+            diff = scored_B - scored_A
+            templates = [
+                (f"A student A fails by {fail_A_by} marks in an exam. Another student B passes by {pass_B_by} marks. "
+                 f"If B scored {diff} marks more than A, find the pass marks.", pass_marks),
+                (f"In an examination, Ramesh fails by {fail_A_by} marks while Suresh passes by {pass_B_by} marks. "
+                 f"Suresh got {diff} more marks than Ramesh. What are the pass marks?", pass_marks),
+            ]
+            tmpl, correct_val = random.choice(templates)
+            question = tmpl
+            correct = str(correct_val)
+            explanation = (
+                f"A scored = Pass - {fail_A_by} = Pass - {fail_A_by}.\n"
+                f"B scored = Pass + {pass_B_by} = Pass + {pass_B_by}.\n"
+                f"Difference = B - A = {pass_B_by} + {fail_A_by} = {diff}.\n"
+                f"But given difference is {diff}, which matches. Pass marks = {pass_marks}."
+            )
+            opts = [correct]
+            for d in [-fail_A_by * 2, -fail_A_by, pass_B_by, pass_B_by * 2]:
+                alt = str(pass_marks + d)
+                if alt not in opts and int(alt) > 0: opts.append(alt)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 3}
+
+        elif sub == 'pass_pct_given_marks':
+            # Q9: A student scored N marks out of M. Pass marks are P. Find pass percentage.
+            max_marks = random.choice([300, 400, 500, 600])
+            pass_marks = random.choice([120, 150, 200, 240])
+            while pass_marks >= max_marks:
+                pass_marks = random.randint(max_marks // 3, max_marks // 2)
+            pass_pct = round((pass_marks / max_marks) * 100, 2)
+            scored = pass_marks + random.choice([10, 20, 30, 40])
+            templates = [
+                f"In an examination with {max_marks} maximum marks and {pass_marks} pass marks, what is the pass percentage?",
+                f"To pass an examination, a student needs to score {pass_marks} out of {max_marks}. What is the minimum pass percentage?",
+                f"An exam has a maximum of {max_marks} marks. The minimum required to pass is {pass_marks} marks. What percentage is the pass mark?",
+            ]
+            question = random.choice(templates)
+            correct = f"{pass_pct}%"
+            explanation = (
+                f"Pass percentage = (Pass marks / Max marks) × 100\n"
+                f"= ({pass_marks} / {max_marks}) × 100 = {pass_pct}%."
+            )
+            opts = [correct]
+            alts = [round(pass_pct + d, 2) for d in [-10, -5, 5, 10] if pass_pct + d > 0]
+            for a in alts:
+                a_str = f"{a}%"
+                if a_str not in opts: opts.append(a_str)
+                if len(opts) == 4: break
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 2}
+
+        elif sub == 'find_max_marks':
+            # Q10: Student scores P% and gets Y more marks than passing. Passing % is Q. Find max marks.
+            pass_pct = random.choice([33, 40, 50])
+            score_pct = random.choice([50, 60, 70, 75, 80])
+            while score_pct <= pass_pct:
+                score_pct = pass_pct + random.choice([10, 15, 20, 25])
+            max_marks = random.choice([200, 300, 400, 500, 600])
+            pass_marks = (pass_pct * max_marks) // 100
+            score_marks = (score_pct * max_marks) // 100
+            excess = score_marks - pass_marks
+            templates = [
+                f"By scoring {score_pct}% marks, a student passes by {excess} marks. If the pass percentage is {pass_pct}%, what are the maximum marks?",
+                f"A candidate scores {score_pct}% in an exam and exceeds the pass mark by {excess}. If the pass percentage is {pass_pct}%, find the total marks.",
+                f"Geeta scores {score_pct}% in her exam and passes by {excess} marks. The pass percentage is {pass_pct}%. What is the maximum marks in the exam?",
+            ]
+            question = random.choice(templates)
+            correct = str(max_marks)
+            explanation = (
+                f"Score = {score_pct}% of M. Pass marks = {pass_pct}% of M.\n"
+                f"Excess = ({score_pct} - {pass_pct})% of M = {excess}.\n"
+                f"{score_pct - pass_pct}% of M = {excess}.\n"
+                f"M = {excess} × 100 / {score_pct - pass_pct} = {max_marks}."
+            )
+            opts, idx = make_options(max_marks, step=max_marks // 4)
+            return {"question_text": question, "options": opts,
+                    "correct_option_index": idx,
+                    "explanation": explanation, "difficulty": 3}
 
 hybrid_generator = HybridGenerator()

@@ -113,8 +113,10 @@ class DatabaseManager:
         INSERT INTO questions (pattern_id, question_text, options, correct_option_index, explanation, difficulty)
         VALUES (%s, %s, %s, %s, %s, %s)
         """
-        # psycopg2 handles dicts/lists for JSONB columns automatically
-        self.execute_query(query, (pattern_id, question_text, options, correct_index, explanation, difficulty))
+        # Explicit serialization because psycopg2 might default a Python list to text[] instead of jsonb
+        import json
+        options_json = json.dumps(options)
+        self.execute_query(query, (pattern_id, question_text, options_json, correct_index, explanation, difficulty))
 
     def get_recent_questions(self, pattern_id, limit=50):
         query = "SELECT question_text FROM questions WHERE pattern_id = %s ORDER BY created_at DESC LIMIT %s"
