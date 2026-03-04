@@ -47,6 +47,10 @@ class QuestionGenerator:
             return "income_expenditure"
         if pn == "pass fail aggregates":
             return "pass_fail_aggregates"
+        if pn == "examination scoring":
+            return "exam_scoring"
+        if pn == "successive percentage changes":
+            return "successive_changes"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -69,7 +73,12 @@ class QuestionGenerator:
             elif hybrid_type == "percentage_comparisons": hybrid_result = hybrid_generator.generate_percentage_comparisons()
             elif hybrid_type == "percentage_calculations": hybrid_result = hybrid_generator.generate_percentage_calculations()
             elif hybrid_type == "income_expenditure": hybrid_result = hybrid_generator.generate_income_expenditure()
-            elif hybrid_type == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
+            elif hybrid_type == "pass_fail_aggregates":
+                return hybrid_generator.generate_pass_fail_aggregates(), None
+            elif hybrid_type == "exam_scoring":
+                return hybrid_generator.generate_exam_scoring(), None
+            elif hybrid_type == "successive_changes":
+                return hybrid_generator.generate_successive_net_change(), None
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
@@ -212,6 +221,10 @@ class QuestionGenerator:
                 results.append({**hybrid_generator.generate_income_expenditure(), "pattern_id": p['id']})
             elif ht == "pass_fail_aggregates":
                 results.append({**hybrid_generator.generate_pass_fail_aggregates(), "pattern_id": p['id']})
+            elif ht == "exam_scoring":
+                results.append({**hybrid_generator.generate_exam_scoring(), "pattern_id": p['id']})
+            elif ht == "successive_changes":
+                results.append({**hybrid_generator.generate_successive_net_change(), "pattern_id": p['id']})
             else:
                 ai_patterns.append(p)
 
@@ -282,98 +295,158 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             return results, str(e)
 
     def _rephrase_hybrid_question(self, hybrid_data):
-        """Takes a math-generated question dict and uses the LLM to rewrite the linguistic framing."""
+        """Takes a math-generated question dict and uses the LLM to rewrite the linguistic framing with a retry loop."""
         if not os.getenv("GROQ_API_KEY"):
-            return hybrid_data # Graceful fallback if no key
+            return hybrid_data 
             
-        prompt = f"""
-        You are a GMAT Question Rephraser.
-        Take the following functionally correct math question and rewrite the storyline/context completely.
-        Use a creative new theme (e.g. spaceships, business budgets, ancient kingdoms, racecars, obscure professions, etc).
+        original_text = hybrid_data['question_text']
+        original_explanation = hybrid_data['explanation']
         
-        Original Question: {hybrid_data['question_text']}
-        Original Explanation: {hybrid_data['explanation']}
-        
-        CRITICAL RULES:
-        1. DO NOT change any numbers or mathematical relationships.
-        2. DO NOT change or reorder the multiple choice options.
-        3. You must output a JSON object with strictly these keys:
-           "question_text": "your new unique rewritten question",
-           "explanation": "the original explanation, altered ONLY to fit the new names/themes. Keep the formulas identical."
-        """
-        try:
-            chat = self.client.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "You are a math tutor assistant. Output strictly valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                model=self.model,
-                response_format={"type": "json_object"}
-            )
-            val = json.loads(chat.choices[0].message.content)
+        for attempt in range(2): # Up to 2 retries
+            prompt = f"""
+            You are a GMAT Question Rephraser.
+            Take the following functionally correct math question and rewrite the storyline/context completely.
+            Use a creative new theme (e.g. spaceships, business budgets, ancient kingdoms, racecars, obscure professions, etc).
             
-            # Merge the new text over the original, preserving options/correct_index/difficulty/pattern_id
-            return {
-                **hybrid_data,
-                "question_text": val.get("question_text", hybrid_data["question_text"]),
-                "explanation": val.get("explanation", hybrid_data["explanation"])
-            }
-        except Exception as e:
-            print(f"Hybrid Rephrase Error: {e}")
-            return hybrid_data # Graceful fallback
+            Original Question: {original_text}
+            Original Explanation: {original_explanation}
+            
+            CRITICAL RULES:
+            1. KEEP ALL NUMERICAL VALUES EXACTLY THE SAME. If the original says 50, use 50. 
+            2. You MAY change units (e.g., from "dollars" to "galactic credits" or "km" to "light years") if it fits the new theme, but the raw numbers must be invariant.
+            3. DO NOT change or reorder the multiple choice options.
+            4. You must output a JSON object with strictly these keys:
+               "question_text": "your new unique rewritten question",
+               "explanation": "the original explanation, altered ONLY to fit the new names/themes. Keep the formulas identical."
+            """
+            try:
+                chat = self.client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You are a math tutor assistant. Output strictly valid JSON."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model=self.model,
+                    response_format={"type": "json_object"}
+                )
+                rephrased_json = json.loads(chat.choices[0].message.content)
+                new_text = rephrased_json.get("question_text", original_text)
+                new_explanation = rephrased_json.get("explanation", original_explanation)
+                
+                # Double-LLM Verification
+                is_valid, reason = self._verify_rephrased_content(original_text, new_text)
+                if is_valid:
+                    return {
+                        **hybrid_data,
+                        "question_text": new_text,
+                        "explanation": new_explanation
+                    }
+                else:
+                    print(f"Rephrase Verification Failed (Attempt {attempt+1}). Reason: {reason}")
+                    print(f"Offending text: {new_text}")
+            except Exception as e:
+                print(f"Hybrid Rephrase Error (Attempt {attempt+1}): {e}")
+        
+        return hybrid_data # Graceful fallback to original if retries fail
 
-    def _batch_rephrase_hybrid(self, hybrid_list):
-        """Takes a list of hybrid question dicts and rewrites them all in one LLM call for speed."""
-        if not hybrid_list or not os.getenv("GROQ_API_KEY"):
-            return hybrid_list
-            
-        original_texts = ""
-        for i, h in enumerate(hybrid_list):
-            original_texts += f"\\n--- ITEM {i} ---\\nQuestion: {h['question_text']}\\nExplanation: {h['explanation']}"
-            
+    def _verify_rephrased_content(self, original, rephrased):
+        """Second LLM call to verify that the math remains identical."""
         prompt = f"""
-        You are a GMAT Question Rephraser.
-        I will give you {len(hybrid_list)} mathematically correct word problems.
-        For EACH one, rewrite the storyline/context completely using a creative new theme (e.g. spaceships, business budgets, ancient kingdoms, racecars).
+        You are a Math Content Verifier. 
+        Compare these two versions of a math question. 
+        The second version (REPHRASED) should be a stylistic rewrite of the first (ORIGINAL).
         
-        CRITICAL RULES:
-        1. DO NOT change any numbers or mathematical relationships.
-        2. DO NOT change the multiple choice options.
-        3. Output a single JSON object with a "replacements" array. Each object in the array MUST correspond to the input items in order.
+        ORIGINAL: {original}
+        REPHRASED: {rephrased}
         
-        Format:
-        {{
-            "replacements": [
-                {{
-                    "question_text": "new rewritten text for ITEM 0",
-                    "explanation": "explanation adapted to new theme but keeping exact same math/formulas"
-                }},
-                ...
-            ]
-        }}
+        RULES:
+        1. All numerical values in the ORIGINAL must be present and identical in the REPHRASED version.
+        2. Units may change (e.g., $ to credits) but the digits must be invariant.
+        3. The mathematical logic as defined by the constraints must be identical.
+        4. The question goal (what is being asked for) must be identical.
         
-        INPUT ITEMS:
-        {original_texts}
+        Output strictly a JSON object: {{"is_valid": true/false, "reason": "short explanation if false"}}
         """
         try:
             chat = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You output only valid JSON arrays."},
+                    {"role": "system", "content": "You are a Match Consistency Checker. YOUR ONLY JOB is to ensure that the DIGITS and NUMBERS (like 20, 10, 50%) are the same in both versions. DO NOT care about currency, names, units, or themes. IF THE NUMBERS MATCH, IS_VALID IS TRUE."},
                     {"role": "user", "content": prompt}
                 ],
-                model=self.model,
+                model=self.model, # Can use same or faster model
                 response_format={"type": "json_object"}
             )
             res = json.loads(chat.choices[0].message.content)
-            replacements = res.get("replacements", [])
-            
-            if len(replacements) == len(hybrid_list):
-                for i in range(len(hybrid_list)):
-                    hybrid_list[i]["question_text"] = replacements[i].get("question_text", hybrid_list[i]["question_text"])
-                    hybrid_list[i]["explanation"] = replacements[i].get("explanation", hybrid_list[i]["explanation"])
+            return res.get("is_valid", False), res.get("reason", "No reason provided")
         except Exception as e:
-            print(f"Hybrid Batch Rephrase Error: {e}")
+            return True, f"Error in verification call: {e}" # Fallback to true to avoid infinite retry blocking on minor API errors
+
+    def _batch_rephrase_hybrid(self, hybrid_list):
+        """Takes a list of hybrid question dicts and rewrites them all in one LLM call with verification."""
+        if not hybrid_list or not os.getenv("GROQ_API_KEY"):
+            return hybrid_list
             
+        for attempt in range(2): 
+            original_texts = ""
+            for i, h in enumerate(hybrid_list):
+                original_texts += f"\\n--- ITEM {i} ---\\nQuestion: {h['question_text']}\\nExplanation: {h['explanation']}"
+                
+            prompt = f"""
+            You are a GMAT Question Rephraser.
+            I will give you {len(hybrid_list)} mathematically correct word problems.
+            For EACH one, rewrite the storyline/context completely using a creative new theme.
+            
+            CRITICAL RULES:
+            1. DO NOT change any numbers or mathematical relationships.
+            2. DO NOT change the multiple choice options.
+            3. Output a single JSON object with a "replacements" array. 
+            
+            Format:
+            {{
+                "replacements": [
+                    {{
+                        "question_text": "new rewritten text for ITEM 0",
+                        "explanation": "explanation adapted to new theme"
+                    }},
+                    ...
+                ]
+            }}
+            
+            INPUT ITEMS:
+            {original_texts}
+            """
+            try:
+                chat = self.client.chat.completions.create(
+                    messages=[
+                        {"role": "system", "content": "You output only valid JSON arrays."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    model=self.model,
+                    response_format={"type": "json_object"}
+                )
+                res = json.loads(chat.choices[0].message.content)
+                replacements = res.get("replacements", [])
+                
+                if len(replacements) == len(hybrid_list):
+                    all_valid = True
+                    for i in range(len(hybrid_list)):
+                        # Verify each one
+                        is_valid, reason = self._verify_rephrased_content(hybrid_list[i]['question_text'], replacements[i].get('question_text', ''))
+                        if not is_valid:
+                            print(f"Batch item {i} failed verification: {reason}")
+                            all_valid = False
+                            break
+                    
+                    if all_valid:
+                        for i in range(len(hybrid_list)):
+                            hybrid_list[i]["question_text"] = replacements[i].get("question_text", hybrid_list[i]["question_text"])
+                            hybrid_list[i]["explanation"] = replacements[i].get("explanation", hybrid_list[i]["explanation"])
+                        return hybrid_list
+                    else:
+                        print(f"Batch Rephrase Verification Failed (Attempt {attempt+1})")
+                
+            except Exception as e:
+                print(f"Hybrid Batch Rephrase Error (Attempt {attempt+1}): {e}")
+                
         return hybrid_list
 
     def restructure_pattern(self, raw_text):

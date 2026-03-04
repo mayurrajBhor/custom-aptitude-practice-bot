@@ -31,7 +31,9 @@ def seed_gmat_data():
         ("percentage comparisons", "Nested variable chains, sum-based relativity, ratio equalization, weight fractions, donation differences, and fractional populations."),
         ("percentage calculations", "Product constancy, work & productivity, geometric scaling, error multipliers, salary remainders, property value chains, and spoiled subset problems."),
         ("income expenditure saving", "Successive scaling, constant equations, finding percentage changes and backtracking original values across Income = Expenditure + Savings."),
-        ("pass fail aggregates", "Complex weighted averages, multi-object sizing, scaling productivity margins, and subset presence distributions.")
+        ("pass fail aggregates", "Complex weighted averages, multi-object sizing, scaling productivity margins, and subset presence distributions."),
+        ("examination scoring", "Max marks, pass/fail thresholds, sum-difference relationships, and ratio shifts in scoring."),
+        ("successive percentage changes", "Calculating single equivalent change for multiple random percentage increases or decreases.")
     ]
     
     for name, desc in patterns:

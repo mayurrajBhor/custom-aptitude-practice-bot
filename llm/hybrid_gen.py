@@ -2234,7 +2234,312 @@ class HybridGenerator:
             )
             opts, idx = make_options(max_marks, step=max_marks // 4)
             return {"question_text": question, "options": opts,
-                    "correct_option_index": idx,
-                    "explanation": explanation, "difficulty": 3}
+                    "correct_option_index": opts.index(correct),
+                    "explanation": explanation, "difficulty": 4}
+
+    def generate_exam_scoring(self):
+        """Phase 22 Cat 1: Examination Scoring & Cut-offs
+        Covers pass/fail marks, max marks, and shifts.
+        """
+        sub = random.choice([
+            'sum_difference_pct',         # Q1, Q4
+            'avg_candidates',             # Q2
+            'student_chain',              # Q3
+            'ratio_shift_pass_fail',      # Q5
+            'score_comparison_chain',     # Q6
+            'fail_pass_offsets',          # Q7
+            'fail_pass_simple'            # Q8
+        ])
+
+        def make_options_int(correct_val):
+            opts = [str(correct_val)]
+            step = max(5, correct_val // 10)
+            while len(opts) < 4:
+                alt = correct_val + random.choice([-3, -2, -1, 1, 2, 3]) * step
+                if alt > 0 and str(alt) not in opts:
+                    opts.append(str(alt))
+            random.shuffle(opts)
+            return opts, opts.index(str(correct_val))
+
+        if sub == 'sum_difference_pct':
+            # Q1, Q4: A got X marks more than B. A's marks were P% of sum.
+            diff = random.choice([9, 10, 15, 20, 30])
+            p = random.choice([55, 56, 60, 62.5])
+            
+            # A = p/100 * (A + B)
+            # A = p/100 * (A + A - diff) = p/100 * (2A - diff)
+            # 100A = p * 2A - p * diff
+            # A * (100 - 2p) = -p * diff
+            # A = p * diff / (2p - 100)
+            
+            while True:
+                num = p * diff
+                den = 2 * p - 100
+                if den > 0 and num % den == 0:
+                    a_marks = num // den
+                    b_marks = a_marks - diff
+                    break
+                else:
+                    diff = random.randint(5, 40)
+                    p = random.choice([52, 54, 55, 56, 58, 60])
+
+            names = ["Ram", "Shyam", "Rahul", "Pranita", "Amit"]
+            objs = ["Math", "Science", "English"]
+            n1, n2 = random.sample(names, 2)
+            o1, o2 = random.sample(objs, 2)
+            
+            if random.random() > 0.5:
+                question = f"In an entrance exam, {n1} secured {diff} marks more than {n2}, and his marks were {p}% of the sum of their marks. What were the marks obtained by them?"
+                correct = f"{a_marks} and {b_marks}"
+                explanation = (f"Let {n1} = A, {n2} = B. A = B + {diff} => B = A - {diff}.\n"
+                               f"A = {p}% of (A + B) = {p}/100 * (A + A - {diff})\n"
+                               f"100A = {p}(2A - {diff}) => 100A = {2*p}A - {p*diff}\n"
+                               f"{2*p - 100}A = {p*diff} => A = {num}/{den} = {a_marks}.\n"
+                               f"B = {a_marks} - {diff} = {b_marks}.")
+            else:
+                question = f"{n1} got {diff} marks more in {o1} than what she got in {o2}. Her {o1} marks are {p}% of the sum of her {o1} and {o2} marks. What are her {o2} marks?"
+                correct = str(b_marks)
+                explanation = (f"Let {o1} = M, {o2} = S. M = S + {diff}.\n"
+                               f"M = {p}% of (M + S) => M = {p}/100 * (M + M - {diff})\n"
+                               f"M = {a_marks}, S = {b_marks}.")
+
+            opts = [correct]
+            if "and" in correct:
+                alts = [f"{a_marks+10} and {b_marks+10}", f"{a_marks-5} and {b_marks-5}", f"{a_marks+20} and {b_marks+20}"]
+            else:
+                alts = [str(b_marks+10), str(b_marks-10), str(b_marks+15)]
+            for a in alts:
+                if a not in opts: opts.append(a)
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts, "correct_option_index": opts.index(correct), "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'avg_candidates':
+            # Q2: Average marks of N candidates is A_tot. Avg of passed is A_p, avg of failed is A_f. Find passed count.
+            n_tot = random.choice([100, 120, 150, 200])
+            while True:
+                a_tot = random.randint(25, 45)
+                a_passed = random.randint(a_tot + 5, 60)
+                a_failed = random.randint(10, a_tot - 5)
+                
+                # Equation: x * a_p + (n_tot - x) * a_f = n_tot * a_tot
+                # x(a_p - a_f) = n_tot(a_tot - a_f)
+                num = n_tot * (a_tot - a_failed)
+                den = a_passed - a_failed
+                if num % den == 0:
+                    x = num // den
+                    break
+
+            question = f"The average marks obtained by {n_tot} candidates in a certain examination is {a_tot}. If the average marks of passed candidates is {a_passed} and failed candidates is {a_failed}, what is the number of candidates who passed the exam?"
+            correct = str(x)
+            explanation = (f"Let passed = x. Failed = {n_tot} - x.\n"
+                           f"Total Marks = {n_tot} * {a_tot} = {n_tot * a_tot}.\n"
+                           f"x * {a_passed} + ({n_tot} - x) * {a_failed} = {n_tot * a_tot}.\n"
+                           f"x({a_passed} - {a_failed}) = {n_tot*a_tot} - {n_tot*a_failed} = {num}.\n"
+                           f"x = {num} / {den} = {x}.")
+            opts, idx = make_options_int(x)
+            return {"question_text": question, "options": opts, "correct_option_index": idx, "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'student_chain':
+            # Q3: Chain percentage. A = B*(1+x%), A = C*(1-y%). Given B find C.
+            b_marks = random.choice([200, 220, 250, 300])
+            p_ab = random.randint(10, 25)
+            p_ac_less = random.randint(5, 15)
+            
+            a_marks = b_marks * (1 + p_ab / 100)
+            c_marks = a_marks / (1 - p_ac_less / 100)
+            
+            while not c_marks.is_integer():
+                b_marks += 10
+                p_ab = random.randint(10, 25)
+                p_ac_less = random.randint(5, 15)
+                a_marks = b_marks * (1 + p_ab / 100)
+                c_marks = a_marks / (1 - p_ac_less / 100)
+
+            c_marks = int(c_marks)
+            question = f"A, B, and C are three students. A got {p_ab}% more marks than B and {p_ac_less}% less marks than C. If B got {b_marks} marks, then how many marks has C got?"
+            correct = str(c_marks)
+            explanation = (f"B = {b_marks}.\n"
+                           f"A = B + {p_ab}% of B = {b_marks} * {1 + p_ab/100} = {int(a_marks)}.\n"
+                           f"A is {p_ac_less}% less than C => A = C * (100 - {p_ac_less})/100 = C * {100-p_ac_less}/100.\n"
+                           f"C = ({int(a_marks)} * 100) / {100-p_ac_less} = {c_marks}.")
+            opts, idx = make_options_int(c_marks)
+            return {"question_text": question, "options": opts, "correct_option_index": idx, "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'ratio_shift_pass_fail':
+            # Q5: Initial ratio P:F = a:b. If 1 more passed & appeared (so total +1), and 3 less failed...
+            # Wait, "If one more students had appeared & passed & the number of failed students was 3 less than earlier"
+            # This means: New Pass = P + 1, New Fail = F - 3. Total students = (P+1)+(F-3) = P+F-2.
+            # Initial: P = 25k, F = 4k.
+            # New: (25k + 1) / (4k - 3) = 22 / 3.
+            # 3(25k + 1) = 22(4k - 3)
+            # 75k + 3 = 88k - 66
+            # 13k = 69 -> k = 69/13 (not nice).
+            
+            # Let's generalize: (ak + m) / (bk - n) = c / d
+            # d(ak + m) = c(bk - n)
+            # dak + dm = cbk - cn
+            # k(cb - da) = dm + cn
+            # k = (dm + cn) / (cb - da)
+            
+            while True:
+                a, b = 25, 4
+                c, d = random.randint(5, 30), random.randint(1, 10)
+                m, n = random.randint(1, 5), random.randint(1, 5)
+                
+                num = d * m + c * n
+                den = c * b - d * a
+                if den != 0 and num % den == 0 and num // den > 0:
+                    k = num // den
+                    init_pass = a * k
+                    init_fail = b * k
+                    diff = init_pass - init_fail
+                    break
+                else:
+                    a, b = random.choice([(25, 4), (5, 2), (7, 3)])
+                    c, d = random.choice([(22, 3), (4, 1), (3, 1)])
+                    m, n = random.randint(1, 5), random.randint(1, 10)
+
+            question = f"In an exam, the number of students who passed and the number of students who failed were in the ratio of {a}:{b}. If {m} more student(s) had appeared and passed and the number of failed students was {n} less than earlier, the ratio of passed students to failed students would have become {c}:{d}. What is the difference between the number of students who initially passed and the number who failed?"
+            correct = str(abs(diff))
+            explanation = (f"Initial ratio {a}:{b} => Pass = {a}k, Fail = {b}k.\n"
+                           f"New Pass = {a}k + {m}, New Fail = {b}k - {n}.\n"
+                           f"({a}k + {m})/({b}k - {n}) = {c}/{d}.\n"
+                           f"Solving for k: {d}({a}k + {m}) = {c}({b}k - {n}) => {k*den}k = {num} => k = {k}.\n"
+                           f"Initial Pass = {a}*{k} = {init_pass}, Initial Fail = {b}*{k} = {init_fail}.\n"
+                           f"Difference = {init_pass} - {init_fail} = {diff}.")
+            opts, idx = make_options_int(abs(diff))
+            return {"question_text": question, "options": opts, "correct_option_index": idx, "explanation": explanation, "difficulty": 5}
+
+        elif sub == 'score_comparison_chain':
+            # Q6 style: Chain of relative scores. A < B, B > C, C relative to D...
+            # Ram scored 25 less than Rohit. Rohit 45 more than Sam. Rohan 75 (10 more than Sam). Ravi 34 more than Ram. Max-Ravi = 50. Find Ravi %.
+            
+            sam = random.randint(50, 80)
+            rohan_diff = random.randint(5, 15)
+            rohan = sam + rohan_diff
+            
+            rohit_diff = random.randint(30, 60)
+            rohit = sam + rohit_diff
+            
+            ram_diff = random.randint(10, 30)
+            ram = rohit - ram_diff
+            
+            ravi_diff = random.randint(20, 40)
+            ravi = ram + ravi_diff
+            
+            max_offset = random.randint(40, 60)
+            max_marks = ravi + max_offset
+            
+            pct = round((ravi / max_marks) * 100, 1)
+
+            question = f"In an examination Ram scored {ram_diff} marks less than Rohit. Rohit scored {rohit_diff} more marks than Sam. Rohan scored {rohan} marks which is {rohan_diff} more than Sam. Ravi's score is {max_offset} less than the maximum marks of the test. What approximate percentage of marks did Ravi score if he gets {ravi_diff} more than Ram?"
+            correct = f"{pct}%"
+            explanation = (f"Rohan = {rohan}. Rohan = Sam + {rohan_diff} => Sam = {rohan} - {rohan_diff} = {sam}.\n"
+                           f"Rohit = Sam + {rohit_diff} = {sam} + {rohit_diff} = {rohit}.\n"
+                           f"Ram = Rohit - {ram_diff} = {rohit} - {ram_diff} = {ram}.\n"
+                           f"Ravi = Ram + {ravi_diff} = {ram} + {ravi_diff} = {ravi}.\n"
+                           f"Max Marks = Ravi + {max_offset} = {ravi} + {max_offset} = {max_marks}.\n"
+                           f"Ravi % = ({ravi} / {max_marks}) * 100 = {pct}%.")
+            
+            opts = [correct]
+            for d in [-3.2, 2.5, 5.0]:
+                alt = f"{round(pct + d, 1)}%"
+                if alt not in opts: opts.append(alt)
+            random.shuffle(opts)
+            return {"question_text": question, "options": opts, "correct_option_index": opts.index(correct), "explanation": explanation, "difficulty": 5}
+
+        elif sub == 'fail_pass_offsets':
+            # Q7: gets X% fail by M. gets Y% gets N more than pass. Find max marks.
+            # Pass Mark = X% Max + M = Y% Max - N
+            # (Y - X)% Max = M + N
+            # Max = (M + N) / ((Y - X)/100)
+            
+            while True:
+                x = random.randint(25, 35)
+                y = random.randint(x + 5, 45)
+                m = random.randint(10, 30)
+                n = random.randint(10, 30)
+                
+                num = (m + n) * 100
+                den = y - x
+                if num % den == 0:
+                    max_marks = num // den
+                    pass_marks = (x * max_marks // 100) + m
+                    break
+            
+            question = f"In a test, a student got {x}% marks and failed by {m} marks. In the same test, another student got {y}% marks and secured {n} marks more than the essential minimum pass marks. What is the maximum pass marks (maximum marks) of the test?"
+            correct = str(max_marks)
+            explanation = (f"Let Max Marks = T.\n"
+                           f"Passing Marks P = {x}% of T + {m}.\n"
+                           f"Passing Marks P = {y}% of T - {n}.\n"
+                           f"{y}% of T - {x}% of T = {m} + {n}.\n"
+                           f"({y-x})% of T = {m+n} => T = ({m+n} * 100) / {y-x} = {max_marks}.")
+            opts, idx = make_options_int(max_marks)
+            return {"question_text": question, "options": opts, "correct_option_index": idx, "explanation": explanation, "difficulty": 4}
+
+        elif sub == 'fail_pass_simple':
+            # Q8: Need P% to pass. Gets M, fails by N. Find Max.
+            while True:
+                p = random.choice([25, 30, 33, 35, 40])
+                m = random.randint(40, 150)
+                n = random.randint(10, 50)
+                
+                num = (m + n) * 100
+                if num % p == 0:
+                    max_marks = num // p
+                    break
+
+            question = f"For a student to pass an exam, he has to secure {p}% marks. If he gets {m} marks and fails by {n}, then what are the maximum marks of the exam?"
+            correct = str(max_marks)
+            explanation = (f"Passing Marks = {m} + {n} = {m+n}.\n"
+                           f"{p}% of Max = {m+n} => Max = ({m+n} * 100) / {p} = {max_marks}.")
+            opts, idx = make_options_int(max_marks)
+            return {"question_text": question, "options": opts, "correct_option_index": idx, "explanation": explanation, "difficulty": 3}
+
+    def generate_successive_net_change(self):
+        """Phase 22 Cat 2: Successive Percentage Net Change
+        Calculates equivalent single change for multiple random changes.
+        """
+        n_changes = random.choice([2, 3])
+        changes = []
+        for _ in range(n_changes):
+            # Using random values as requested
+            val = round(random.uniform(1.0, 12.0), 1)
+            if val.is_integer(): val = int(val)
+            changes.append(val)
+        
+        # Net multiplier: (1 - d1)(1 - d2)... for discounts (based on user examples 1, 2 -> 2.98)
+        multiplier = 1.0
+        for d in changes:
+            multiplier *= (1 - d/100)
+        
+        net_change = round((1 - multiplier) * 100, 3)
+        
+        change_str = ", ".join([f"{c}%" for c in changes])
+        question = f"Calculate the single equivalent discount percentage for successive discounts of {change_str}."
+        correct = f"{net_change}%"
+        
+        if n_changes == 2:
+            d1, d2 = changes
+            explanation = (f"Formula: d1 + d2 - (d1*d2)/100\n"
+                           f"Net = {d1} + {d2} - ({d1}*{d2})/100 = {d1+d2} - {round(d1*d2/100, 4)} = {net_change}%.")
+        else:
+            d1, d2, d3 = changes
+            r1 = (1 - d1/100)
+            r2 = (1 - d2/100)
+            r3 = (1 - d3/100)
+            explanation = (f"Equivalent multiplier = (1 - d1/100)(1 - d2/100)(1 - d3/100)\n"
+                           f"M = {r1:.4f} * {r2:.4f} * {r3:.4f} = {multiplier:.6f}\n"
+                           f"Net Discount = (1 - {multiplier:.6f}) * 100 = {net_change}%.")
+
+        opts = [correct]
+        while len(opts) < 4:
+            alt = round(net_change + random.choice([-1.5, -0.5, 0.5, 1.5, 2.0]), 3)
+            if alt > 0:
+                alt_str = f"{alt}%"
+                if alt_str not in opts: opts.append(alt_str)
+        random.shuffle(opts)
+        
+        return {"question_text": question, "options": opts, "correct_option_index": opts.index(correct), "explanation": explanation, "difficulty": 4}
 
 hybrid_generator = HybridGenerator()
