@@ -353,34 +353,82 @@ class HybridGenerator:
 
     def generate_percentage_equations(self):
         """Phase 18 Category 1: Percentage Equations & Ratios"""
-        sub_type = random.choice(['sum_diff', 'direct_eq', 'multi_var', 'third_anchor', 'sum_constraint'])
+        sub_type = random.choice([
+            'sum_diff_ratio',       # Q12: P%(A+B)=Q%(A-B), find A:B ratio
+            'sum_diff_percent',     # Q23: P%(A+B)=Q%(A-B), find A as % of B
+            'direct_eq_find_x',    # Q21: P% of A = Q% of B, find x% (B as % of A)
+            'direct_eq_two_var',   # Q22/Q26: two equalities, find combined expression
+            'multi_var',           # Q27: 30%A = 0.25B = 1/5C, find A:B:C
+            'third_anchor',        # Q20: first is X% of C, second is Y% less than C
+            'sum_constraint',      # Q29: sum + ratio constraint
+        ])
         
-        if sub_type == 'sum_diff':
-            # e.g., 40% (a+b) = 60% (a-b), find ratio or expression like a/b
+        if sub_type == 'sum_diff_ratio':
+            # Q12: P%(A+B) = Q%(A-B), find A:B ratio
             p1 = random.choice([10, 15, 20, 25, 30, 40])
             p2 = random.choice([50, 60, 70, 75, 80])
             f = Fraction(p1 + p2, p2 - p1)
-            
-            expr_type = random.choice(['ratio', 'percentage'])
-            if expr_type == 'ratio':
-                question = f"If {p1}% of (A + B) = {p2}% of (A - B), then what is the ratio of A to B?"
-                correct = f"{f.numerator}:{f.denominator}"
-                explanation = f"{p1}(A + B) = {p2}(A - B)\n=> {p1}A + {p1}B = {p2}A - {p2}B\n=> ({p1} + {p2})B = ({p2} - {p1})A\n=> {p1+p2}B = {p2-p1}A\n=> A/B = {p1+p2}/{p2-p1} = {f.numerator}/{f.denominator}."
-            else:
-                question = f"If {p1}% of (A + B) = {p2}% of (A - B), then A is what percent of B?"
-                val = float(f) * 100
-                correct = f"{int(val)}%" if val.is_integer() else f"{round(val, 2)}%"
-                explanation = f"{p1}(A + B) = {p2}(A - B)\n=> {p1+p2}B = {p2-p1}A\n=> A/B = {f.numerator}/{f.denominator}.\nAs a percentage: ({f.numerator}/{f.denominator}) * 100 = {correct}."
-                
-        elif sub_type == 'direct_eq':
-            # e.g., 80% A = 50% B. Find B as x% of A.
+            templates = [
+                f"If {p1}% of (A + B) = {p2}% of (A - B), then what is the ratio of A to B?",
+                f"Two numbers A and B satisfy {p1}(A + B) = {p2}(A - B). What is A : B?",
+                f"The sum of two numbers is related to their difference such that {p1}% of their sum equals {p2}% of their difference. Find A:B.",
+            ]
+            question = random.choice(templates)
+            correct = f"{f.numerator}:{f.denominator}"
+            explanation = f"{p1}(A + B) = {p2}(A - B)\n=> {p1}A + {p1}B = {p2}A - {p2}B\n=> ({p1} + {p2})B = ({p2} - {p1})A\n=> {p1+p2}B = {p2-p1}A\n=> A/B = {p1+p2}/{p2-p1} = {f.numerator}/{f.denominator}."
+
+        elif sub_type == 'sum_diff_percent':
+            # Q23: P%(A+B) = Q%(A-B), find A as % of B
+            p1 = random.choice([10, 15, 20, 25, 30, 40])
+            p2 = random.choice([50, 60, 70, 75, 80])
+            f = Fraction(p1 + p2, p2 - p1)
+            val = float(f) * 100
+            templates = [
+                f"If {p1}% of (A + B) = {p2}% of (A - B), then A is what percent of B?",
+                f"Given {p1}(A+B) = {p2}(A-B), express A as a percentage of B.",
+                f"Two numbers A and B satisfy {p1}% of (A+B) = {p2}% of (A–B). What percent of B is A?",
+            ]
+            question = random.choice(templates)
+            correct = f"{int(val)}%" if val.is_integer() else f"{round(val, 2)}%"
+            explanation = f"{p1}(A + B) = {p2}(A - B)\n=> {p1+p2}B = {p2-p1}A\n=> A/B = {f.numerator}/{f.denominator}.\nAs a percentage: ({f.numerator}/{f.denominator}) * 100 = {correct}."
+
+        elif sub_type == 'direct_eq_find_x':
+            # Q21: P% of A = Q% of B, and B = x% of A. Find x.
             p1 = random.choice([40, 50, 60, 75, 80])
             p2 = random.choice([10, 20, 25, 30])
             f = Fraction(p1, p2)
             val = float(f) * 100
             correct = f"{int(val)}" if val.is_integer() else f"{round(val, 2)}"
-            question = f"If {p1}% of A = {p2}% of B, and B = x% of A, then find the value of x."
+            templates = [
+                f"If {p1}% of A = {p2}% of B, and B = x% of A, then find the value of x.",
+                f"Given that {p1}% of A equals {p2}% of B, what percentage of A is B?",
+                f"Two quantities A and B satisfy {p1}% of A = {p2}% of B. If B = x% of A, find x.",
+            ]
+            question = random.choice(templates)
             explanation = f"{p1}% of A = {p2}% of B\n=> {p1}A = {p2}B\n=> B/A = {p1}/{p2} = {f.numerator}/{f.denominator}.\nSo B is ({f.numerator}/{f.denominator}) * 100% of A = {correct}% of A. Thus x = {correct}."
+
+        elif sub_type == 'direct_eq_two_var':
+            # Q22/Q26: A is X% of C, B is Y% of C. Find B as % of A, or A+B as % of C.
+            p_A = random.choice([30, 40, 50, 60, 75])
+            p_B = random.choice([20, 25, 40, 50, 80])
+            t = random.choice(['b_pct_a', 'sum_pct_c'])
+            if t == 'b_pct_a':
+                val = round(p_B / p_A * 100, 2)
+                correct = f"{int(val)}%" if float(val).is_integer() else f"{val}%"
+                templates = [
+                    f"If A = {p_A}% of C and B = {p_B}% of C, then B is what percent of A?",
+                    f"A and B are {p_A}% and {p_B}% of C respectively. Express B as a percentage of A.",
+                ]
+                explanation = f"A = {p_A}% of C => A = {p_A}.\nB = {p_B}% of C => B = {p_B}.\nB as % of A = ({p_B}/{p_A}) * 100 = {correct}."
+            else:
+                val = p_A + p_B
+                correct = f"{val}%"
+                templates = [
+                    f"If A = {p_A}% of C and B = {p_B}% of C, then (A + B) is what percent of C?",
+                    f"A is {p_A}% of C and B is {p_B}% of C. What percentage of C is (A+B)?",
+                ]
+                explanation = f"A + B = {p_A}% of C + {p_B}% of C = ({p_A} + {p_B})% of C = {val}% of C."
+            question = random.choice(templates)
             
         elif sub_type == 'multi_var':
             b1 = random.choice([(1, 4, "25%"), (1, 5, "20%"), (3, 10, "30%")])
@@ -451,12 +499,12 @@ class HybridGenerator:
             elif "%" in correct:
                 val = float(correct.replace("%", ""))
                 alt_val = val + random.choice([-10, -5, 5, 10, 20])
-                alt = f"{int(alt_val)}%" if alt_val.is_integer() else f"{round(alt_val, 2)}%"
+                alt = f"{int(alt_val)}%" if float(alt_val).is_integer() else f"{round(alt_val, 2)}%"
                 if alt not in options and alt_val > 0: options.append(alt)
             else:
                 val = float(correct)
                 alt_val = val + random.choice([-20, -10, 10, 20])
-                alt = str(int(alt_val)) if alt_val.is_integer() else str(round(alt_val, 2))
+                alt = str(int(alt_val)) if float(alt_val).is_integer() else str(round(alt_val, 2))
                 if alt not in options and alt_val > 0: options.append(alt)
         
         random.shuffle(options)
@@ -470,50 +518,93 @@ class HybridGenerator:
 
     def generate_base_comparisons(self):
         """Phase 18 Category 2: Base Comparisons & Successive Chains"""
-        sub_type = random.choice(['direct_base', 'missing_val', 'chain', 'successive', 'var_chain'])
+        sub_type = random.choice([
+            'direct_of',      # Q18: X is what % of Y
+            'direct_less',    # Q19/Q28: X is what % less than Y
+            'missing_add',    # Q11: what to add to X to equal Y
+            'missing_num',    # Q24: P% of which number = Q% of Z
+            'chain',          # Q14: chain multiplication a% of b% of c/d of N
+            'successive',     # Q25: x is P% more than y, y is Q% more than Z
+            'var_chain',      # Q13: b = A% of N, find Q% of b
+        ])
         
-        if sub_type == 'direct_base':
-            t = random.choice(['of', 'less_than'])
-            if t == 'of':
-                p = random.choice([5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 80])
-                Y = random.randint(10, 100) * 10
-                X = (p * Y) // 100
-                if random.random() > 0.5: 
-                    X, Y = X / 10, Y / 10
-                question = f"{X} is what percent of {Y}?"
-                correct = f"{p}%"
-                explanation = f"Percent = (Part / Whole) * 100\n= ({X} / {Y}) * 100 = {p}%."
-            else:
-                p = random.choice([10, 20, 25, 30, 40, 50, 60, 75, 80])
-                Y = random.randint(10, 100) * 10
-                X = Y - (p * Y) // 100
-                if random.random() > 0.5: 
-                    X, Y = X / 10, Y / 10
-                question = f"{X} is what percent less than {Y}?"
-                correct = f"{p}%"
-                explanation = f"Percent less = (Difference / Original Base) * 100\nDifference = {Y} - {X} = {Y-X}.\n({Y-X} / {Y}) * 100 = {p}%."
-                
-        elif sub_type == 'missing_val':
+        if sub_type == 'direct_of':
+            # Q18: X is what percent of Y?
+            p = random.choice([5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 80])
+            Y = random.randint(10, 100) * 10
+            X = (p * Y) // 100
             if random.random() > 0.5:
-                p1, X1 = random.choice([10, 15, 20, 25, 30]), random.randint(10, 50) * 10
-                p2, X2 = random.choice([15, 20, 25, 30, 40, 50]), random.randint(20, 60) * 10
-                val1 = (p1 * X1) // 100
-                val2 = (p2 * X2) // 100
-                if val1 >= val2: val2 = val1 + random.randint(10, 50)
-                ans = val2 - val1
-                question = f"What must be added to {p1}% of {X1} so that the sum is equal to {p2}% of {X2}?"
-                correct = str(ans)
-                explanation = f"Calculate both parts:\n{p1}% of {X1} = {val1}\n{p2}% of {X2} = {val2}\nDifference = {val2} - {val1} = {ans}. You must add {ans}."
+                X, Y = X / 10, Y / 10
+            templates = [
+                f"{X} is what percent of {Y}?",
+                f"What percentage of {Y} is {X}?",
+                f"Express {X} as a percentage of {Y}.",
+            ]
+            question = random.choice(templates)
+            correct = f"{p}%"
+            explanation = f"Percent = (Part / Whole) * 100\n= ({X} / {Y}) * 100 = {p}%."
+
+        elif sub_type == 'direct_less':
+            # Q19/Q28: X is what % less/more than Y?
+            p = random.choice([10, 20, 25, 30, 40, 50, 60, 75, 80])
+            Y = random.randint(10, 100) * 10
+            direction = random.choice(['less', 'more'])
+            if direction == 'less':
+                X = Y - (p * Y) // 100
+                templates = [
+                    f"{X} is what percent less than {Y}?",
+                    f"By what percent is {X} less than {Y}?",
+                    f"{X} is less than {Y} by what percentage?",
+                ]
+                explanation = f"Percent less = (Difference / Original) * 100\nDifference = {Y} - {X} = {Y-X}.\n({Y-X} / {Y}) * 100 = {p}%."
             else:
-                p1 = random.choice([12, 15, 18, 20, 24, 25])
-                p2 = random.choice([10, 12, 16, 20, 25, 30])
-                num2 = random.randint(20, 100) * 5
-                num2 = (num2 // p1) * p1
-                if num2 == 0: num2 = p1 * 5
-                ans = (p2 * num2) // p1
-                question = f"{p1}% of which number is equal to {p2}% of {num2}?"
-                correct = str(ans)
-                explanation = f"Let the number be x.\n{p1}% of x = {p2}% of {num2}\n({p1}/100) * x = {p2 * num2 / 100}\n{p1}x = {p2 * num2}\nx = {p2 * num2} / {p1} = {ans}."
+                X = Y + (p * Y) // 100
+                templates = [
+                    f"{X} is what percent more than {Y}?",
+                    f"By what percent is {X} more than {Y}?",
+                ]
+                explanation = f"Percent more = (Difference / Base) * 100\nDifference = {X} - {Y} = {X-Y}.\n({X-Y} / {Y}) * 100 = {p}%."
+            if random.random() > 0.5:
+                X, Y = X / 10, Y / 10
+            question = random.choice(templates)
+            correct = f"{p}%"
+
+        elif sub_type == 'missing_add':
+            # Q11: What must be added to P% of X so sum equals Q% of Y?
+            p1 = random.choice([10, 15, 20, 25, 30])
+            X1 = random.randint(10, 50) * 10
+            p2 = random.choice([15, 20, 25, 30, 40, 50])
+            X2 = random.randint(20, 60) * 10
+            val1 = (p1 * X1) // 100
+            val2 = (p2 * X2) // 100
+            if val1 >= val2: val2 = val1 + random.randint(10, 50)
+            ans = val2 - val1
+            templates = [
+                f"What must be added to {p1}% of {X1} so that the sum is equal to {p2}% of {X2}?",
+                f"Find what should be added to {p1}% of {X1} to make it equal to {p2}% of {X2}.",
+                f"How much should be added to {p1}% of {X1} to bring it to the level of {p2}% of {X2}?",
+            ]
+            question = random.choice(templates)
+            correct = str(ans)
+            explanation = f"Calculate both parts:\n{p1}% of {X1} = {val1}\n{p2}% of {X2} = {val2}\nDifference = {val2} - {val1} = {ans}. You must add {ans}."
+
+        elif sub_type == 'missing_num':
+            # Q24: P% of which number equals Q% of Z?
+            p1 = random.choice([12, 15, 18, 20, 24, 25])
+            p2 = random.choice([10, 12, 16, 20, 25, 30])
+            num2 = random.randint(20, 100) * 5
+            num2 = (num2 // p1) * p1
+            if num2 == 0: num2 = p1 * 5
+            ans = (p2 * num2) // p1
+            templates = [
+                f"{p1}% of which number is equal to {p2}% of {num2}?",
+                f"Find a number such that {p1}% of it equals {p2}% of {num2}.",
+                f"What number, when {p1}% is taken, gives the same result as {p2}% of {num2}?",
+            ]
+            question = random.choice(templates)
+            correct = str(ans)
+            explanation = f"Let the number be x.\n{p1}% of x = {p2}% of {num2}\n({p1}/100) * x = {p2 * num2 / 100}\n{p1}x = {p2 * num2}\nx = {p2 * num2} / {p1} = {ans}."
+
                 
         elif sub_type == 'chain':
             p1 = random.choice([12, 15, 18, 20, 24]) 
@@ -547,7 +638,7 @@ class HybridGenerator:
             val_x = val_y * m1
             
             question = f"If a number x is {p1}% {t1} than another number y, and y is {p2}% {t2} than {Z}, then x is equal to:"
-            correct = str(int(val_x)) if val_x.is_integer() else str(round(val_x, 2))
+            correct = str(int(val_x)) if float(val_x).is_integer() else str(round(val_x, 2))
             explanation = f"Step 1: Find y. y is {p2}% {t2} than {Z}.\ny = {Z} * {m2} = {val_y}\nStep 2: Find x. x is {p1}% {t1} than y.\nx = {val_y} * {m1} = {correct}."
             
         else: # var_chain
@@ -557,7 +648,7 @@ class HybridGenerator:
             ans = (val2 * val1) / 100
             
             question = f"If b = A% of {val1}, then {val2}% of 'b' is the same as:"
-            correct = f"{int(ans)}% of A" if ans.is_integer() else f"{round(ans, 2)}% of A"
+            correct = f"{int(ans)}% of A" if float(ans).is_integer() else f"{round(ans, 2)}% of A"
             explanation = f"b = (A / 100) * {val1}\n{val2}% of b = ({val2} / 100) * b\nSubstitute b: ({val2} / 100) * (A / 100) * {val1}\nRearranging: A * ({val2} * {val1} / 10000)\n= ({ans} / 100) * A\n= {correct}."
 
         options = [correct]
@@ -565,18 +656,18 @@ class HybridGenerator:
             if "% of A" in correct:
                 val = float(correct.split("%")[0])
                 alt_val = val * random.choice([0.5, 2, 10, 0.1, 5])
-                alt = f"{int(alt_val)}% of A" if alt_val.is_integer() else f"{round(alt_val, 2)}% of A"
+                alt = f"{int(alt_val)}% of A" if float(alt_val).is_integer() else f"{round(alt_val, 2)}% of A"
                 if alt not in options and alt_val > 0: options.append(alt)
             elif "%" in correct:
                 val = float(correct.replace("%", ""))
                 alt_val = val + random.choice([-10, -5, 5, 10, 20])
-                alt = f"{int(alt_val)}%" if alt_val.is_integer() else f"{round(alt_val, 2)}%"
+                alt = f"{int(alt_val)}%" if float(alt_val).is_integer() else f"{round(alt_val, 2)}%"
                 if alt not in options and alt_val > 0: options.append(alt)
             else:
                 val = float(correct)
                 alt_val = val + random.choice([-20, -10, 10, 20, -val*0.1, val*0.1])
                 alt_val = max(1, alt_val)
-                alt = str(int(alt_val)) if alt_val.is_integer() else str(round(alt_val, 2))
+                alt = str(int(alt_val)) if float(alt_val).is_integer() else str(round(alt_val, 2))
                 if alt not in options: options.append(alt)
         
         random.shuffle(options)
@@ -590,7 +681,14 @@ class HybridGenerator:
 
     def generate_applied_percentages(self):
         """Phase 18 Category 3: Applied Scenarios & Complex Calculations"""
-        sub_type = random.choice(['fraction_shift', 'weighted_avg', 'population_split', 'calc_trick_add', 'calc_trick_sub'])
+        sub_type = random.choice([
+            'fraction_shift',       # Q30: numerator/denominator each % increased, find original
+            'weighted_avg',         # Q31: two equal groups, find needed % on second half
+            'population_split',     # Q32: P% boys, girls count given, find boys count
+            'calc_trick_symmetric', # Q16: a% of b + b% of a = 2*(a% of b), find missing
+            'calc_trick_find_val',  # Q17: same trick but asked as direct calculation
+            'calc_trick_sub',       # Extra: precise decimal subtraction
+        ])
         
         if sub_type == 'fraction_shift':
             p_num = random.choice([100, 150, 200, 250, 300]) 
@@ -642,34 +740,66 @@ class HybridGenerator:
             question = q_text
             explanation = f"Since {p_b}% are {label}, the remaining {p_g}% represent the other group.\n{p_g}% of Total = {g_val}\nTotal = {g_val} / {p_g/100} = {total}\nNumber of {label} = {total} - {g_val} = {correct}."
             
-        elif sub_type == 'calc_trick_add':
+        elif sub_type == 'calc_trick_symmetric':
+            # Q16: a% of (b*10) + b% of (a*10) = 2 * (a% of b*10). Find missing value.
             A = random.choice([45.5, 62.5, 78.5, 82.5, 94.5])
             B = random.choice([36, 42, 64, 84])
-            
             term1 = (A * B * 10) / 100
-            term2 = (B * A * 10) / 100 
+            term2 = (B * A * 10) / 100
             total_sum = term1 + term2
-            
             target_diff = random.randint(10, 50) * 10
             rhs = total_sum - target_diff
-            
-            question = f"Calculate the missing value (?): {A}% of {B*10} + {B}% of {int(A*10)} - ? = {int(rhs)}"
+            templates = [
+                f"Calculate the missing value (?): {A}% of {B*10} + {B}% of {int(A*10)} - ? = {int(rhs)}",
+                f"Find the unknown (?) in: {A}% of {int(B*10)} + {B}% of {int(A*10)} = {int(rhs)} + ?",
+                f"What is the value of ?: {A}% of {B*10} + {B}% of {int(A*10)} - {int(rhs)} = ?",
+            ]
+            question = random.choice(templates)
             correct = str(int(target_diff))
-            explanation = f"Notice the trick: {B}% of {int(A*10)} is exactly the same as {B*10}% of {A}, which is also equal to {A}% of {B*10}!\nSo the left side is 2 * ({A}% of {B*10}).\n2 * {term1} = {total_sum}.\n{total_sum} - ? = {int(rhs)}\n? = {target_diff}."
-            
-        else: # calc_trick_sub
+            explanation = (
+                f"Notice the trick: {B}% of {int(A*10)} = {A}% of {int(B*10)} (swap property).\n"
+                f"So the expression = 2 × ({A}% of {int(B*10)}) = 2 × {term1} = {total_sum}.\n"
+                f"{total_sum} - ? = {int(rhs)} => ? = {int(target_diff)}."
+            )
+
+        elif sub_type == 'calc_trick_find_val':
+            # Q17: Direct calculation using symmetry. a% of X + X% of a = 2*(a% of X). 
+            # Ask for the direct total.
+            a = random.choice([25, 30, 40, 45, 50, 60])
+            X = random.choice([80, 120, 150, 200, 240, 300])
+            ans = 2 * (a * X / 100)
+            templates = [
+                f"Calculate: {a}% of {X} + {X}% of {a}",
+                f"Find the value of ({a}% of {X}) + ({X}% of {a}).",
+                f"What is the sum of {a}% of {X} and {X}% of {a}?",
+            ]
+            question = random.choice(templates)
+            correct = str(int(ans)) if ans == int(ans) else str(round(ans, 2))
+            explanation = (
+                f"Using the property: a% of b = b% of a.\n"
+                f"So {X}% of {a} = {a}% of {X} = {a * X / 100}.\n"
+                f"Sum = {a}% of {X} + {a}% of {X} = 2 × {a * X / 100} = {ans}."
+            )
+
+        else:  # calc_trick_sub
             a = random.choice([6.4, 4.5, 8.2, 5.5])
             b = random.randint(100, 1500)
             c = random.choice([3.5, 2.5, 4.2, 1.5])
             d = random.randint(100, 500)
-            
             t1 = (a * b) / 100
             t2 = (c * d) / 100
             ans = round(t1 - t2, 4)
-            
-            question = f"Find the exact value of ({a}% of {b}) - ({c}% of {d}):"
-            correct = f"{int(ans)}" if ans.is_integer() else f"{round(ans, 4)}"
-            explanation = f"Calculate each term separately. Multiply the decimal out:\n{a}% of {b} = {a/100} * {b} = {t1}\n{c}% of {d} = {c/100} * {d} = {t2}\nDifference = {t1} - {t2} = {correct}."
+            templates = [
+                f"Find the exact value of ({a}% of {b}) - ({c}% of {d}):",
+                f"Calculate: {a}% of {b} minus {c}% of {d}.",
+                f"What is ({a}% of {b}) − ({c}% of {d})?",
+            ]
+            question = random.choice(templates)
+            correct = f"{int(ans)}" if float(ans).is_integer() else f"{round(ans, 4)}"
+            explanation = (
+                f"Calculate each term:\n{a}% of {b} = {a/100} × {b} = {t1}\n"
+                f"{c}% of {d} = {c/100} × {d} = {t2}\nDifference = {t1} - {t2} = {correct}."
+            )
 
         options = [correct]
         while len(options) < 4:
@@ -683,13 +813,13 @@ class HybridGenerator:
             elif "%" in correct:
                 val = float(correct.replace("%", ""))
                 alt_val = val + random.choice([-10, -5, 5, 10, 20])
-                alt = f"{int(alt_val)}%" if alt_val.is_integer() else f"{round(alt_val, 2)}%"
+                alt = f"{int(alt_val)}%" if float(alt_val).is_integer() else f"{round(alt_val, 2)}%"
                 if alt not in options and alt_val > 0: options.append(alt)
             else:
                 val = float(correct)
                 alt_val = val + random.choice([-20, -10, 10, 20, -min(10, val*0.1), min(10, val*0.1), 1, -1])
                 alt_val = max(0, alt_val)
-                alt = str(int(alt_val)) if alt_val.is_integer() else str(round(alt_val, 4))
+                alt = str(int(alt_val)) if float(alt_val).is_integer() else str(round(alt_val, 4))
                 if alt not in options: options.append(alt)
         
         random.shuffle(options)
