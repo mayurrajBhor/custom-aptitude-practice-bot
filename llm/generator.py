@@ -73,16 +73,15 @@ class QuestionGenerator:
             elif hybrid_type == "percentage_comparisons": hybrid_result = hybrid_generator.generate_percentage_comparisons()
             elif hybrid_type == "percentage_calculations": hybrid_result = hybrid_generator.generate_percentage_calculations()
             elif hybrid_type == "income_expenditure": hybrid_result = hybrid_generator.generate_income_expenditure()
-            elif hybrid_type == "pass_fail_aggregates":
-                return hybrid_generator.generate_pass_fail_aggregates(), None
-            elif hybrid_type == "exam_scoring":
-                return hybrid_generator.generate_exam_scoring(), None
-            elif hybrid_type == "successive_changes":
-                return hybrid_generator.generate_successive_net_change(), None
+            elif hybrid_type == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
+            elif hybrid_type == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
+            elif hybrid_type == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
-                rephrased = self._rephrase_hybrid_question(hybrid_result)
+                rephrased, err = self._rephrase_hybrid_question(hybrid_result)
+                if err:
+                    return None, f"Rephrasing Error: {err}"
                 return rephrased, None
 
         if not os.getenv("GROQ_API_KEY"):
@@ -178,6 +177,8 @@ class QuestionGenerator:
                 elif ht == "percentage_calculations": hybrid_result = hybrid_generator.generate_percentage_calculations()
                 elif ht == "income_expenditure": hybrid_result = hybrid_generator.generate_income_expenditure()
                 elif ht == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
+                elif ht == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
+                elif ht == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
                 
                 if hybrid_result:
                     hybrid_results.append({**hybrid_result, "pattern_id": p['id']})
@@ -186,47 +187,10 @@ class QuestionGenerator:
                 
         # Batch rephrase all hybrid results at once
         if hybrid_results:
-            hybrid_results = self._batch_rephrase_hybrid(hybrid_results)
+            hybrid_results, err = self._batch_rephrase_hybrid(hybrid_results)
+            if err:
+                return results, f"Batch Rephrasing Error: {err}"
             results.extend(hybrid_results)
-            ht = self._get_hybrid_type(p['name'])
-            if ht == "mixed_fraction":
-                results.append({**hybrid_generator.generate_mixed_fraction(), "pattern_id": p['id']})
-            elif ht == "fraction_subtraction":
-                results.append({**hybrid_generator.generate_fraction_subtraction(), "pattern_id": p['id']})
-            elif ht == "random_conv":
-                results.append({**hybrid_generator.generate_random_conv(), "pattern_id": p['id']})
-            elif ht == "benchmark_conv":
-                results.append({**hybrid_generator.generate_benchmark_conv(), "pattern_id": p['id']})
-            elif ht == "find_original_number":
-                results.append({**hybrid_generator.generate_find_original_number(), "pattern_id": p['id']})
-            elif ht == "fraction_to_decimal":
-                results.append({**hybrid_generator.generate_fraction_to_decimal(), "pattern_id": p['id']})
-            elif ht == "swap_percentage":
-                results.append({**hybrid_generator.generate_swap_percentage(), "pattern_id": p['id']})
-            elif ht == "breakdown_percentage":
-                results.append({**hybrid_generator.generate_breakdown_percentage(), "pattern_id": p['id']})
-            elif ht == "percentage_equations":
-                results.append({**hybrid_generator.generate_percentage_equations(), "pattern_id": p['id']})
-            elif ht == "base_comparisons":
-                results.append({**hybrid_generator.generate_base_comparisons(), "pattern_id": p['id']})
-            elif ht == "applied_percentages":
-                results.append({**hybrid_generator.generate_applied_percentages(), "pattern_id": p['id']})
-            elif ht == "alligation_shifts":
-                results.append({**hybrid_generator.generate_alligation_shifts(), "pattern_id": p['id']})
-            elif ht == "percentage_comparisons":
-                results.append({**hybrid_generator.generate_percentage_comparisons(), "pattern_id": p['id']})
-            elif ht == "percentage_calculations":
-                results.append({**hybrid_generator.generate_percentage_calculations(), "pattern_id": p['id']})
-            elif ht == "income_expenditure":
-                results.append({**hybrid_generator.generate_income_expenditure(), "pattern_id": p['id']})
-            elif ht == "pass_fail_aggregates":
-                results.append({**hybrid_generator.generate_pass_fail_aggregates(), "pattern_id": p['id']})
-            elif ht == "exam_scoring":
-                results.append({**hybrid_generator.generate_exam_scoring(), "pattern_id": p['id']})
-            elif ht == "successive_changes":
-                results.append({**hybrid_generator.generate_successive_net_change(), "pattern_id": p['id']})
-            else:
-                ai_patterns.append(p)
 
         if not ai_patterns:
             return results, None
@@ -297,11 +261,12 @@ Difficulty: {p['difficulty']}/5{avoid_text}
     def _rephrase_hybrid_question(self, hybrid_data):
         """Takes a math-generated question dict and uses the LLM to rewrite the linguistic framing with a retry loop."""
         if not os.getenv("GROQ_API_KEY"):
-            return hybrid_data 
+            return hybrid_data, None 
             
         original_text = hybrid_data['question_text']
         original_explanation = hybrid_data['explanation']
         
+        last_err = "Unknown error"
         for attempt in range(2): # Up to 2 retries
             prompt = f"""
             You are a GMAT Question Rephraser.
@@ -339,14 +304,15 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                         **hybrid_data,
                         "question_text": new_text,
                         "explanation": new_explanation
-                    }
+                    }, None
                 else:
+                    last_err = f"Verification failed: {reason}"
                     print(f"Rephrase Verification Failed (Attempt {attempt+1}). Reason: {reason}")
-                    print(f"Offending text: {new_text}")
             except Exception as e:
+                last_err = str(e)
                 print(f"Hybrid Rephrase Error (Attempt {attempt+1}): {e}")
         
-        return hybrid_data # Graceful fallback to original if retries fail
+        return None, last_err # Propagate the error instead of falling back
 
     def _verify_rephrased_content(self, original, rephrased):
         """Second LLM call to verify that the math remains identical."""
@@ -383,8 +349,9 @@ Difficulty: {p['difficulty']}/5{avoid_text}
     def _batch_rephrase_hybrid(self, hybrid_list):
         """Takes a list of hybrid question dicts and rewrites them all in one LLM call with verification."""
         if not hybrid_list or not os.getenv("GROQ_API_KEY"):
-            return hybrid_list
+            return hybrid_list, None
             
+        last_err = "Unknown batch error"
         for attempt in range(2): 
             original_texts = ""
             for i, h in enumerate(hybrid_list):
@@ -428,11 +395,12 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                 
                 if len(replacements) == len(hybrid_list):
                     all_valid = True
+                    reasons = []
                     for i in range(len(hybrid_list)):
                         # Verify each one
                         is_valid, reason = self._verify_rephrased_content(hybrid_list[i]['question_text'], replacements[i].get('question_text', ''))
                         if not is_valid:
-                            print(f"Batch item {i} failed verification: {reason}")
+                            reasons.append(f"Item {i}: {reason}")
                             all_valid = False
                             break
                     
@@ -440,14 +408,16 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                         for i in range(len(hybrid_list)):
                             hybrid_list[i]["question_text"] = replacements[i].get("question_text", hybrid_list[i]["question_text"])
                             hybrid_list[i]["explanation"] = replacements[i].get("explanation", hybrid_list[i]["explanation"])
-                        return hybrid_list
+                        return hybrid_list, None
                     else:
-                        print(f"Batch Rephrase Verification Failed (Attempt {attempt+1})")
+                        last_err = "; ".join(reasons)
+                        print(f"Batch Rephrase Verification Failed (Attempt {attempt+1}): {last_err}")
                 
             except Exception as e:
+                last_err = str(e)
                 print(f"Hybrid Batch Rephrase Error (Attempt {attempt+1}): {e}")
                 
-        return hybrid_list
+        return None, last_err
 
     def restructure_pattern(self, raw_text):
         prompt = f"""
