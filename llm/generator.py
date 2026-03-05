@@ -271,7 +271,7 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             prompt = f"""
             You are a GMAT Question Rephraser.
             Take the following functionally correct math question and rewrite the storyline/context completely.
-            Use a creative new theme (e.g. spaceships, business budgets, ancient kingdoms, racecars, obscure professions, etc).
+            Use a professional GMAT/CAT theme (e.g. corporate finance, global trade, industrial production, university admissions, salary negotiations, investment portfolios, market research, or logistics).
             
             Original Question: {original_text}
             Original Explanation: {original_explanation}
@@ -360,7 +360,7 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             prompt = f"""
             You are a GMAT Question Rephraser.
             I will give you {len(hybrid_list)} mathematically correct word problems.
-            For EACH one, rewrite the storyline/context completely using a creative new theme.
+            For EACH one, rewrite the storyline/context completely using a professional GMAT/CAT theme (e.g. business operations, economics, social sciences, or corporate management).
             
             CRITICAL RULES:
             1. DO NOT change any numbers or mathematical relationships.

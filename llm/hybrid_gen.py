@@ -2501,11 +2501,17 @@ class HybridGenerator:
         Calculates equivalent single change for multiple random changes.
         """
         n_changes = random.choice([2, 3])
+        has_decimal = random.random() < 0.3 # 30% chance have one decimal
+        decimal_idx = random.randint(0, n_changes - 1) if has_decimal else -1
         changes = []
-        for _ in range(n_changes):
-            # Using random values as requested
-            val = round(random.uniform(1.0, 12.0), 1)
-            if val.is_integer(): val = int(val)
+        for i in range(n_changes):
+            if i == decimal_idx:
+                # Generate a decimal (e.g., 12.5)
+                val = round(random.uniform(2.5, 15.5), 1)
+                if int(val) == val: val += 0.5 # Force it to be a decimal
+            else:
+                # Generate an integer
+                val = random.randint(2, 20)
             changes.append(val)
         
         # Net multiplier: (1 - d1)(1 - d2)... for discounts (based on user examples 1, 2 -> 2.98)

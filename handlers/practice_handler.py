@@ -11,6 +11,11 @@ import asyncio
 async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TYPE, pattern_ids: list, target_count: int = 20):
     # Initialize session
     context.user_data['session_patterns'] = pattern_ids
+    # Create a shuffled queue to ensure all patterns are covered fairly
+    shuffled_patterns = pattern_ids.copy()
+    random.shuffle(shuffled_patterns)
+    context.user_data['session_patterns_queue'] = shuffled_patterns
+    
     context.user_data['session_score'] = 0
     context.user_data['session_total_target'] = target_count
     context.user_data['session_current_index'] = 0
@@ -42,13 +47,20 @@ async def _fill_custom_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not pattern_ids:
         return
         
-    # Prepare patterns for the batch (try to be diverse)
+    # Prepare patterns for the batch using a fair queue
+    queue = context.user_data.get('session_patterns_queue', [])
     selected_for_batch = []
-    if len(pattern_ids) >= 5:
-        selected_for_batch = random.sample(pattern_ids, 5)
-    else:
-        # Cycle through available patterns to fill 5 slots
-        selected_for_batch = (pattern_ids * (5 // len(pattern_ids) + 1))[:5]
+    
+    while len(selected_for_batch) < 5:
+        if not queue:
+            # Refill and reshuffle when empty
+            queue = context.user_data.get('session_patterns', []).copy()
+            random.shuffle(queue)
+            
+        selected_for_batch.append(queue.pop(0))
+    
+    # Save the remaining queue back
+    context.user_data['session_patterns_queue'] = queue
         
     batch_patterns_info = []
     user_id = update.effective_user.id
