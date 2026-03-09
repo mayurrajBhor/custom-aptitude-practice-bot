@@ -105,6 +105,16 @@ class DatabaseManager:
         res = self.execute_query("SELECT id FROM patterns WHERE topic_id = %s", (topic_id,))
         return [row['id'] for row in res] if res else []
 
+    def get_all_pattern_ids_for_category(self, category_id):
+        query = """
+        SELECT p.id 
+        FROM patterns p
+        JOIN topics t ON p.topic_id = t.id
+        WHERE t.category_id = %s
+        """
+        res = self.execute_query(query, (category_id,))
+        return [row['id'] for row in res] if res else []
+
     def unlock_pattern(self, pattern_id):
         self.execute_query("UPDATE patterns SET is_unlocked = %s WHERE id = %s", (True, pattern_id))
 
@@ -212,6 +222,9 @@ class DatabaseManager:
         query = """
         INSERT INTO patterns (topic_id, name, description, difficulty_level, is_unlocked)
         VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (topic_id, name) DO UPDATE SET
+            description = EXCLUDED.description,
+            difficulty_level = EXCLUDED.difficulty_level
         RETURNING id
         """
         res = self.execute_query(query, (topic_id, name, description, difficulty, True))

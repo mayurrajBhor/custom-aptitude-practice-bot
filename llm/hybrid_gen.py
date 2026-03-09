@@ -2548,4 +2548,566 @@ class HybridGenerator:
         
         return {"question_text": question, "options": opts, "correct_option_index": opts.index(correct), "explanation": explanation, "difficulty": 4}
 
+    def generate_clockwise_anticlockwise(self):
+        """Pattern: Clockwise and anti clockwise"""
+        directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
+        dir_angles = {d: i * 45 for i, d in enumerate(directions)}
+        angles_to_dir = {v: k for k, v in dir_angles.items()}
+        
+        start_dir = random.choice(directions)
+        current_angle = dir_angles[start_dir]
+        
+        # Scenario: Facing X, turns A cw, then B acw, etc.
+        num_turns = random.randint(2, 3)
+        turns = []
+        for _ in range(num_turns):
+            angle = random.choice([45, 90, 135, 180, 225, 270])
+            is_clockwise = random.random() > 0.5
+            turns.append((angle, is_clockwise))
+            if is_clockwise:
+                current_angle = (current_angle + angle) % 360
+            else:
+                current_angle = (current_angle - angle) % 360
+        
+        final_dir = angles_to_dir[current_angle]
+        
+        turn_texts = []
+        for angle, cw in turns:
+            turn_texts.append(f"{angle}° {'clockwise' if cw else 'anti-clockwise'}")
+        
+        question = f"Facing {start_dir}, a person turns {' and then '.join(turn_texts)}. What direction is the person facing now?"
+        
+        options = [final_dir]
+        while len(options) < 4:
+            opt = random.choice(directions)
+            if opt not in options:
+                options.append(opt)
+        
+        random.shuffle(options)
+        
+        # Simple explanation
+        exp_steps = [f"Initial: {start_dir} ({dir_angles[start_dir]}°)"]
+        temp_angle = dir_angles[start_dir]
+        for angle, cw in turns:
+            change = angle if cw else -angle
+            temp_angle = (temp_angle + change) % 360
+            dir_now = angles_to_dir[temp_angle]
+            exp_steps.append(f"Turn {angle}° {'CW' if cw else 'ACW'} -> {dir_now} ({temp_angle}°)")
+            
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(final_dir),
+            "explanation": " -> ".join(exp_steps) + f". Final direction is {final_dir}.",
+            "difficulty": 2
+        }
+
+    def generate_pythagoras_theorem(self):
+        """Pattern: Pythagoras theorem"""
+        # A person starts from home, walks X east, Y north/left etc.
+        # Shortest distance = sqrt(dx^2 + dy^2)
+        
+        # Pick a pythagorean triplet or clean pair
+        triplets = [(3, 4, 5), (6, 8, 10), (5, 12, 13), (8, 15, 17), (7, 24, 25), (9, 40, 41), (12, 35, 37)]
+        dx, dy, dist = random.choice(triplets)
+        
+        if random.random() > 0.5: dx, dy = dy, dx
+        
+        # Decompose dx and dy into segments
+        x1 = dx + random.randint(5, 15)
+        y1 = dy + random.randint(5, 15)
+        x2 = x1 - dx
+        y_seg1 = random.randint(1, dy - 1)
+        y_seg2 = dy - y_seg1
+        
+        question = f"Ravi started from his house and walked {x1}m East, then he takes a left turn and walked {y_seg1}m. Then again he takes a left turn and walks {x2}m. He finally takes a right turn and walked {y_seg2}m. What is the shortest distance between his house and the final point?"
+        
+        correct = f"{dist}m"
+        options = [correct]
+        while len(options) < 4:
+            opt = f"{dist + random.choice([-2, -1, 1, 2, 5])}m"
+            if opt not in options:
+                options.append(opt)
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"Net displacement: East = {x1}-{x2} = {dx}m; North = {y_seg1}+{y_seg2} = {dy}m. Shortest distance = √( {dx}² + {dy}² ) = √({dx**2} + {dy**2}) = √{dx**2 + dy**2} = {dist}m.",
+            "difficulty": 3
+        }
+
+    def generate_starting_without_direction(self):
+        """Pattern: Starting without direction"""
+        directions = ["North", "East", "South", "West"]
+        
+        # Random initial (hidden)
+        initial_hidden = random.choice(directions)
+        current = initial_hidden
+        
+        turns = []
+        num_turns = random.randint(2, 3)
+        for _ in range(num_turns):
+            turn = random.choice(["left", "right"])
+            turns.append(turn)
+            if turn == "left":
+                idx = directions.index(current)
+                current = directions[(idx - 1) % 4]
+            else:
+                idx = directions.index(current)
+                current = directions[(idx + 1) % 4]
+        
+        final_facing = current
+        
+        turn_text = ", ".join(turns[:-1]) + " and then a " + turns[-1] if len(turns) > 1 else turns[0]
+        
+        question = f"Rakesh starts walking from his house and then takes {turn_text} turn to reach the market. If he is facing {final_facing} on reaching the market, in which direction was Rakesh facing when he started from his house?"
+        
+        correct = initial_hidden
+        options = directions[:]
+        random.shuffle(options)
+        
+        # Explanation: Reversing
+        exp_steps = [f"Final facing: {final_facing}"]
+        temp_facing = final_facing
+        for turn in reversed(turns):
+            if turn == "left":
+                idx = directions.index(temp_facing)
+                temp_facing = directions[(idx + 1) % 4]
+                exp_steps.append(f"Reverse Left turn -> Facing {temp_facing}")
+            else:
+                idx = directions.index(temp_facing)
+                temp_facing = directions[(idx - 1) % 4]
+                exp_steps.append(f"Reverse Right turn -> Facing {temp_facing}")
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": " -> ".join(exp_steps) + f". Thus, he started facing {correct}.",
+            "difficulty": 3
+        }
+
+    def generate_moving_towards_direction(self):
+        """Pattern: Moving towards different direction"""
+        # Complex movements with multiple turns
+        segments = []
+        directions = ["North", "East", "South", "West"]
+        
+        start_dir = random.choice(directions)
+        current_dir = start_dir
+        
+        num_moves = random.randint(3, 5)
+        for i in range(num_moves):
+            dist = random.randint(10, 100)
+            segments.append((current_dir, dist))
+            
+            # Next turn
+            turn = random.choice(["left", "right"])
+            if turn == "left":
+                current_dir = directions[(directions.index(current_dir) - 1) % 4]
+            else:
+                current_dir = directions[(directions.index(current_dir) + 1) % 4]
+        
+        # Final move
+        dist = random.randint(10, 100)
+        segments.append((current_dir, dist))
+        
+        question_steps = []
+        for i, (d, dist) in enumerate(segments):
+            if i == 0:
+                question_steps.append(f"walks {dist}m towards {d}")
+            else:
+                # Describe turn relative to previous
+                prev_d = segments[i-1][0]
+                turn = "left" if directions[(directions.index(prev_d) - 1) % 4] == d else "right"
+                question_steps.append(f"turns {turn} and walks {dist}m")
+        
+        question = f"Gopal starts from A and " + ", ".join(question_steps) + ". In which direction is he facing now?"
+        
+        correct = current_dir
+        options = directions[:]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"Sequence of moves ends with facing {correct}.",
+            "difficulty": 3
+        }
+
+    def generate_interchange_direction(self):
+        """Pattern: Interchange direction"""
+        directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
+        dir_angles = {d: i * 45 for i, d in enumerate(directions)}
+        angles_to_dir = {v: k for k, v in dir_angles.items()}
+        
+        # Example: If South-East becomes North...
+        old_dir = random.choice(directions)
+        new_name = random.choice(directions)
+        
+        rotation = (dir_angles[new_name] - dir_angles[old_dir]) % 360
+        
+        target_old = random.choice([d for d in directions if d != old_dir])
+        target_new_angle = (dir_angles[target_old] + rotation) % 360
+        target_new = angles_to_dir[target_new_angle]
+        
+        question = f"If {old_dir} becomes {new_name}, and {directions[(directions.index(old_dir)+1)%8]} becomes {directions[(dir_angles[new_name]//45 + 1)%8]}, and so on, what will {target_old} become?"
+        
+        correct = target_new
+        options = directions[:]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"The entire direction map is rotated by {rotation}°. {old_dir} ({dir_angles[old_dir]}°) -> {new_name} ({dir_angles[new_name]}°). So {target_old} ({dir_angles[target_old]}°) becomes {(dir_angles[target_old] + rotation)%360}° which is {target_new}.",
+            "difficulty": 3
+        }
+
+    def generate_find_direction_in_respect_to_another(self):
+        """Pattern: Find direction in respect to another one"""
+        # Relative positioning of points
+        num_points = random.randint(3, 5)
+        points = {'A': (0, 0)}
+        used_names = ['A']
+        avail_names = ['B', 'C', 'D', 'E', 'F']
+        
+        descriptions = []
+        for i in range(num_points - 1):
+            p1 = random.choice(used_names)
+            p2 = avail_names.pop(0)
+            used_names.append(p2)
+            
+            dist = random.randint(10, 100)
+            direction = random.choice(["North", "East", "South", "West"])
+            
+            x1, y1 = points[p1]
+            if direction == "North": points[p2] = (x1, y1 + dist)
+            elif direction == "South": points[p2] = (x1, y1 - dist)
+            elif direction == "East": points[p2] = (x1 + dist, y1)
+            elif direction == "West": points[p2] = (x1 - dist, y1)
+            
+            descriptions.append(f"{p2} is {dist}m {direction} of {p1}")
+        
+        # Ask relative position
+        p_q = random.choice(used_names)
+        p_ref = random.choice([p for p in used_names if p != p_q])
+        
+        xq, yq = points[p_q]
+        xr, yr = points[p_ref]
+        
+        dx = xq - xr
+        dy = yq - yr
+        
+        if dx == 0 and dy > 0: rel_dir = "North"
+        elif dx == 0 and dy < 0: rel_dir = "South"
+        elif dx > 0 and dy == 0: rel_dir = "East"
+        elif dx < 0 and dy == 0: rel_dir = "West"
+        elif dx > 0 and dy > 0: rel_dir = "North-East"
+        elif dx > 0 and dy < 0: rel_dir = "South-East"
+        elif dx < 0 and dy > 0: rel_dir = "North-West"
+        else: rel_dir = "South-West"
+        
+        question = f"Given the locations: {'. '.join(descriptions)}. Find the position of {p_q} with reference to {p_ref}."
+        
+        correct = rel_dir
+        options = ["North", "South", "East", "West", "North-East", "South-East", "North-West", "South-West"]
+        random.shuffle(options)
+        options = options[:4]
+        if correct not in options:
+            options[0] = correct
+            random.shuffle(options)
+            
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"Based on the coordinates relative to {p_ref}, {p_q} lies to the {rel_dir}.",
+            "difficulty": 4
+        }
+
+    def generate_coded_direction(self):
+        """Pattern: Coded direction"""
+        symbols = {"@": "North", "#": "South", "$": "East", "%": "West"}
+        sym_list = list(symbols.keys())
+        random.shuffle(sym_list)
+        
+        # New mapping for this question
+        mapping = {s: d for s, d in zip(sym_list, ["North", "South", "East", "West"])}
+        code_desc = [f"P {s} Q means P is {d} of Q" for s, d in mapping.items()]
+        
+        # Scenario: 3 points
+        p1, p2, p3 = "A", "B", "C"
+        s1 = random.choice(sym_list)
+        s2 = random.choice(sym_list)
+        
+        d1 = random.randint(5, 20)
+        d2 = random.randint(5, 20)
+        
+        question = f"{'. '.join(code_desc)}. If {p1} {s1} {p2} ({d1}m) and {p2} {s2} {p3} ({d2}m), then in which direction is {p1} with respect to {p3}?"
+        
+        # Calculate relative position
+        # P1 is dir1 of P2 -> P1 = P2 + vector(dir1)
+        # P2 is dir2 of P3 -> P2 = P3 + vector(dir2)
+        # P1 = P3 + vector(dir2) + vector(dir1)
+        
+        x, y = 0, 0
+        dir2 = mapping[s2]
+        if dir2 == "North": y += d2
+        elif dir2 == "South": y -= d2
+        elif dir2 == "East": x += d2
+        elif dir2 == "West": x -= d2
+        
+        dir1 = mapping[s1]
+        if dir1 == "North": y += d1
+        elif dir1 == "South": y -= d1
+        elif dir1 == "East": x += d1
+        elif dir1 == "West": x -= d1
+        
+        # Find direction of (x,y) from (0,0)
+        if x == 0 and y > 0: rel = "North"
+        elif x == 0 and y < 0: rel = "South"
+        elif x > 0 and y == 0: rel = "East"
+        elif x < 0 and y == 0: rel = "West"
+        elif x > 0 and y > 0: rel = "North-East"
+        elif x > 0 and y < 0: rel = "South-East"
+        elif x < 0 and y > 0: rel = "North-West"
+        else: rel = "South-West"
+        
+        correct = rel
+        options = ["North-East", "South-East", "North-West", "South-West", "North", "South", "East", "West"]
+        random.shuffle(options)
+        options = options[:4]
+        if correct not in options:
+            options[0] = correct
+            random.shuffle(options)
+            
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"{p2} is {dir2} of {p3}. {p1} is {dir1} of {p2}. Thus {p1} is at ({x}, {y}) relative to {p3}, which is {rel}.",
+            "difficulty": 4
+        }
+
+    def generate_shadow_based(self):
+        """Pattern: Shadow-based questions"""
+        times = ["Morning", "Evening"]
+        time = random.choice(times)
+        
+        # Morning: Sun is East, Shadow is West
+        # Evening: Sun is West, Shadow is East
+        sun_dir = "East" if time == "Morning" else "West"
+        shadow_dir = "West" if time == "Morning" else "East"
+        
+        # Two people A and B are talking face to face.
+        # A's shadow falls to the right of B.
+        # If shadow is West, and it is to the right of B, then B is facing North.
+        # (Facing North -> Right is East, Left is West. Wait. Facing North: Right is East? No.
+        # N: L=W, R=E.
+        # S: L=E, R=W.
+        # So if shadow(West) is to the Right of B, B must be facing South.)
+        
+        facing_options = ["North", "South", "East", "West"]
+        b_facing = random.choice(["North", "South"])
+        
+        if b_facing == "North":
+            # Right is East, Left is West
+            rel_side = "Left" if shadow_dir == "West" else "Right"
+        else:
+            # South: Right is West, Left is East
+            rel_side = "Right" if shadow_dir == "West" else "Left"
+            
+        question = f"One {time}, Amit and Sunil were talking to each other face to face. Amit's shadow fell exactly to the {rel_side} of Sunil. Which direction was Amit facing?"
+        
+        # If Amit and Sunil are face to face, Amit faces opposite of Sunil.
+        amit_facing = "South" if b_facing == "North" else "North"
+        
+        correct = amit_facing
+        options = ["North", "South", "East", "West"]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"In the {time}, the sun is in the {sun_dir}, so shadows fall to the {shadow_dir}. Since the shadow is to the {rel_side} of Sunil, Sunil must be facing {b_facing}. Amit is face-to-face with Sunil, so Amit faces {amit_facing}.",
+            "difficulty": 4
+        }
+
+    def generate_headstand(self):
+        """Pattern: Headstand questions"""
+        directions = ["North", "South", "East", "West"]
+        facing = random.choice(directions)
+        
+        # Normal facing:
+        # North -> L=West, R=East
+        # South -> L=East, R=West
+        # East -> L=North, R=South
+        # West -> L=South, R=North
+        
+        # Headstand: Left and Right are SWAPPED relative to normal facing.
+        # (A person facing North: Head is down, Feet are up. Eyes still face North.
+        # But 'left' hand is now where 'right' used to be?)
+        # Let's verify: Stand facing North. Left is West. Now flip upside down but keep facing North.
+        # Your left hand is now on the East side.
+        
+        mapping = {
+            "North": {"Left": "East", "Right": "West"},
+            "South": {"Left": "West", "Right": "East"},
+            "East": {"Left": "South", "Right": "North"},
+            "West": {"Left": "North", "Right": "South"}
+        }
+        
+        hand = random.choice(["Left", "Right"])
+        correct = mapping[facing][hand]
+        
+        question = f"A person is performing headstand with his face towards the {facing}. In which direction will his {hand.lower()} hand be?"
+        
+        options = ["North", "South", "East", "West"]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"When performing a headstand facing {facing}, the left and right positions are reversed compared to normal standing. Normally facing {facing}, the {hand.lower()} hand would be { 'West' if (facing=='North' and hand=='Left') else '...' }. In headstand, it is {correct}.",
+            "difficulty": 3
+        }
+
+    def generate_final_facing(self):
+        """Pattern: Final facing"""
+        return self.generate_moving_towards_direction()
+
+    def generate_side_movement(self):
+        """Pattern: Side movement"""
+        # Walking along edges of a square/rectangle
+        l, b = random.randint(10, 50), random.randint(10, 50)
+        sides = ["length", "width", "length", "width"]
+        question = f"A person walks along the boundary of a rectangular field of {l}m x {b}m. He starts from one corner and walks {l}m along the length, then turns left and walks {b}m, then turns left and walks {l}m. How far and in which direction is he from the starting point?"
+        
+        correct_dist = f"{b}m"
+        # Start at (0,0). Move l East -> (l, 0). Left(North) b -> (l, b). Left(West) l -> (0, b).
+        # From (0,0) to (0,b) is b meters North.
+        correct_dir = "North"
+        
+        options = ["North", "South", "East", "West"]
+        random.shuffle(options)
+        opts = [f"{b}m {d}" for d in options]
+        correct = f"{b}m {correct_dir}"
+        
+        return {
+            "question_text": question,
+            "options": opts,
+            "correct_option_index": opts.index(correct),
+            "explanation": f"The path forms three sides of a rectangle. He is now at the last corner, which is {b}m away in the perpendicular direction ({correct_dir}).",
+            "difficulty": 2
+        }
+
+    def generate_direction_of_smoke(self):
+        """Pattern: Direction of smoke"""
+        # Train vs Wind
+        directions = ["North", "South", "East", "West"]
+        train_dir = random.choice(directions)
+        wind_dir = random.choice([d for d in directions if d != train_dir])
+        
+        # Smoke goes opposite to train + with wind.
+        # Opposite of North is South. Wind is East. Smoke goes South-East.
+        opp = {"North": "South", "South": "North", "East": "West", "West": "East"}
+        smoke_vector_1 = opp[train_dir]
+        smoke_vector_2 = wind_dir
+        
+        correct = f"{smoke_vector_1}-{smoke_vector_2}"
+        
+        question = f"A train is moving towards {train_dir} and the wind is blowing towards {wind_dir}. In which direction will the smoke of the train go?"
+        
+        options = ["North-East", "South-East", "North-West", "South-West", "North", "South", "East", "West"]
+        random.shuffle(options)
+        options = options[:4]
+        if correct not in options: options[0] = correct
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"Smoke is pushed back by the train's motion ({smoke_vector_1}) and carried by the wind ({smoke_vector_2}), resulting in {correct}.",
+            "difficulty": 3
+        }
+
+    def generate_playing_cards(self):
+        """Pattern: Playing cards"""
+        # P, Q, R, S playing cards. Partners face each other.
+        # P and R are partners, Q and S are partners.
+        # S is to the right of P who faces North.
+        
+        p_facing = "North"
+        # P faces North. S is to the right of P. In a circle, 'right' of P (facing North/Center) is East.
+        # Wait, if they face center:
+        # P(South side, faces North). S(West side, faces East) is to P's left. 
+        # R(North side, faces South). Q(East side, faces West) is to P's right.
+        # Let's use simple cardinal mapping.
+        
+        question = f"P, Q, R and S are playing a game of carrom/cards. P and R are partners; S and Q are partners. S is to the right of R who faces West. Which direction is Q facing?"
+        
+        # R faces West (stands on East side).
+        # Partners R and P: P faces East (stands on West side).
+        # To the right of R (facing West): Right is North.
+        # So S is at North.
+        # Partners S and Q: Q is at South.
+        # Q faces North.
+        
+        correct = "North"
+        options = ["North", "South", "East", "West"]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": f"R faces West. R's partner P faces East. To the right of R (West) is North, where S sits. S's partner Q must sit at South, facing North.",
+            "difficulty": 4
+        }
+
+    def generate_seating_arrangement(self):
+        """Pattern: Seating arrangement"""
+        # 5 people in a row or circle
+        question = "Five boys P, Q, R, S, T are sitting in a row. P is to the right of Q, S is to the left of Q but to the right of R. P is to the left of T. Who is sitting in the middle?"
+        # R - S - Q - P - T
+        correct = "Q"
+        options = ["P", "Q", "R", "S"]
+        random.shuffle(options)
+        
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": "The arrangement from left to right is R, S, Q, P, T. Q is in the center.",
+            "difficulty": 3
+        }
+
+    def generate_based_on_turns(self):
+        """Pattern: Based on turns"""
+        return self.generate_moving_towards_direction()
+
+    def generate_one_direction_only(self):
+        """Pattern: When only one direction is given"""
+        # Traditional logic puzzle
+        question = "To reach his school, Rahul goes 5km towards North, then turns left and goes 10km, then turns left again and goes 5km. In which direction is the school from his starting point?"
+        # N 5, L(W) 10, L(S) 5 -> Net West 10.
+        correct = "West"
+        options = ["North", "South", "East", "West"]
+        random.shuffle(options)
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": options.index(correct),
+            "explanation": "He moved 5km North and 5km South, cancelling the vertical movement. He is 10km West of the start.",
+            "difficulty": 2
+        }
+
 hybrid_generator = HybridGenerator()

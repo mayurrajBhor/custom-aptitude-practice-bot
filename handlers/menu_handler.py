@@ -1,7 +1,7 @@
 from telegram import Update
 from telegram.ext import ContextTypes
 from database.db_manager import db
-from utils.keyboards import category_keyboard, topic_keyboard, pattern_keyboard
+from utils.keyboards import category_keyboard, topic_keyboard, pattern_keyboard, topic_options_keyboard, topic_gen_quantity_keyboard
 from handlers.practice_handler import start_custom_practice, handle_answer
 
 async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -22,6 +22,45 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cat_id = int(data.split('_')[1])
         topics = db.get_topics(cat_id)
         await query.message.edit_text("Select a Topic:", reply_markup=topic_keyboard(topics))
+
+    elif data.startswith("topic_"):
+        # Handle intermediate options for a topic
+        parts = data.split('_')
+        if len(parts) == 2: # topic_{id}
+            topic_id = int(parts[1])
+            await query.message.edit_text("Topic Options:", reply_markup=topic_options_keyboard(topic_id))
+        elif parts[1] == "gen" and parts[2] == "opts": # topic_gen_opts_{id}
+            topic_id = int(parts[3])
+            await query.message.edit_text("Select Number of Questions:", reply_markup=topic_gen_quantity_keyboard(topic_id))
+
+    elif data.startswith("show_patterns_"):
+        topic_id = int(data.split('_')[2])
+        patterns = db.get_patterns(topic_id)
+        selected_ids = context.user_data.get('selected_patterns', [])
+        await query.message.edit_text("Select Question Patterns:", reply_markup=pattern_keyboard(patterns, selected_ids))
+
+    elif data.startswith("start_topic_gen_"):
+        # start_topic_gen_{id}_{count}
+        parts = data.split('_')
+        topic_id = int(parts[3])
+        count = int(parts[4])
+        pattern_ids = db.get_all_pattern_ids_for_topic(topic_id)
+        
+        if not pattern_ids:
+            await query.answer("No patterns found for this topic.", show_alert=True)
+            return
+            
+        await start_custom_practice(update, context, pattern_ids, target_count=count)
+
+    elif data.startswith("back_to_cat_from_topic_"):
+        topic_id = int(data.split('_')[-1])
+        res = db.execute_query("SELECT category_id FROM topics WHERE id = %s", (topic_id,))
+        if res:
+            topics = db.get_topics(res[0]['category_id'])
+            await query.message.edit_text("Select a Topic:", reply_markup=topic_keyboard(topics))
+        else:
+            categories = db.get_categories()
+            await query.message.edit_text("Choose a GMAT category:", reply_markup=category_keyboard(categories))
 
     elif data == "back_to_cats":
         categories = db.get_categories()

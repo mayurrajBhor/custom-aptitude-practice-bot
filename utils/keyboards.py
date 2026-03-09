@@ -13,6 +13,23 @@ def category_keyboard(categories):
         keyboard.append([InlineKeyboardButton(cat['name'], callback_data=f"cat_{cat['id']}")])
     return InlineKeyboardMarkup(keyboard)
 
+def topic_options_keyboard(topic_id):
+    keyboard = [
+        [InlineKeyboardButton("🚀 Generate Questions", callback_data=f"topic_gen_opts_{topic_id}")],
+        [InlineKeyboardButton("📂 See Patterns", callback_data=f"show_patterns_{topic_id}")],
+        [InlineKeyboardButton("🔙 Back", callback_data=f"back_to_cat_from_topic_{topic_id}")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
+def topic_gen_quantity_keyboard(topic_id):
+    keyboard = [
+        [InlineKeyboardButton("5 Questions", callback_data=f"start_topic_gen_{topic_id}_5")],
+        [InlineKeyboardButton("10 Questions", callback_data=f"start_topic_gen_{topic_id}_10")],
+        [InlineKeyboardButton("20 Questions", callback_data=f"start_topic_gen_{topic_id}_20")],
+        [InlineKeyboardButton("🔙 Back", callback_data=f"topic_{topic_id}")]
+    ]
+    return InlineKeyboardMarkup(keyboard)
+
 def topic_keyboard(topics):
     keyboard = []
     for topic in topics:

@@ -25,7 +25,7 @@ class QuestionGenerator:
             return "benchmark_conv"
         if pn == "find original number":
             return "find_original_number"
-        if pn == "fraction to decimal":
+        if pn == "fraction to decimal and vice versa":
             return "fraction_to_decimal"
         if pn == "swap of percentage":
             return "swap_percentage"
@@ -51,6 +51,38 @@ class QuestionGenerator:
             return "exam_scoring"
         if pn == "successive percentage changes":
             return "successive_changes"
+        if pn == "clockwise and anti clockwise":
+            return "clockwise_anticlockwise"
+        if pn == "pythagoras theorem":
+            return "pythagoras_theorem"
+        if pn == "starting without direction":
+            return "starting_without_direction"
+        if pn == "moving towards different directions":
+            return "moving_towards_direction"
+        if pn == "interchange direction":
+            return "interchange_direction"
+        if pn == "find direction with respect to another point":
+            return "find_direction_in_respect_to_another"
+        if pn == "coded direction":
+            return "coded_direction"
+        if pn == "shadow-based questions":
+            return "shadow_based"
+        if pn == "headstand questions":
+            return "headstand"
+        if pn == "final facing":
+            return "final_facing"
+        if pn == "side movement":
+            return "side_movement"
+        if pn == "direction of smoke":
+            return "direction_of_smoke"
+        if pn == "playing cards":
+            return "playing_cards"
+        if pn == "seating arrangement":
+            return "seating_arrangement"
+        if pn == "based on turns":
+            return "based_on_turns"
+        if pn == "when only one direction is given":
+            return "one_direction_only"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -76,6 +108,22 @@ class QuestionGenerator:
             elif hybrid_type == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
             elif hybrid_type == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
             elif hybrid_type == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
+            elif hybrid_type == "clockwise_anticlockwise": hybrid_result = hybrid_generator.generate_clockwise_anticlockwise()
+            elif hybrid_type == "pythagoras_theorem": hybrid_result = hybrid_generator.generate_pythagoras_theorem()
+            elif hybrid_type == "starting_without_direction": hybrid_result = hybrid_generator.generate_starting_without_direction()
+            elif hybrid_type == "moving_towards_direction": hybrid_result = hybrid_generator.generate_moving_towards_direction()
+            elif hybrid_type == "interchange_direction": hybrid_result = hybrid_generator.generate_interchange_direction()
+            elif hybrid_type == "find_direction_in_respect_to_another": hybrid_result = hybrid_generator.generate_find_direction_in_respect_to_another()
+            elif hybrid_type == "coded_direction": hybrid_result = hybrid_generator.generate_coded_direction()
+            elif hybrid_type == "shadow_based": hybrid_result = hybrid_generator.generate_shadow_based()
+            elif hybrid_type == "headstand": hybrid_result = hybrid_generator.generate_headstand()
+            elif hybrid_type == "final_facing": hybrid_result = hybrid_generator.generate_final_facing()
+            elif hybrid_type == "side_movement": hybrid_result = hybrid_generator.generate_side_movement()
+            elif hybrid_type == "direction_of_smoke": hybrid_result = hybrid_generator.generate_direction_of_smoke()
+            elif hybrid_type == "playing_cards": hybrid_result = hybrid_generator.generate_playing_cards()
+            elif hybrid_type == "seating_arrangement": hybrid_result = hybrid_generator.generate_seating_arrangement()
+            elif hybrid_type == "based_on_turns": hybrid_result = hybrid_generator.generate_based_on_turns()
+            elif hybrid_type == "one_direction_only": hybrid_result = hybrid_generator.generate_one_direction_only()
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
@@ -179,6 +227,22 @@ class QuestionGenerator:
                 elif ht == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
                 elif ht == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
                 elif ht == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
+                elif ht == "clockwise_anticlockwise": hybrid_result = hybrid_generator.generate_clockwise_anticlockwise()
+                elif ht == "pythagoras_theorem": hybrid_result = hybrid_generator.generate_pythagoras_theorem()
+                elif ht == "starting_without_direction": hybrid_result = hybrid_generator.generate_starting_without_direction()
+                elif ht == "moving_towards_direction": hybrid_result = hybrid_generator.generate_moving_towards_direction()
+                elif ht == "interchange_direction": hybrid_result = hybrid_generator.generate_interchange_direction()
+                elif ht == "find_direction_in_respect_to_another": hybrid_result = hybrid_generator.generate_find_direction_in_respect_to_another()
+                elif ht == "coded_direction": hybrid_result = hybrid_generator.generate_coded_direction()
+                elif ht == "shadow_based": hybrid_result = hybrid_generator.generate_shadow_based()
+                elif ht == "headstand": hybrid_result = hybrid_generator.generate_headstand()
+                elif ht == "final_facing": hybrid_result = hybrid_generator.generate_final_facing()
+                elif ht == "side_movement": hybrid_result = hybrid_generator.generate_side_movement()
+                elif ht == "direction_of_smoke": hybrid_result = hybrid_generator.generate_direction_of_smoke()
+                elif ht == "playing_cards": hybrid_result = hybrid_generator.generate_playing_cards()
+                elif ht == "seating_arrangement": hybrid_result = hybrid_generator.generate_seating_arrangement()
+                elif ht == "based_on_turns": hybrid_result = hybrid_generator.generate_based_on_turns()
+                elif ht == "one_direction_only": hybrid_result = hybrid_generator.generate_one_direction_only()
                 
                 if hybrid_result:
                     hybrid_results.append({**hybrid_result, "pattern_id": p['id']})
