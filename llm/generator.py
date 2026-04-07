@@ -314,9 +314,11 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             batch_res = json.loads(content)
             
             if isinstance(batch_res, dict) and "questions" in batch_res:
-                results.extend(batch_res["questions"])
+                q_list = batch_res["questions"]
+                if isinstance(q_list, list):
+                    results.extend([q for q in q_list if isinstance(q, dict)])
             elif isinstance(batch_res, list):
-                results.extend(batch_res)
+                results.extend([q for q in batch_res if isinstance(q, dict)])
             
             return results, None
         except Exception as e:
@@ -405,8 +407,14 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                 model=self.model, # Can use same or faster model
                 response_format={"type": "json_object"}
             )
-            res = json.loads(chat.choices[0].message.content)
-            return res.get("is_valid", False), res.get("reason", "No reason provided")
+            try:
+                content = chat.choices[0].message.content
+                res = json.loads(content)
+                if not isinstance(res, dict):
+                    return False, f"LLM returned {type(res).__name__} instead of dict"
+                return res.get("is_valid", False), res.get("reason", "No reason provided")
+            except json.JSONDecodeError:
+                return False, "LLM returned invalid JSON"
         except Exception as e:
             return True, f"Error in verification call: {e}" # Fallback to true to avoid infinite retry blocking on minor API errors
 
@@ -454,15 +462,30 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                     model=self.model,
                     response_format={"type": "json_object"}
                 )
-                res = json.loads(chat.choices[0].message.content)
+                content = chat.choices[0].message.content
+                res = json.loads(content)
+                if not isinstance(res, dict):
+                    print(f"Batch Rephrase Error: Expected dict, got {type(res).__name__}")
+                    continue
+                    
                 replacements = res.get("replacements", [])
-                
+                if not isinstance(replacements, list):
+                    print(f"Batch Rephrase Error: 'replacements' should be a list, got {type(replacements).__name__}")
+                    continue
+
                 if len(replacements) == len(hybrid_list):
                     all_valid = True
                     reasons = []
                     for i in range(len(hybrid_list)):
+                        # Ensure item is a dict
+                        rep_item = replacements[i]
+                        if not isinstance(rep_item, dict):
+                            reasons.append(f"Item {i} is not a dictionary")
+                            all_valid = False
+                            break
+                            
                         # Verify each one
-                        is_valid, reason = self._verify_rephrased_content(hybrid_list[i]['question_text'], replacements[i].get('question_text', ''))
+                        is_valid, reason = self._verify_rephrased_content(hybrid_list[i]['question_text'], rep_item.get('question_text', ''))
                         if not is_valid:
                             reasons.append(f"Item {i}: {reason}")
                             all_valid = False

@@ -83,7 +83,8 @@ if __name__ == '__main__':
         
     print("Starting TEST BOT (Local Environment)...")
     
-    application = ApplicationBuilder().token(token).build()
+    # Increase timeouts for slower networks
+    application = ApplicationBuilder().token(token).connect_timeout(30).read_timeout(30).build()
     
     application.add_handler(CommandHandler('start', start))
     application.add_handler(add_topic_conv)

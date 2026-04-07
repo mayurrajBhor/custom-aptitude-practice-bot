@@ -11,6 +11,7 @@ class DatabaseManager:
     def __init__(self):
         self.conn_url = os.getenv("DATABASE_URL")
         self.conn = None
+        self.driver = 'postgres'
 
     def get_connection(self):
         # Check if connection exists and is alive
@@ -19,7 +20,6 @@ class DatabaseManager:
             should_reconnect = True
         else:
             try:
-                # For Postgres, poll the connection to see if it's still alive
                 if self.conn.closed != 0:
                     should_reconnect = True
                 else:
@@ -28,15 +28,21 @@ class DatabaseManager:
                 should_reconnect = True
 
         if should_reconnect:
-            logging.info("Re-establishing database connection...")
+            logging.info("Attempting to connect to Supabase (Postgres)...")
             try:
-                self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor)
+                # Use a shorter timeout to fail fast if project is paused/invalid
+                self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor, connect_timeout=10)
                 with self.conn.cursor() as cur:
                     cur.execute("CREATE SCHEMA IF NOT EXISTS aptitude_practice")
                     cur.execute("SET search_path TO aptitude_practice, public")
                     self.conn.commit()
+                logging.info("✅ Connected to Supabase.")
             except Exception as e:
-                logging.error(f"Failed to connect to Postgres: {e}")
+                err_msg = str(e)
+                if "Tenant or user not found" in err_msg:
+                    logging.error("FATAL: Supabase Project ID is invalid or project is PAUSED. Please check your .env and Supabase dashboard.")
+                else:
+                    logging.error(f"Failed to connect to Supabase: {e}")
                 self.conn = None
         return self.conn
 
@@ -48,14 +54,20 @@ class DatabaseManager:
                 
             try:
                 cur = conn.cursor()
-                cur.execute(query, params)
-                conn.commit()
+                if params:
+                    cur.execute(query, params)
+                else:
+                    cur.execute(query)
+                
                 if cur.description:
-                    return cur.fetchall()
-                return True # Success for non-SELECT queries
+                    results = cur.fetchall()
+                else:
+                    results = True
+                conn.commit()
+                return results
             except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
                 logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
-                self.conn = None # Force reconnection on next get_connection()
+                self.conn = None # Force reconnection
                 if attempt == retries:
                     return None
             except Exception as e:
@@ -63,7 +75,7 @@ class DatabaseManager:
                 if conn:
                     try:
                         conn.rollback()
-                    except (psycopg2.InterfaceError, psycopg2.InternalError):
+                    except:
                         pass
                 return None
         return None

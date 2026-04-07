@@ -49,10 +49,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db_ok = db.register_user(user.id, user.username, user.first_name, user.last_name)
     
     first_name = html.escape(user.first_name)
-    status_tag = "" if db_ok else "\n\n⚠️ <b>Warning:</b> Database connection error. Many features may not work."
+    
+    # Inform user about database mode
+    db_mode = f" (Mode: {db.driver.upper() if db.driver else 'NONE'})"
+    status_tag = "" 
+    if not db_ok:
+         status_tag = "\n\n⚠️ <b>Warning:</b> Database connection error."
+    elif db.driver == 'sqlite':
+         status_tag = "\n\nℹ️ <b>Note:</b> Connected to local database (Offline Mode)."
     
     welcome_msg = (
-        f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.2.0-CURRICULUM)!\n\n"
+        f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.2.0-CURRICULUM){db_mode}!\n\n"
         f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.{status_tag}\n\n"
         "Choose a mode to start:"
     )
@@ -78,9 +85,9 @@ async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = (
         f"🖥️ <b>Database Status:</b>\n"
         f"Connectivity: {status}\n"
-        f"Type: {db.db_type}\n"
+        f"Driver: {db.driver.upper() if db.driver else 'None'}\n"
         f"Category Count: {cat_count}\n"
-        f"Schema Path: aptitude_practice"
+        f"Search Path: aptitude_practice / public"
     )
     await update.message.reply_text(msg, parse_mode='HTML')
 
@@ -119,7 +126,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             logging.error(f"Failed to send error message to Telegram: {e}")
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+    application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).connect_timeout(30).read_timeout(30).build()
     
     application.add_handler(CommandHandler('start', start))
     application.add_handler(CommandHandler('db_status', db_status))
