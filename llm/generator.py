@@ -8,13 +8,286 @@ from llm.hybrid_gen import hybrid_generator
 load_dotenv()
 
 class QuestionGenerator:
+    HYBRID_GROUPS = {
+        "group_fraction_foundations": [
+            "mixed_fraction",
+            "fraction_subtraction",
+            "random_conv",
+            "benchmark_conv",
+            "fraction_to_decimal",
+        ],
+        "group_core_percentage_equations": [
+            "find_original_number",
+            "percentage_equations",
+        ],
+        "group_percentage_calculation_tricks": [
+            "swap_percentage",
+            "breakdown_percentage",
+            "base_comparisons",
+            "percentage_calculations",
+        ],
+        "group_applied_percentage_word_problems": [
+            "applied_percentages",
+            "percentage_comparisons",
+        ],
+        "group_mixtures_alligation_shifts": [
+            "alligation_shifts",
+        ],
+        "group_income_savings_exam_aggregates": [
+            "income_expenditure",
+            "pass_fail_aggregates",
+            "exam_scoring",
+        ],
+        "group_successive_changes_discounts": [
+            "successive_changes",
+            "successive_discount",
+        ],
+    }
+
+    HYBRID_SUBTYPES = {
+        "random_conv": [
+            "fraction_to_percent",
+            "percent_to_fraction",
+        ],
+        "find_original_number": [
+            "add_self",
+            "sub_self",
+            "add_abs",
+            "sub_abs",
+        ],
+        "fraction_to_decimal": [
+            "fraction_to_decimal",
+            "decimal_to_fraction",
+        ],
+        "swap_percentage": [
+            "swap",
+            "scale",
+            "composite",
+        ],
+        "breakdown_percentage": [
+            "place_value",
+            "breakdown",
+            "repeating",
+        ],
+        "percentage_equations": [
+            "sum_diff_ratio",
+            "sum_diff_percent",
+            "direct_eq_find_x",
+            "direct_eq_two_var",
+            "multi_var",
+            "third_anchor",
+            "sum_constraint",
+        ],
+        "base_comparisons": [
+            "direct_of",
+            "direct_less",
+            "missing_add",
+            "missing_num",
+            "chain",
+            "successive",
+            "var_chain",
+        ],
+        "applied_percentages": [
+            "fraction_shift",
+            "weighted_avg",
+            "population_split",
+            "calc_trick_symmetric",
+            "calc_trick_find_val",
+            "calc_trick_sub",
+        ],
+        "alligation_shifts": [
+            "double_shift_nested",
+            "simple_pop_split",
+            "qty_value_overlap",
+        ],
+        "percentage_comparisons": [
+            "nested_variable_chain",
+            "sum_relativity",
+            "basic_diff_equation",
+            "ratio_equalization",
+            "weight_fraction",
+            "multi_person_donations",
+            "fractional_population",
+        ],
+        "percentage_calculations": [
+            "product_constancy",
+            "work_productivity",
+            "geometry_scaling",
+            "error_multiplier",
+            "salary_remainder",
+            "property_value_chain",
+            "spoiled_fruit_subsets",
+        ],
+        "income_expenditure": [
+            "direct_savings_pct",
+            "net_decimal_variation",
+            "backtrack_target_amt_str",
+            "missing_savings_rate",
+            "fixed_savings_find_income",
+            "compare_two_persons",
+            "exp_as_pct_of_savings",
+            "savings_absolute_change",
+        ],
+        "pass_fail_aggregates": [
+            "split_pass_fail_ratios",
+            "weighted_pass_fail",
+            "missing_weighted_component",
+            "margin_work_scaling",
+            "absentee_splits",
+            "fail_by_marks",
+            "pass_by_marks",
+            "two_students_fail_pass",
+            "pass_pct_given_marks",
+            "find_max_marks",
+        ],
+        "exam_scoring": [
+            "sum_difference_pct",
+            "avg_candidates",
+            "student_chain",
+            "ratio_shift_pass_fail",
+            "score_comparison_chain",
+            "fail_pass_offsets",
+            "fail_pass_simple",
+        ],
+        "successive_discount": [
+            "selling_price",
+            "marked_price",
+            "equivalent_discount",
+        ],
+    }
+
+    HYBRID_RANDOM_VALUES = {
+        ("random_conv", "fraction_to_percent"): [0.99],
+        ("random_conv", "percent_to_fraction"): [0.0],
+        ("fraction_to_decimal", "fraction_to_decimal"): [0.99, 0.99],
+        ("fraction_to_decimal", "decimal_to_fraction"): [0.99, 0.0],
+    }
+
     def __init__(self):
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "openai/gpt-oss-120b" # Latest model
 
+    def _select_hybrid_type(self, hybrid_type):
+        return random.choice(self.HYBRID_GROUPS.get(hybrid_type, [hybrid_type]))
+
+    def get_hybrid_variants(self, pattern_name):
+        hybrid_type = self._get_hybrid_type(pattern_name)
+        if not hybrid_type:
+            return []
+        return self._expand_hybrid_type(hybrid_type)
+
+    def _expand_hybrid_type(self, hybrid_type):
+        variants = []
+        for base_type in self.HYBRID_GROUPS.get(hybrid_type, [hybrid_type]):
+            subtypes = self.HYBRID_SUBTYPES.get(base_type)
+            if subtypes:
+                variants.extend(f"{base_type}::{subtype}" for subtype in subtypes)
+            else:
+                variants.append(base_type)
+        return variants
+
+    @staticmethod
+    def _split_hybrid_variant(hybrid_type):
+        base_type, separator, forced_variant = hybrid_type.partition("::")
+        return base_type, forced_variant if separator else None
+
+    def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None):
+        if not generator_fn or not forced_variant:
+            return generator_fn() if generator_fn else None
+
+        subtype_list = self.HYBRID_SUBTYPES.get(base_type, [])
+        forced_random_values = list(self.HYBRID_RANDOM_VALUES.get((base_type, forced_variant), []))
+
+        real_choice = random.choice
+        real_random = random.random
+
+        def choice_with_forced_subtype(seq):
+            values = list(seq)
+            if values == subtype_list and forced_variant in values:
+                return forced_variant
+            return real_choice(seq)
+
+        def random_with_forced_values():
+            if forced_random_values:
+                return forced_random_values.pop(0)
+            return real_random()
+
+        should_patch_choice = forced_variant in subtype_list
+        should_patch_random = bool(forced_random_values)
+
+        if not should_patch_choice and not should_patch_random:
+            return generator_fn()
+
+        try:
+            if should_patch_choice:
+                random.choice = choice_with_forced_subtype
+            if should_patch_random:
+                random.random = random_with_forced_values
+            return generator_fn()
+        finally:
+            random.choice = real_choice
+            random.random = real_random
+
+    def _generate_hybrid(self, hybrid_type):
+        dispatch = {
+            "mixed_fraction": hybrid_generator.generate_mixed_fraction,
+            "fraction_subtraction": hybrid_generator.generate_fraction_subtraction,
+            "random_conv": hybrid_generator.generate_random_conv,
+            "benchmark_conv": hybrid_generator.generate_benchmark_conv,
+            "find_original_number": hybrid_generator.generate_find_original_number,
+            "fraction_to_decimal": hybrid_generator.generate_fraction_to_decimal,
+            "swap_percentage": hybrid_generator.generate_swap_percentage,
+            "breakdown_percentage": hybrid_generator.generate_breakdown_percentage,
+            "percentage_equations": hybrid_generator.generate_percentage_equations,
+            "base_comparisons": hybrid_generator.generate_base_comparisons,
+            "applied_percentages": hybrid_generator.generate_applied_percentages,
+            "alligation_shifts": hybrid_generator.generate_alligation_shifts,
+            "percentage_comparisons": hybrid_generator.generate_percentage_comparisons,
+            "percentage_calculations": hybrid_generator.generate_percentage_calculations,
+            "income_expenditure": hybrid_generator.generate_income_expenditure,
+            "pass_fail_aggregates": hybrid_generator.generate_pass_fail_aggregates,
+            "exam_scoring": hybrid_generator.generate_exam_scoring,
+            "successive_changes": hybrid_generator.generate_successive_net_change,
+            "successive_discount": hybrid_generator.generate_successive_discount,
+            "clockwise_anticlockwise": hybrid_generator.generate_clockwise_anticlockwise,
+            "pythagoras_theorem": hybrid_generator.generate_pythagoras_theorem,
+            "starting_without_direction": hybrid_generator.generate_starting_without_direction,
+            "moving_towards_direction": hybrid_generator.generate_moving_towards_direction,
+            "interchange_direction": hybrid_generator.generate_interchange_direction,
+            "find_direction_in_respect_to_another": hybrid_generator.generate_find_direction_in_respect_to_another,
+            "coded_direction": hybrid_generator.generate_coded_direction,
+            "shadow_based": hybrid_generator.generate_shadow_based,
+            "headstand": hybrid_generator.generate_headstand,
+            "final_facing": hybrid_generator.generate_final_facing,
+            "side_movement": hybrid_generator.generate_side_movement,
+            "direction_of_smoke": hybrid_generator.generate_direction_of_smoke,
+            "playing_cards": hybrid_generator.generate_playing_cards,
+            "seating_arrangement": hybrid_generator.generate_seating_arrangement,
+            "based_on_turns": hybrid_generator.generate_based_on_turns,
+            "one_direction_only": hybrid_generator.generate_one_direction_only,
+        }
+        selected_type = self._select_hybrid_type(hybrid_type)
+        base_type, forced_variant = self._split_hybrid_variant(selected_type)
+        generator_fn = dispatch.get(base_type)
+        return self._call_hybrid_generator(generator_fn, base_type, forced_variant)
+
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""
         pn = pattern_name.strip().lower()
+        if pn == "fraction, decimal and percent foundations":
+            return "group_fraction_foundations"
+        if pn == "core percentage equations":
+            return "group_core_percentage_equations"
+        if pn == "percentage calculation tricks":
+            return "group_percentage_calculation_tricks"
+        if pn == "applied percentage word problems":
+            return "group_applied_percentage_word_problems"
+        if pn == "mixtures, alligation and shifts":
+            return "group_mixtures_alligation_shifts"
+        if pn == "income, savings and exam aggregates":
+            return "group_income_savings_exam_aggregates"
+        if pn == "successive changes and discounts":
+            return "group_successive_changes_discounts"
         if pn == "mix fraction":
             return "mixed_fraction"
         if pn == "fraction subtraction":
@@ -25,7 +298,7 @@ class QuestionGenerator:
             return "benchmark_conv"
         if pn == "find original number":
             return "find_original_number"
-        if pn == "fraction to decimal and vice versa":
+        if pn in ("fraction to decimal and vice versa", "fraction to decimal"):
             return "fraction_to_decimal"
         if pn == "swap of percentage":
             return "swap_percentage"
@@ -51,6 +324,8 @@ class QuestionGenerator:
             return "exam_scoring"
         if pn == "successive percentage changes":
             return "successive_changes"
+        if pn == "successive discounts":
+            return "successive_discount"
         if pn == "clockwise and anti clockwise":
             return "clockwise_anticlockwise"
         if pn == "pythagoras theorem":
@@ -61,11 +336,11 @@ class QuestionGenerator:
             return "moving_towards_direction"
         if pn == "interchange direction":
             return "interchange_direction"
-        if pn == "find direction with respect to another point":
+        if pn in ("find direction with respect to another point", "find direction in respect to another"):
             return "find_direction_in_respect_to_another"
         if pn == "coded direction":
             return "coded_direction"
-        if pn == "shadow-based questions":
+        if pn in ("shadow-based questions", "shadow based"):
             return "shadow_based"
         if pn == "headstand questions":
             return "headstand"
@@ -81,7 +356,7 @@ class QuestionGenerator:
             return "seating_arrangement"
         if pn == "based on turns":
             return "based_on_turns"
-        if pn == "when only one direction is given":
+        if pn in ("when only one direction is given", "only one direction given"):
             return "one_direction_only"
         return None
 
@@ -89,41 +364,7 @@ class QuestionGenerator:
         # Check for Hybrid Patterns first
         hybrid_type = self._get_hybrid_type(pattern_name)
         if hybrid_type:
-            hybrid_result = None
-            if hybrid_type == "mixed_fraction": hybrid_result = hybrid_generator.generate_mixed_fraction()
-            elif hybrid_type == "fraction_subtraction": hybrid_result = hybrid_generator.generate_fraction_subtraction()
-            elif hybrid_type == "random_conv": hybrid_result = hybrid_generator.generate_random_conv()
-            elif hybrid_type == "benchmark_conv": hybrid_result = hybrid_generator.generate_benchmark_conv()
-            elif hybrid_type == "find_original_number": hybrid_result = hybrid_generator.generate_find_original_number()
-            elif hybrid_type == "fraction_to_decimal": hybrid_result = hybrid_generator.generate_fraction_to_decimal()
-            elif hybrid_type == "swap_percentage": hybrid_result = hybrid_generator.generate_swap_percentage()
-            elif hybrid_type == "breakdown_percentage": hybrid_result = hybrid_generator.generate_breakdown_percentage()
-            elif hybrid_type == "percentage_equations": hybrid_result = hybrid_generator.generate_percentage_equations()
-            elif hybrid_type == "base_comparisons": hybrid_result = hybrid_generator.generate_base_comparisons()
-            elif hybrid_type == "applied_percentages": hybrid_result = hybrid_generator.generate_applied_percentages()
-            elif hybrid_type == "alligation_shifts": hybrid_result = hybrid_generator.generate_alligation_shifts()
-            elif hybrid_type == "percentage_comparisons": hybrid_result = hybrid_generator.generate_percentage_comparisons()
-            elif hybrid_type == "percentage_calculations": hybrid_result = hybrid_generator.generate_percentage_calculations()
-            elif hybrid_type == "income_expenditure": hybrid_result = hybrid_generator.generate_income_expenditure()
-            elif hybrid_type == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
-            elif hybrid_type == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
-            elif hybrid_type == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
-            elif hybrid_type == "clockwise_anticlockwise": hybrid_result = hybrid_generator.generate_clockwise_anticlockwise()
-            elif hybrid_type == "pythagoras_theorem": hybrid_result = hybrid_generator.generate_pythagoras_theorem()
-            elif hybrid_type == "starting_without_direction": hybrid_result = hybrid_generator.generate_starting_without_direction()
-            elif hybrid_type == "moving_towards_direction": hybrid_result = hybrid_generator.generate_moving_towards_direction()
-            elif hybrid_type == "interchange_direction": hybrid_result = hybrid_generator.generate_interchange_direction()
-            elif hybrid_type == "find_direction_in_respect_to_another": hybrid_result = hybrid_generator.generate_find_direction_in_respect_to_another()
-            elif hybrid_type == "coded_direction": hybrid_result = hybrid_generator.generate_coded_direction()
-            elif hybrid_type == "shadow_based": hybrid_result = hybrid_generator.generate_shadow_based()
-            elif hybrid_type == "headstand": hybrid_result = hybrid_generator.generate_headstand()
-            elif hybrid_type == "final_facing": hybrid_result = hybrid_generator.generate_final_facing()
-            elif hybrid_type == "side_movement": hybrid_result = hybrid_generator.generate_side_movement()
-            elif hybrid_type == "direction_of_smoke": hybrid_result = hybrid_generator.generate_direction_of_smoke()
-            elif hybrid_type == "playing_cards": hybrid_result = hybrid_generator.generate_playing_cards()
-            elif hybrid_type == "seating_arrangement": hybrid_result = hybrid_generator.generate_seating_arrangement()
-            elif hybrid_type == "based_on_turns": hybrid_result = hybrid_generator.generate_based_on_turns()
-            elif hybrid_type == "one_direction_only": hybrid_result = hybrid_generator.generate_one_direction_only()
+            hybrid_result = self._generate_hybrid(hybrid_type)
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
@@ -153,14 +394,16 @@ class QuestionGenerator:
         2. Ensure distractors (wrong options) are plausible and based on common student errors.
         3. The explanation MUST be deep, covering the logic of the correct answer and a refutation of all wrong answers.
         
-        Rules:
+        RULES:
         1. Always provide exactly 4 options (A, B, C, D).
         2. Output format MUST be a valid JSON object with the following keys:
-           "question_text": "text",
-           "options": ["A", "B", "C", "D"],
-           "correct_option_index": 0-3,
-           "explanation": "detailed reasoning",
-           "difficulty": integer 1-5
+            "question_text": "text",
+            "options": ["A", "B", "C", "D"],
+            "correct_option_index": 0-3,
+            "explanation": "detailed reasoning",
+            "difficulty": integer 1-5
+
+        IMPORTANT: Generate a UNIQUE, varied scenario each time. Choose a distinct real‑world domain (e.g., finance, logistics, sports, health, engineering) and ensure the story context, numbers, and units differ from all previous questions. Use the avoid_questions list to avoid repeating similar wording or values.
         
         {avoid_text}
         
@@ -197,52 +440,16 @@ class QuestionGenerator:
             return None, error_msg
 
     def generate_batch(self, patterns_info, count=5):
-        """
-        patterns_info: List of dicts with {topic_name, name, description, difficulty, avoid_questions, id}
-        """
         results = []
         ai_patterns = []
+        random.shuffle(patterns_info)
         
         # Split into Hybrid and AI
         hybrid_results = []
         for p in patterns_info:
-            ht = self._get_hybrid_type(p['name'])
+            ht = p.get('hybrid_type') or self._get_hybrid_type(p['name'])
             if ht:
-                hybrid_result = None
-                if ht == "mixed_fraction": hybrid_result = hybrid_generator.generate_mixed_fraction()
-                elif ht == "fraction_subtraction": hybrid_result = hybrid_generator.generate_fraction_subtraction()
-                elif ht == "random_conv": hybrid_result = hybrid_generator.generate_random_conv()
-                elif ht == "benchmark_conv": hybrid_result = hybrid_generator.generate_benchmark_conv()
-                elif ht == "find_original_number": hybrid_result = hybrid_generator.generate_find_original_number()
-                elif ht == "fraction_to_decimal": hybrid_result = hybrid_generator.generate_fraction_to_decimal()
-                elif ht == "swap_percentage": hybrid_result = hybrid_generator.generate_swap_percentage()
-                elif ht == "breakdown_percentage": hybrid_result = hybrid_generator.generate_breakdown_percentage()
-                elif ht == "percentage_equations": hybrid_result = hybrid_generator.generate_percentage_equations()
-                elif ht == "base_comparisons": hybrid_result = hybrid_generator.generate_base_comparisons()
-                elif ht == "applied_percentages": hybrid_result = hybrid_generator.generate_applied_percentages()
-                elif ht == "alligation_shifts": hybrid_result = hybrid_generator.generate_alligation_shifts()
-                elif ht == "percentage_comparisons": hybrid_result = hybrid_generator.generate_percentage_comparisons()
-                elif ht == "percentage_calculations": hybrid_result = hybrid_generator.generate_percentage_calculations()
-                elif ht == "income_expenditure": hybrid_result = hybrid_generator.generate_income_expenditure()
-                elif ht == "pass_fail_aggregates": hybrid_result = hybrid_generator.generate_pass_fail_aggregates()
-                elif ht == "exam_scoring": hybrid_result = hybrid_generator.generate_exam_scoring()
-                elif ht == "successive_changes": hybrid_result = hybrid_generator.generate_successive_net_change()
-                elif ht == "clockwise_anticlockwise": hybrid_result = hybrid_generator.generate_clockwise_anticlockwise()
-                elif ht == "pythagoras_theorem": hybrid_result = hybrid_generator.generate_pythagoras_theorem()
-                elif ht == "starting_without_direction": hybrid_result = hybrid_generator.generate_starting_without_direction()
-                elif ht == "moving_towards_direction": hybrid_result = hybrid_generator.generate_moving_towards_direction()
-                elif ht == "interchange_direction": hybrid_result = hybrid_generator.generate_interchange_direction()
-                elif ht == "find_direction_in_respect_to_another": hybrid_result = hybrid_generator.generate_find_direction_in_respect_to_another()
-                elif ht == "coded_direction": hybrid_result = hybrid_generator.generate_coded_direction()
-                elif ht == "shadow_based": hybrid_result = hybrid_generator.generate_shadow_based()
-                elif ht == "headstand": hybrid_result = hybrid_generator.generate_headstand()
-                elif ht == "final_facing": hybrid_result = hybrid_generator.generate_final_facing()
-                elif ht == "side_movement": hybrid_result = hybrid_generator.generate_side_movement()
-                elif ht == "direction_of_smoke": hybrid_result = hybrid_generator.generate_direction_of_smoke()
-                elif ht == "playing_cards": hybrid_result = hybrid_generator.generate_playing_cards()
-                elif ht == "seating_arrangement": hybrid_result = hybrid_generator.generate_seating_arrangement()
-                elif ht == "based_on_turns": hybrid_result = hybrid_generator.generate_based_on_turns()
-                elif ht == "one_direction_only": hybrid_result = hybrid_generator.generate_one_direction_only()
+                hybrid_result = self._generate_hybrid(ht)
                 
                 if hybrid_result:
                     hybrid_results.append({**hybrid_result, "pattern_id": p['id']})
@@ -251,10 +458,15 @@ class QuestionGenerator:
                 
         # Batch rephrase all hybrid results at once
         if hybrid_results:
-            hybrid_results, err = self._batch_rephrase_hybrid(hybrid_results)
+            rephrased_hybrids, err = self._batch_rephrase_hybrid(hybrid_results)
             if err:
-                return results, f"Batch Rephrasing Error: {err}"
-            results.extend(hybrid_results)
+                print(f"Batch Rephrasing Error: {err}. Using original hybrid questions.")
+                results.extend(hybrid_results)
+            else:
+                results.extend(rephrased_hybrids)
+
+        # Randomize AI pattern order to increase variety
+        random.shuffle(ai_patterns)
 
         if not ai_patterns:
             return results, None
@@ -344,9 +556,10 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             
             CRITICAL RULES:
             1. KEEP ALL NUMERICAL VALUES EXACTLY THE SAME. If the original says 50, use 50. 
-            2. You MAY change units (e.g., from "dollars" to "galactic credits" or "km" to "light years") if it fits the new theme, but the raw numbers must be invariant.
-            3. DO NOT change or reorder the multiple choice options.
-            4. You must output a JSON object with strictly these keys:
+            2. DO NOT introduce any new numbers, dates, or quantitative values that were not in the original text (e.g. don't add "in 2024" or "budget of 10,000" if not present).
+            3. You MAY change units (e.g., from "dollars" to "galactic credits" or "km" to "light years") if it fits the new theme, but the raw numbers must be invariant.
+            4. DO NOT change or reorder the multiple choice options.
+            5. You must output a JSON object with strictly these keys:
                "question_text": "your new unique rewritten question",
                "explanation": "the original explanation, altered ONLY to fit the new names/themes. Keep the formulas identical."
             """
@@ -378,7 +591,7 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                 last_err = str(e)
                 print(f"Hybrid Rephrase Error (Attempt {attempt+1}): {e}")
         
-        return None, last_err # Propagate the error instead of falling back
+        return hybrid_data, last_err # Fallback to original instead of returning None
 
     def _verify_rephrased_content(self, original, rephrased):
         """Second LLM call to verify that the math remains identical."""
@@ -401,7 +614,7 @@ Difficulty: {p['difficulty']}/5{avoid_text}
         try:
             chat = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You are a Match Consistency Checker. YOUR ONLY JOB is to ensure that the DIGITS and NUMBERS (like 20, 10, 50%) are the same in both versions. DO NOT care about currency, names, units, or themes. IF THE NUMBERS MATCH, IS_VALID IS TRUE."},
+                    {"role": "system", "content": "You are a Match Consistency Checker. YOUR ONLY JOB is to ensure that the DIGITS and NUMBERS (like 20, 10, 50%) are the same in both versions. Ignore commas, dollar signs, or unit symbols (e.g., '29,000' and '29000' are IDENTICAL). IF THE NUMBERS MATCH, IS_VALID IS TRUE."},
                     {"role": "user", "content": prompt}
                 ],
                 model=self.model, # Can use same or faster model
@@ -436,8 +649,9 @@ Difficulty: {p['difficulty']}/5{avoid_text}
             
             CRITICAL RULES:
             1. DO NOT change any numbers or mathematical relationships.
-            2. DO NOT change the multiple choice options.
-            3. Output a single JSON object with a "replacements" array. 
+            2. DO NOT add any new numbers, quantities, or dates that were not in the original items.
+            3. DO NOT change the multiple choice options.
+            4. Output a single JSON object with a "replacements" array.
             
             Format:
             {{
@@ -474,31 +688,20 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                     continue
 
                 if len(replacements) == len(hybrid_list):
-                    all_valid = True
-                    reasons = []
                     for i in range(len(hybrid_list)):
-                        # Ensure item is a dict
                         rep_item = replacements[i]
                         if not isinstance(rep_item, dict):
-                            reasons.append(f"Item {i} is not a dictionary")
-                            all_valid = False
-                            break
+                            continue
                             
-                        # Verify each one
+                        # Verify each one individually
                         is_valid, reason = self._verify_rephrased_content(hybrid_list[i]['question_text'], rep_item.get('question_text', ''))
-                        if not is_valid:
-                            reasons.append(f"Item {i}: {reason}")
-                            all_valid = False
-                            break
+                        if is_valid:
+                            hybrid_list[i]["question_text"] = rep_item.get("question_text", hybrid_list[i]["question_text"])
+                            hybrid_list[i]["explanation"] = rep_item.get("explanation", hybrid_list[i]["explanation"])
+                        else:
+                            print(f"Batch Item {i} Verification Failed: {reason}. Keeping original.")
                     
-                    if all_valid:
-                        for i in range(len(hybrid_list)):
-                            hybrid_list[i]["question_text"] = replacements[i].get("question_text", hybrid_list[i]["question_text"])
-                            hybrid_list[i]["explanation"] = replacements[i].get("explanation", hybrid_list[i]["explanation"])
-                        return hybrid_list, None
-                    else:
-                        last_err = "; ".join(reasons)
-                        print(f"Batch Rephrase Verification Failed (Attempt {attempt+1}): {last_err}")
+                    return hybrid_list, None
                 
             except Exception as e:
                 last_err = str(e)

@@ -30,13 +30,21 @@ class HybridGenerator:
         
         # Distractors
         options = [correct]
-        while len(options) < 4:
-            w = max(1, whole + random.randint(-2, 2))
-            r = max(1, rem + random.randint(-3, 3)) % denom
-            if r == 0: r = 1
+        for delta in [-2, -1, 1, 2, 3, 4]:
+            w = max(1, whole + delta)
+            r = rem
             opt = f"{w}({r}/{denom})"
             if opt not in options:
                 options.append(opt)
+            if len(options) == 4:
+                break
+
+        next_whole = whole + 5
+        while len(options) < 4:
+            opt = f"{next_whole}({rem}/{denom})"
+            if opt not in options:
+                options.append(opt)
+            next_whole += 1
         
         random.shuffle(options)
         return {
@@ -487,7 +495,9 @@ class HybridGenerator:
             explanation = f"Let G be greater, S be smaller.\n{p1}% of G = {p2}% of S => G/S = {p2}/{p1} = {f.numerator}/{f.denominator}.\nThe sum of the ratio parts is {f.numerator} + {f.denominator} = {parts}.\nThe actual sum is {total_sum}, so each part is {total_sum}/{parts} = {multiplier}.\nThe greater number G is {f.numerator} * {multiplier} = {correct}."
 
         options = [correct]
-        while len(options) < 4:
+        attempts = 0
+        while len(options) < 4 and attempts < 50:
+            attempts += 1
             if ":" in correct: # Ratio
                 parts = list(map(int, correct.split(':')))
                 random.shuffle(parts)
@@ -506,6 +516,27 @@ class HybridGenerator:
                 alt_val = val + random.choice([-20, -10, 10, 20])
                 alt = str(int(alt_val)) if float(alt_val).is_integer() else str(round(alt_val, 2))
                 if alt not in options and alt_val > 0: options.append(alt)
+
+        if len(options) < 4:
+            if ":" in correct:
+                parts = list(map(int, correct.split(':')))
+                candidates = []
+                for delta in range(1, 20):
+                    candidates.append(":".join(str(max(1, p + delta)) for p in parts))
+                    candidates.append(":".join(str(max(1, p + (delta if i == 0 else 0))) for i, p in enumerate(parts)))
+                    candidates.append(":".join(str(max(1, p + (delta if i == len(parts) - 1 else 0))) for i, p in enumerate(parts)))
+            elif "%" in correct:
+                val = float(correct.replace("%", ""))
+                candidates = [f"{int(v)}%" if float(v).is_integer() else f"{round(v, 2)}%" for v in (val + d for d in [-20, -15, -10, -5, 5, 10, 15, 20]) if v > 0]
+            else:
+                val = float(correct)
+                candidates = [str(int(v)) if float(v).is_integer() else str(round(v, 2)) for v in (val + d for d in [-40, -30, -20, -10, 10, 20, 30, 40]) if v > 0]
+
+            for candidate in candidates:
+                if candidate not in options:
+                    options.append(candidate)
+                    if len(options) == 4:
+                        break
         
         random.shuffle(options)
         return {
@@ -1871,28 +1902,22 @@ class HybridGenerator:
 
         if sub == 'split_pass_fail_ratios':
             # Q6: Y has P% more students than X. X has F1% fail. Total pass is P_tot%. Find Y's fail %.
-            P = random.choice([20, 50, 100, 150])
-            F1 = random.choice([20, 25, 30, 40])
-            
-            # X passes
-            P1 = 100 - F1
-            
-            # Build valid Y fail rate and calculate P_tot
-            while True:
-                F2 = random.choice([10, 15, 20, 25, 30])
-                P2 = 100 - F2
-                
-                # Math: X students = 100, Y students = 100 * (1 + P/100)
-                nx = 100
-                ny = int(100 * (1 + P / 100))
-                
-                total_students = nx + ny
-                total_pass = nx * P1 / 100 + ny * P2 / 100
-                P_tot = (total_pass / total_students) * 100
-                
-                if P_tot.is_integer() and P_tot > 0 and P_tot < 100:
-                    P_tot = int(P_tot)
-                    break 
+            valid_cases = []
+            for P in [20, 50, 100, 150]:
+                for F1 in [20, 25, 30, 40]:
+                    for F2 in [10, 15, 20, 25, 30]:
+                        P1 = 100 - F1
+                        P2 = 100 - F2
+                        nx = 100
+                        ny = int(100 * (1 + P / 100))
+                        total_students = nx + ny
+                        total_pass = nx * P1 / 100 + ny * P2 / 100
+                        P_tot = (total_pass / total_students) * 100
+
+                        if P_tot.is_integer() and 0 < P_tot < 100:
+                            valid_cases.append((P, F1, F2, P1, nx, ny, total_pass, int(P_tot)))
+
+            P, F1, F2, P1, nx, ny, total_pass, P_tot = random.choice(valid_cases)
 
             question = f"A certain number of students from school X appeared in an examination and {F1}% of the students failed. {P}% more students than school X appeared in school Y. If {P_tot}% of the total number of students who appeared from X and Y passed, then what is the percentage of students who failed from Y?"
             correct = f"{F2}%"
@@ -1969,18 +1994,21 @@ class HybridGenerator:
 
         elif sub == 'missing_weighted_component':
             # Q13: A student scored P1% in S1 out of M1. Needs P_tot% overall of M_tot. Find P2%.
-            M1 = random.choice([200, 300, 400])
-            M2 = random.choice([100, 200, 300])
-            M_tot = M1 + M2
-            
-            P1 = random.choice([32, 40, 50, 60])
-            P_tot = random.choice([46, 55, 65, 75])
-            
-            marks1 = (P1 * M1) / 100
-            marks_target = (P_tot * M_tot) / 100
-            
-            marks2_needed = marks_target - marks1
-            P2_req = (marks2_needed / M2) * 100
+            valid_cases = []
+            for M1 in [200, 300, 400]:
+                for M2 in [100, 200, 300]:
+                    for P1 in [32, 40, 50, 60]:
+                        for P_tot in [46, 55, 65, 75]:
+                            M_tot = M1 + M2
+                            marks1 = (P1 * M1) / 100
+                            marks_target = (P_tot * M_tot) / 100
+                            marks2_needed = marks_target - marks1
+                            P2_req = (marks2_needed / M2) * 100
+
+                            if 0 < P2_req <= 100:
+                                valid_cases.append((M1, M2, M_tot, P1, P_tot, marks1, marks_target, marks2_needed, P2_req))
+
+            M1, M2, M_tot, P1, P_tot, marks1, marks_target, marks2_needed, P2_req = random.choice(valid_cases)
             
             question = f"A student scored {P1}% marks in science subjects out of {M1}. How much percentage should he score in language papers out of {M2} if he is to get an overall {P_tot}% marks?"
             correct = f"{round(P2_req, 1)}%"
@@ -2548,6 +2576,66 @@ class HybridGenerator:
         
         return {"question_text": question, "options": opts, "correct_option_index": opts.index(correct), "explanation": explanation, "difficulty": 4}
 
+    def generate_successive_discount(self):
+        """Successive discount applications with marked price and selling price."""
+        d1 = random.choice([5, 10, 12.5, 15, 20, 25, 30])
+        d2 = random.choice([5, 10, 12.5, 15, 20, 25])
+        marked_price = random.choice([800, 1000, 1200, 1500, 2000, 2500, 4000, 5000])
+        multiplier = (1 - d1 / 100) * (1 - d2 / 100)
+        selling_price = round(marked_price * multiplier, 2)
+        net_discount = round((1 - multiplier) * 100, 2)
+        subtype = random.choice(["selling_price", "marked_price", "equivalent_discount"])
+
+        def money(value):
+            return str(int(value)) if float(value).is_integer() else str(round(value, 2))
+
+        if subtype == "selling_price":
+            question = f"A product marked at {marked_price} is sold after two successive discounts of {d1}% and {d2}%. What is the final selling price?"
+            correct = money(selling_price)
+            explanation = (
+                f"Successive discounts multiply the remaining price, not the discount rates.\n"
+                f"Final price = {marked_price} * (1 - {d1}/100) * (1 - {d2}/100)\n"
+                f"= {marked_price} * {1 - d1 / 100:.4f} * {1 - d2 / 100:.4f} = {correct}."
+            )
+            numeric_correct = selling_price
+        elif subtype == "marked_price":
+            question = f"After successive discounts of {d1}% and {d2}%, an item sells for {money(selling_price)}. What was its marked price?"
+            correct = money(marked_price)
+            explanation = (
+                f"Selling price = Marked price * (1 - {d1}/100) * (1 - {d2}/100).\n"
+                f"Marked price = {money(selling_price)} / ({1 - d1 / 100:.4f} * {1 - d2 / 100:.4f}) = {correct}."
+            )
+            numeric_correct = marked_price
+        else:
+            question = f"What single discount is equivalent to two successive discounts of {d1}% and {d2}%?"
+            correct = f"{money(net_discount)}%"
+            explanation = (
+                f"Equivalent discount = d1 + d2 - (d1*d2)/100.\n"
+                f"= {d1} + {d2} - ({d1}*{d2})/100 = {correct}."
+            )
+            numeric_correct = net_discount
+
+        opts = [correct]
+        for delta in [-10, -5, 5, 10, 15, -15]:
+            alt_val = numeric_correct + delta if subtype == "equivalent_discount" else numeric_correct * (1 + delta / 100)
+            if alt_val <= 0:
+                continue
+
+            alt = f"{money(round(alt_val, 2))}%" if subtype == "equivalent_discount" else money(round(alt_val, 2))
+            if alt not in opts:
+                opts.append(alt)
+            if len(opts) == 4:
+                break
+
+        random.shuffle(opts)
+        return {
+            "question_text": question,
+            "options": opts,
+            "correct_option_index": opts.index(correct),
+            "explanation": explanation,
+            "difficulty": 3
+        }
+
     def generate_clockwise_anticlockwise(self):
         """Pattern: Clockwise and anti clockwise"""
         directions = ["North", "North-East", "East", "South-East", "South", "South-West", "West", "North-West"]
@@ -2757,7 +2845,9 @@ class HybridGenerator:
         question = f"If {old_dir} becomes {new_name}, and {directions[(directions.index(old_dir)+1)%8]} becomes {directions[(dir_angles[new_name]//45 + 1)%8]}, and so on, what will {target_old} become?"
         
         correct = target_new
-        options = directions[:]
+        distractors = [d for d in directions if d != correct]
+        random.shuffle(distractors)
+        options = [correct] + distractors[:3]
         random.shuffle(options)
         
         return {

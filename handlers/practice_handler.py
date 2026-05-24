@@ -11,28 +11,48 @@ import asyncio
 async def start_custom_practice(update: Update, context: ContextTypes.DEFAULT_TYPE, pattern_ids: list, target_count: int = 20):
     # Initialize session
     context.user_data['session_patterns'] = pattern_ids
-    # Create a shuffled queue to ensure all patterns are covered fairly
-    shuffled_patterns = pattern_ids.copy()
-    random.shuffle(shuffled_patterns)
-    context.user_data['session_patterns_queue'] = shuffled_patterns
+
+    session_items = []
+    pattern_names = []
+    seen_names = set()
+    for pid in pattern_ids:
+        rows = db.execute_query("SELECT name FROM patterns WHERE id = %s", (pid,))
+        if not rows:
+            continue
+
+        name = rows[0]['name']
+        if name not in seen_names:
+            seen_names.add(name)
+            pattern_names.append(name)
+
+        hybrid_variants = generator.get_hybrid_variants(name)
+        if hybrid_variants:
+            session_items.extend({'pattern_id': pid, 'hybrid_type': ht} for ht in hybrid_variants)
+        else:
+            session_items.append({'pattern_id': pid})
+
+    if not session_items:
+        session_items = [{'pattern_id': pid} for pid in pattern_ids]
+
+    # Create a shuffled queue to ensure all underlying question types are covered fairly.
+    shuffled_items = session_items.copy()
+    random.shuffle(shuffled_items)
+    context.user_data['session_pattern_items'] = session_items
+    context.user_data['session_patterns_queue'] = shuffled_items
     
     context.user_data['session_score'] = 0
-    context.user_data['session_total_target'] = target_count
+    context.user_data['session_total_target'] = max(target_count, len(session_items))
     context.user_data['session_current_index'] = 0
     context.user_data['custom_pool'] = [] # Pool for batched questions
     context.user_data['session_wrong_patterns'] = [] # Track wrong answers
     context.user_data['session_wrong_questions'] = [] # Track wrong question texts
     
     # Selection Summary
-    pattern_names = []
-    for pid in pattern_ids:
-        rows = db.execute_query("SELECT name FROM patterns WHERE id = %s", (pid,))
-        if rows:
-            pattern_names.append(rows[0]['name'])
-    
     summary_text = "📋 <b>Your Selection:</b>\n"
     summary_text += "\n".join([f"• {html.escape(name)}" for name in pattern_names])
-    summary_text += f"\n\n🚀 Starting a session of {target_count} questions!"
+    if len(session_items) > len(pattern_names):
+        summary_text += f"\n\nCovers <b>{len(session_items)}</b> underlying question types."
+    summary_text += f"\n\n🚀 Starting a session of {context.user_data['session_total_target']} questions!"
     
     chat_id = update.effective_chat.id
     await context.bot.send_message(chat_id, summary_text, parse_mode='HTML')
@@ -43,8 +63,10 @@ import time
 
 async def _fill_custom_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Internal helper to fill the question pool via LLM batch."""
-    pattern_ids = context.user_data.get('session_patterns', [])
-    if not pattern_ids:
+    session_items = context.user_data.get('session_pattern_items') or [
+        {'pattern_id': pid} for pid in context.user_data.get('session_patterns', [])
+    ]
+    if not session_items:
         return
         
     # Prepare patterns for the batch using a fair queue
@@ -54,9 +76,12 @@ async def _fill_custom_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
     while len(selected_for_batch) < 5:
         if not queue:
             # Refill and reshuffle when empty
-            queue = context.user_data.get('session_patterns', []).copy()
+            queue = session_items.copy()
             random.shuffle(queue)
-            
+
+        if not queue:
+            return False, "No session patterns available."
+
         selected_for_batch.append(queue.pop(0))
     
     # Save the remaining queue back
@@ -64,19 +89,29 @@ async def _fill_custom_pool(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     batch_patterns_info = []
     user_id = update.effective_user.id
-    for pid in selected_for_batch:
+    for item in selected_for_batch:
+        if isinstance(item, dict):
+            pid = item['pattern_id']
+            hybrid_type = item.get('hybrid_type')
+        else:
+            pid = item
+            hybrid_type = None
+
         res = db.execute_query("SELECT p.id, p.name, p.description, p.difficulty_level, t.name as topic_name FROM patterns p JOIN topics t ON p.topic_id = t.id WHERE p.id = %s", (pid,))
         if res:
             p = res[0]
             current_diff = db.get_current_difficulty(user_id, pid)
-            batch_patterns_info.append({
+            pattern_info = {
                 'id': p['id'],
                 'name': p['name'],
                 'topic_name': p['topic_name'],
                 'description': p['description'],
                 'difficulty': current_diff,
                 'avoid_questions': db.get_recent_questions(p['id'])
-            })
+            }
+            if hybrid_type:
+                pattern_info['hybrid_type'] = hybrid_type
+            batch_patterns_info.append(pattern_info)
     
     questions, error = generator.generate_batch(batch_patterns_info, count=5)
     if questions:

@@ -72,7 +72,7 @@ def session_complete_keyboard(target_count=20):
 
 def question_keyboard(options):
     keyboard = []
-    labels = ['A', 'B', 'C', 'D']
+    labels = [chr(ord('A') + i) for i in range(len(options))]
     
     # Process options in chunks of 2 for a 2x2 grid
     for i in range(0, len(options), 2):

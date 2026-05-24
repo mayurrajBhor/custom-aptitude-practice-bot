@@ -46,21 +46,24 @@ from telegram.ext import CallbackQueryHandler
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    db_ok = db.register_user(user.id, user.username, user.first_name, user.last_name)
+    try:
+        db.register_user(user.id, user.username, user.first_name, user.last_name)
+    except Exception:
+        logging.exception("Failed to register user during /start")
+        await update.message.reply_text(
+            "Database is currently unavailable. Please check Supabase and try again.",
+            parse_mode='HTML'
+        )
+        return
     
-    first_name = html.escape(user.first_name)
+    first_name = html.escape(user.first_name or "there")
     
     # Inform user about database mode
     db_mode = f" (Mode: {db.driver.upper() if db.driver else 'NONE'})"
-    status_tag = "" 
-    if not db_ok:
-         status_tag = "\n\n⚠️ <b>Warning:</b> Database connection error."
-    elif db.driver == 'sqlite':
-         status_tag = "\n\nℹ️ <b>Note:</b> Connected to local database (Offline Mode)."
     
     welcome_msg = (
         f"Welcome 🎓 <b>GMAT Mastery Bot</b> (v1.2.0-CURRICULUM){db_mode}!\n\n"
-        f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.{status_tag}\n\n"
+        f"Hello {first_name}, I'll help you master GMAT Quant, Verbal, and Data Insights.\n\n"
         "Choose a mode to start:"
     )
     
@@ -77,10 +80,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_profile(update, context)
 
 async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    conn = db.get_connection()
-    status = "Connected ✅" if conn else "Disconnected ❌"
-    categories = db.get_categories()
-    cat_count = len(categories) if isinstance(categories, list) else "Error"
+    try:
+        conn = db.get_connection()
+        status = "Connected ✅" if conn else "Disconnected ❌"
+        categories = db.get_categories()
+        cat_count = len(categories) if isinstance(categories, list) else "Error"
+        error_text = ""
+    except Exception as exc:
+        logging.exception("Database status check failed")
+        status = "Disconnected ❌"
+        cat_count = "Error"
+        error_text = f"\nError: <code>{html.escape(str(exc)[:500])}</code>"
     
     msg = (
         f"🖥️ <b>Database Status:</b>\n"
@@ -88,6 +98,7 @@ async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Driver: {db.driver.upper() if db.driver else 'None'}\n"
         f"Category Count: {cat_count}\n"
         f"Search Path: aptitude_practice / public"
+        f"{error_text}"
     )
     await update.message.reply_text(msg, parse_mode='HTML')
 
@@ -103,11 +114,14 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     tb_list = traceback.format_exception(None, context.error, context.error.__traceback__)
     tb_string = "".join(tb_list)
     
-    # Format message for Telegram
-    message = (
-        f"🚨 <b>An error occurred:</b>\n\n"
-        f"<code>{html.escape(tb_string[-4000:])}</code>" # Truncate if too long
-    )
+    # Keep full tracebacks out of production chats.
+    if os.getenv("ENV", "production").lower() == "development":
+        message = (
+            f"🚨 <b>An error occurred:</b>\n\n"
+            f"<code>{html.escape(tb_string[-4000:])}</code>" # Truncate if too long
+        )
+    else:
+        message = "🚨 <b>An error occurred.</b>\n\nPlease try again in a moment."
     
     if not update:
         return

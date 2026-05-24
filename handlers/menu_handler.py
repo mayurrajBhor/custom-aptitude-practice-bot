@@ -7,8 +7,8 @@ from handlers.practice_handler import start_custom_practice, handle_answer
 async def show_categories(update: Update, context: ContextTypes.DEFAULT_TYPE):
     categories = db.get_categories()
     if not categories:
-        # Fallback if DB is empty or connection fails
-        await update.message.reply_text("Database connection issue. Please check your credentials.")
+        # If we got here without exception, database is connected but has no categories
+        await update.message.reply_text("Database is connected but empty. Please run seed/migration scripts to populate categories.")
         return
     
     await update.message.reply_text("Choose a GMAT category:", reply_markup=category_keyboard(categories))

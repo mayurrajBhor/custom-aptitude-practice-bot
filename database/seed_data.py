@@ -16,29 +16,67 @@ def seed_gmat_data():
     res = db.execute_query("SELECT id FROM topics WHERE name = %s", ("Percentages",))
     topic_id = res[0]['id']
     
+    legacy_percentage_patterns = [
+        "Mix fraction",
+        "Fraction subtraction",
+        "Per to fraction and vice versa",
+        "basic fraction to per",
+        "find original number",
+        "fraction to decimal and vice versa",
+        "swap of percentage",
+        "breakdown percentage",
+        "percentage equations and ratios",
+        "base comparisons and successive chains",
+        "applied scenarios and complex calculations",
+        "alligation and shift applications",
+        "percentage comparisons",
+        "percentage calculations",
+        "income expenditure saving",
+        "pass fail aggregates",
+        "examination scoring",
+        "successive percentage changes",
+    ]
+    legacy_percentage_topics = legacy_percentage_patterns + [
+        "Successive discount",
+        "Successive discounts",
+        "Successive changes",
+        "Successive percentage changes",
+    ]
+
     quant_patterns = [
-        ("Mix fraction", "Convert improper fractions to mixed fractions and vice versa."),
-        ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
-        ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
-        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40)."),
-        ("find original number", "Solve percentage equations added or subtracted from themselves."),
-        ("fraction to decimal and vice versa", "Advanced benchmark conversions."),
-        ("swap of percentage", "a% of b equals b% of a, and scaling tricks."),
-        ("breakdown percentage", "Decomposition, shifting, and repeating decimals."),
-        ("percentage equations and ratios", "Multi-variable percentage equality, ratio conversions, and third-anchor constraints."),
-        ("base comparisons and successive chains", "Direct base comparisons, missing values, and successive percentage chains."),
-        ("applied scenarios and complex calculations", "Word problems for populations, test scores, fraction shifts, and tricks."),
-        ("alligation and shift applications", "Mixtures, population splits, value overlaps, and double-shift nested percentages."),
-        ("percentage comparisons", "Nested variable chains, sum-based relativity, ratio equalization, weight fractions, donation differences, and fractional populations."),
-        ("percentage calculations", "Product constancy, work & productivity, geometric scaling, error multipliers, salary remainders, property value chains, and spoiled subset problems."),
-        ("income expenditure saving", "Successive scaling, constant equations, finding percentage changes and backtracking original values across Income = Expenditure + Savings."),
-        ("pass fail aggregates", "Complex weighted averages, multi-object sizing, scaling productivity margins, and subset presence distributions."),
-        ("examination scoring", "Max marks, pass/fail thresholds, sum-difference relationships, and ratio shifts in scoring."),
-        ("successive percentage changes", "Calculating single equivalent change for multiple random percentage increases or decreases.")
+        ("Fraction, Decimal and Percent Foundations", "Merged drills for mixed fractions, fraction subtraction, percent/fraction conversion, benchmark fractions, and fraction-to-decimal conversion."),
+        ("Core Percentage Equations", "Merged drills for finding original values, percentage equations, ratios, multi-variable equalities, and third-anchor constraints."),
+        ("Percentage Calculation Tricks", "Merged drills for swap property, decomposition, base comparisons, chained bases, product constancy, work/productivity, scaling, and error multipliers."),
+        ("Applied Percentage Word Problems", "Merged application set covering populations, test scores, fraction shifts, nested comparisons, ratio equalization, weights, donations, and fractional populations."),
+        ("Mixtures, Alligation and Shifts", "Merged mixture and shift applications, including alligation, population splits, value overlaps, and nested percentage shifts."),
+        ("Income, Savings and Exam Aggregates", "Merged drills for income-expenditure-saving, pass/fail aggregates, weighted averages, marks, thresholds, and exam scoring."),
+        ("Successive Changes and Discounts", "Merged drills for successive percentage increases/decreases, equivalent single changes, marked price, selling price, and successive discounts."),
     ]
     
     for name, desc in quant_patterns:
         db.add_pattern(topic_id, name, desc, 2)
+
+    db.execute_query(
+        """
+        UPDATE patterns
+        SET is_unlocked = FALSE
+        WHERE topic_id = %s AND lower(name) = ANY(%s)
+        """,
+        (topic_id, [name.lower() for name in legacy_percentage_patterns])
+    )
+
+    db.execute_query(
+        """
+        UPDATE patterns p
+        SET is_unlocked = FALSE
+        FROM topics t
+        WHERE p.topic_id = t.id
+        AND t.category_id = %s
+        AND t.id <> %s
+        AND lower(t.name) = ANY(%s)
+        """,
+        (quant_id, topic_id, [name.lower() for name in legacy_percentage_topics])
+    )
 
     # Reasoning - Direction and Distance
     reasoning_id = cat_map['Reasoning']

@@ -4,7 +4,9 @@ def reset_and_seed_minimal():
     print("--- 🗑️ Resetting Database (Minimal Syllabus) ---")
     
     # 1. Clear old data (Maintain categories but clear topics/patterns)
-    # user_added_patterns and user_progress must be cleared first due to FKs
+    # Attempt/question tables must be cleared first due to FKs into patterns.
+    db.execute_query("DELETE FROM question_attempts")
+    db.execute_query("DELETE FROM practice_sessions")
     db.execute_query("DELETE FROM user_progress")
     db.execute_query("DELETE FROM user_added_patterns")
     db.execute_query("DELETE FROM questions")
@@ -25,20 +27,19 @@ def reset_and_seed_minimal():
     res = db.execute_query("SELECT id FROM topics WHERE name = %s", ("Percentages",))
     topic_id = res[0]['id']
     
-    # 4. Add the 4 Foundational Patterns
+    # 4. Add the merged Percentages patterns
     patterns = [
-        ("Mix fraction", "Convert improper fractions to mixed fractions and vice versa."),
-        ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
-        ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
-        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40)."),
-        ("Find original number", "Solve equations where a number is changed by a percentage of itself."),
-        ("Fraction to decimal", "Advanced drills for benchmark fraction-to-decimal conversions."),
-        ("Swap of percentage", "Utilize the commutative and scaling properties ($a\%$ of $b = b\%$ of $a$)."),
-        ("Breakdown percentage", "Decompose complex percentages into manageable benchmark blocks.")
+        ("Fraction, Decimal and Percent Foundations", "Merged drills for mixed fractions, fraction subtraction, percent/fraction conversion, benchmark fractions, and fraction-to-decimal conversion."),
+        ("Core Percentage Equations", "Merged drills for finding original values, percentage equations, ratios, multi-variable equalities, and third-anchor constraints."),
+        ("Percentage Calculation Tricks", "Merged drills for swap property, decomposition, base comparisons, chained bases, product constancy, work/productivity, scaling, and error multipliers."),
+        ("Applied Percentage Word Problems", "Merged application set covering populations, test scores, fraction shifts, nested comparisons, ratio equalization, weights, donations, and fractional populations."),
+        ("Mixtures, Alligation and Shifts", "Merged mixture and shift applications, including alligation, population splits, value overlaps, and nested percentage shifts."),
+        ("Income, Savings and Exam Aggregates", "Merged drills for income-expenditure-saving, pass/fail aggregates, weighted averages, marks, thresholds, and exam scoring."),
+        ("Successive Changes and Discounts", "Merged drills for successive percentage increases/decreases, equivalent single changes, marked price, selling price, and successive discounts.")
     ]
     
     for name, desc in patterns:
-        print(f"Adding foundational pattern: {name}")
+        print(f"Adding merged pattern: {name}")
         db.add_pattern(topic_id, name, desc, 2)
         
     print("\n✅ Database Reset Complete! Only foundational patterns are now active.")

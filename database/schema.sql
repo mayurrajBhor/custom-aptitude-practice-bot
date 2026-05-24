@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS user_progress (
     srs_interval INT DEFAULT 1,
     easiness_factor FLOAT DEFAULT 2.5,
     avg_time_seconds FLOAT DEFAULT 0.0,
-    last_difficulty_level INT DEFAULT 1
+    last_difficulty_level INT DEFAULT 1,
+    UNIQUE(user_id, pattern_id)
 );
 
 -- Tracking when a user adds a pattern for the 9-day rule

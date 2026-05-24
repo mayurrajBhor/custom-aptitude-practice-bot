@@ -31,7 +31,7 @@ async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     active_cycles = db.execute_query("""
         SELECT COUNT(*) as count 
         FROM user_added_patterns 
-        WHERE user_id = %s AND added_at >= datetime('now', '-9 days')
+        WHERE user_id = %s AND added_at >= CURRENT_TIMESTAMP - interval '9 days'
     """, (user_id,))
     cycle_count = active_cycles[0]['count'] if active_cycles else 0
 

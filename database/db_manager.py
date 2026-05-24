@@ -30,6 +30,8 @@ class DatabaseManager:
         if should_reconnect:
             logging.info("Attempting to connect to Supabase (Postgres)...")
             try:
+                if not self.conn_url:
+                    raise RuntimeError("DATABASE_URL is missing. Set it in .env or the deployment environment.")
                 # Use a shorter timeout to fail fast if project is paused/invalid
                 self.conn = psycopg2.connect(self.conn_url, cursor_factory=RealDictCursor, connect_timeout=10)
                 with self.conn.cursor() as cur:
@@ -44,13 +46,22 @@ class DatabaseManager:
                 else:
                     logging.error(f"Failed to connect to Supabase: {e}")
                 self.conn = None
+                raise e
         return self.conn
 
     def execute_query(self, query, params=None, retries=1):
         for attempt in range(retries + 1):
-            conn = self.get_connection()
+            try:
+                conn = self.get_connection()
+            except Exception as conn_err:
+                if attempt == retries:
+                    raise conn_err
+                continue
+
             if not conn:
-                return None
+                if attempt == retries:
+                    raise Exception("Failed to establish a database connection.")
+                continue
                 
             try:
                 cur = conn.cursor()
@@ -69,7 +80,7 @@ class DatabaseManager:
                 logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
                 self.conn = None # Force reconnection
                 if attempt == retries:
-                    return None
+                    raise e
             except Exception as e:
                 logging.error(f"Database error executing query: {e}\nQuery: {query}")
                 if conn:
@@ -77,7 +88,7 @@ class DatabaseManager:
                         conn.rollback()
                     except:
                         pass
-                return None
+                raise e
         return None
 
     def init_db(self):
@@ -108,13 +119,20 @@ class DatabaseManager:
         return self.execute_query("SELECT * FROM categories")
 
     def get_topics(self, category_id):
-        return self.execute_query("SELECT * FROM topics WHERE category_id = %s", (category_id,))
+        query = """
+        SELECT DISTINCT t.*
+        FROM topics t
+        JOIN patterns p ON p.topic_id = t.id
+        WHERE t.category_id = %s AND p.is_unlocked = TRUE
+        ORDER BY t.id
+        """
+        return self.execute_query(query, (category_id,))
 
     def get_patterns(self, topic_id):
-        return self.execute_query("SELECT * FROM patterns WHERE topic_id = %s", (topic_id,))
+        return self.execute_query("SELECT * FROM patterns WHERE topic_id = %s AND is_unlocked = TRUE ORDER BY id", (topic_id,))
         
     def get_all_pattern_ids_for_topic(self, topic_id):
-        res = self.execute_query("SELECT id FROM patterns WHERE topic_id = %s", (topic_id,))
+        res = self.execute_query("SELECT id FROM patterns WHERE topic_id = %s AND is_unlocked = TRUE ORDER BY id", (topic_id,))
         return [row['id'] for row in res] if res else []
 
     def get_all_pattern_ids_for_category(self, category_id):
@@ -122,7 +140,8 @@ class DatabaseManager:
         SELECT p.id 
         FROM patterns p
         JOIN topics t ON p.topic_id = t.id
-        WHERE t.category_id = %s
+        WHERE t.category_id = %s AND p.is_unlocked = TRUE
+        ORDER BY p.id
         """
         res = self.execute_query(query, (category_id,))
         return [row['id'] for row in res] if res else []
@@ -236,7 +255,8 @@ class DatabaseManager:
         VALUES (%s, %s, %s, %s, %s)
         ON CONFLICT (topic_id, name) DO UPDATE SET
             description = EXCLUDED.description,
-            difficulty_level = EXCLUDED.difficulty_level
+            difficulty_level = EXCLUDED.difficulty_level,
+            is_unlocked = EXCLUDED.is_unlocked
         RETURNING id
         """
         res = self.execute_query(query, (topic_id, name, description, difficulty, True))
@@ -272,6 +292,7 @@ class DatabaseManager:
         JOIN patterns p ON uap.pattern_id = p.id
         JOIN topics t ON p.topic_id = t.id
         WHERE uap.user_id = %s 
+        AND p.is_unlocked = TRUE
         AND uap.added_at >= CURRENT_TIMESTAMP - interval '9 days'
         """
         return self.execute_query(query, (user_id,))
@@ -284,6 +305,7 @@ class DatabaseManager:
         JOIN patterns p ON up.pattern_id = p.id
         JOIN topics t ON p.topic_id = t.id
         WHERE up.user_id = %s AND up.next_review_at <= CURRENT_TIMESTAMP
+        AND p.is_unlocked = TRUE
         """
         return self.execute_query(query, (user_id,))
 

@@ -11,10 +11,13 @@ def force_seed_hybrids():
     topic_id = res[0]['id']
     
     patterns = [
-        ("Mix fraction", "Conver improper fractions to mixed fractions and vice versa."),
-        ("Fraction subtraction", "Subtract fractions with common and uncommon denominators."),
-        ("Per to fraction and vice versa", "Convert decimals and percentages to simplified fractions."),
-        ("basic fraction to per", "Memorize common GMAT benchmark conversions (1/2 to 1/40).")
+        ("Fraction, Decimal and Percent Foundations", "Merged drills for mixed fractions, fraction subtraction, percent/fraction conversion, benchmark fractions, and fraction-to-decimal conversion."),
+        ("Core Percentage Equations", "Merged drills for finding original values, percentage equations, ratios, multi-variable equalities, and third-anchor constraints."),
+        ("Percentage Calculation Tricks", "Merged drills for swap property, decomposition, base comparisons, chained bases, product constancy, work/productivity, scaling, and error multipliers."),
+        ("Applied Percentage Word Problems", "Merged application set covering populations, test scores, fraction shifts, nested comparisons, ratio equalization, weights, donations, and fractional populations."),
+        ("Mixtures, Alligation and Shifts", "Merged mixture and shift applications, including alligation, population splits, value overlaps, and nested percentage shifts."),
+        ("Income, Savings and Exam Aggregates", "Merged drills for income-expenditure-saving, pass/fail aggregates, weighted averages, marks, thresholds, and exam scoring."),
+        ("Successive Changes and Discounts", "Merged drills for successive percentage increases/decreases, equivalent single changes, marked price, selling price, and successive discounts.")
     ]
     
     for name, desc in patterns:
