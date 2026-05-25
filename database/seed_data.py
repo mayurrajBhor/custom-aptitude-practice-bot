@@ -56,6 +56,25 @@ def seed_gmat_data():
     for name, desc in quant_patterns:
         db.add_pattern(topic_id, name, desc, 2)
 
+    db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (quant_id, "Vedic Math"))
+    res = db.execute_query("SELECT id FROM topics WHERE category_id = %s AND name = %s", (quant_id, "Vedic Math"))
+    vedic_topic_id = res[0]['id']
+
+    vedic_patterns = [
+        ("Speed Addition and Complements", "Mental addition drills using left-to-right addition, complement pairs, missing addends, and near-base sums."),
+        ("Speed Subtraction and Complements", "Fast subtraction drills using borrowing shortcuts, all-from-9-last-from-10, near-base differences, and missing minuends."),
+        ("Mental Multiplication", "Vedic multiplication drills covering vertical-and-crosswise, near-base products, multiplying by 11, split multiplication, and 25/125 shortcuts."),
+        ("Fast Division and Remainders", "Speed division drills covering short division, remainders, division by 25 or 125, and dividend reconstruction."),
+        ("Tables and Multiples Mastery", "Table fluency drills for products, missing factors, next multiples, and factor splitting."),
+        ("Squares and Square Roots", "Square and square-root drills including ending-in-5 squares, near-base squares, two-digit squares, perfect roots, and integer square roots."),
+        ("Cubes and Cube Roots", "Cube and cube-root drills covering cube values, perfect cube roots, nearest cube roots, and unit digit patterns."),
+        ("Divisibility Rules", "Divisibility-rule drills for 3, 4, 8, 9, 11, and combined aptitude checks."),
+        ("Approximation and Number Sense", "Speed estimation drills using compatible numbers, rounded products, rounded division, and benchmark percentages."),
+    ]
+
+    for name, desc in vedic_patterns:
+        db.add_pattern(vedic_topic_id, name, desc, 2)
+
     db.execute_query(
         """
         UPDATE patterns

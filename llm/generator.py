@@ -155,6 +155,61 @@ class QuestionGenerator:
             "marked_price",
             "equivalent_discount",
         ],
+        "vedic_addition": [
+            "left_to_right",
+            "complements",
+            "missing_addend",
+        ],
+        "vedic_subtraction": [
+            "left_to_right",
+            "base_complement",
+            "near_base_difference",
+            "missing_minuend",
+        ],
+        "vedic_multiplication": [
+            "vertical_crosswise",
+            "near_base_100",
+            "multiply_by_11",
+            "split_multiplier",
+            "multiply_by_25_125",
+        ],
+        "vedic_division": [
+            "short_division",
+            "remainder",
+            "divide_by_25_125",
+            "missing_dividend",
+        ],
+        "vedic_tables_multiples": [
+            "table_product",
+            "missing_factor",
+            "next_multiple",
+            "factor_split",
+        ],
+        "vedic_squares_roots": [
+            "square_ending_5",
+            "near_base_square",
+            "two_digit_square",
+            "perfect_square_root",
+            "integer_square_root",
+        ],
+        "vedic_cubes_roots": [
+            "cube_value",
+            "perfect_cube_root",
+            "nearest_cube",
+            "cube_unit_digit",
+        ],
+        "vedic_divisibility": [
+            "rules_3_9",
+            "rules_4_8",
+            "rule_11",
+            "combined_rules",
+        ],
+        "vedic_approximation": [
+            "compatible_sum",
+            "estimate_product",
+            "estimate_division",
+            "quick_percent",
+        ],
     }
 
     HYBRID_RANDOM_VALUES = {
@@ -253,6 +308,15 @@ class QuestionGenerator:
             "exam_scoring": hybrid_generator.generate_exam_scoring,
             "successive_changes": hybrid_generator.generate_successive_net_change,
             "successive_discount": hybrid_generator.generate_successive_discount,
+            "vedic_addition": hybrid_generator.generate_vedic_addition,
+            "vedic_subtraction": hybrid_generator.generate_vedic_subtraction,
+            "vedic_multiplication": hybrid_generator.generate_vedic_multiplication,
+            "vedic_division": hybrid_generator.generate_vedic_division,
+            "vedic_tables_multiples": hybrid_generator.generate_vedic_tables_multiples,
+            "vedic_squares_roots": hybrid_generator.generate_vedic_squares_roots,
+            "vedic_cubes_roots": hybrid_generator.generate_vedic_cubes_roots,
+            "vedic_divisibility": hybrid_generator.generate_vedic_divisibility,
+            "vedic_approximation": hybrid_generator.generate_vedic_approximation,
             "clockwise_anticlockwise": hybrid_generator.generate_clockwise_anticlockwise,
             "pythagoras_theorem": hybrid_generator.generate_pythagoras_theorem,
             "starting_without_direction": hybrid_generator.generate_starting_without_direction,
@@ -330,6 +394,24 @@ class QuestionGenerator:
             return "successive_changes"
         if pn == "successive discounts":
             return "successive_discount"
+        if pn == "speed addition and complements":
+            return "vedic_addition"
+        if pn == "speed subtraction and complements":
+            return "vedic_subtraction"
+        if pn == "mental multiplication":
+            return "vedic_multiplication"
+        if pn == "fast division and remainders":
+            return "vedic_division"
+        if pn == "tables and multiples mastery":
+            return "vedic_tables_multiples"
+        if pn == "squares and square roots":
+            return "vedic_squares_roots"
+        if pn == "cubes and cube roots":
+            return "vedic_cubes_roots"
+        if pn == "divisibility rules":
+            return "vedic_divisibility"
+        if pn == "approximation and number sense":
+            return "vedic_approximation"
         if pn == "clockwise and anti clockwise":
             return "clockwise_anticlockwise"
         if pn == "pythagoras theorem":
