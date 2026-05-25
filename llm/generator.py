@@ -1,6 +1,7 @@
 import os
 import random
 import json
+import threading
 from groq import Groq
 from dotenv import load_dotenv
 from llm.hybrid_gen import hybrid_generator
@@ -163,6 +164,8 @@ class QuestionGenerator:
         ("fraction_to_decimal", "decimal_to_fraction"): [0.99, 0.0],
     }
 
+    _forced_variant_lock = threading.RLock()
+
     def __init__(self):
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "openai/gpt-oss-120b" # Latest model
@@ -218,15 +221,16 @@ class QuestionGenerator:
         if not should_patch_choice and not should_patch_random:
             return generator_fn()
 
-        try:
-            if should_patch_choice:
-                random.choice = choice_with_forced_subtype
-            if should_patch_random:
-                random.random = random_with_forced_values
-            return generator_fn()
-        finally:
-            random.choice = real_choice
-            random.random = real_random
+        with self._forced_variant_lock:
+            try:
+                if should_patch_choice:
+                    random.choice = choice_with_forced_subtype
+                if should_patch_random:
+                    random.random = random_with_forced_values
+                return generator_fn()
+            finally:
+                random.choice = real_choice
+                random.random = real_random
 
     def _generate_hybrid(self, hybrid_type):
         dispatch = {
@@ -332,7 +336,7 @@ class QuestionGenerator:
             return "pythagoras_theorem"
         if pn == "starting without direction":
             return "starting_without_direction"
-        if pn == "moving towards different directions":
+        if pn in ("moving towards different direction", "moving towards different directions"):
             return "moving_towards_direction"
         if pn == "interchange direction":
             return "interchange_direction"
@@ -358,6 +362,8 @@ class QuestionGenerator:
             return "based_on_turns"
         if pn in ("when only one direction is given", "only one direction given"):
             return "one_direction_only"
+        if pn == "instructions based":
+            return "moving_towards_direction"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):
@@ -439,7 +445,7 @@ class QuestionGenerator:
                 error_msg += f" | Details: {e.response.text}"
             return None, error_msg
 
-    def generate_batch(self, patterns_info, count=5):
+    def generate_batch(self, patterns_info, count=5, rephrase_hybrids=True):
         results = []
         ai_patterns = []
         random.shuffle(patterns_info)
@@ -457,13 +463,15 @@ class QuestionGenerator:
                 ai_patterns.append(p)
                 
         # Batch rephrase all hybrid results at once
-        if hybrid_results:
+        if hybrid_results and rephrase_hybrids:
             rephrased_hybrids, err = self._batch_rephrase_hybrid(hybrid_results)
             if err:
                 print(f"Batch Rephrasing Error: {err}. Using original hybrid questions.")
                 results.extend(hybrid_results)
             else:
                 results.extend(rephrased_hybrids)
+        elif hybrid_results:
+            results.extend(hybrid_results)
 
         # Randomize AI pattern order to increase variety
         random.shuffle(ai_patterns)
@@ -678,11 +686,13 @@ Difficulty: {p['difficulty']}/5{avoid_text}
                 )
                 content = chat.choices[0].message.content
                 res = json.loads(content)
-                if not isinstance(res, dict):
-                    print(f"Batch Rephrase Error: Expected dict, got {type(res).__name__}")
+                if isinstance(res, list):
+                    replacements = res
+                elif isinstance(res, dict):
+                    replacements = res.get("replacements", [])
+                else:
+                    print(f"Batch Rephrase Error: Expected dict or list, got {type(res).__name__}")
                     continue
-                    
-                replacements = res.get("replacements", [])
                 if not isinstance(replacements, list):
                     print(f"Batch Rephrase Error: 'replacements' should be a list, got {type(replacements).__name__}")
                     continue

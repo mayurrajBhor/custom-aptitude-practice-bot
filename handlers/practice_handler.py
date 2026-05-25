@@ -277,6 +277,17 @@ async def handle_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 is_correct, 
                 time_taken
             )
+            if not is_correct:
+                db.record_mistake(
+                    update.effective_user.id,
+                    pattern_id,
+                    q_data['question_text'],
+                    q_data['options'],
+                    q_data['correct_option_index'],
+                    user_ans,
+                    q_data.get('explanation', ''),
+                    q_data.get('difficulty', 3),
+                )
         except Exception as db_err:
             print(f"DEBUG: db.update_user_progress error: {db_err}")
             await query.message.reply_text(f"⚠️ <b>Database Error:</b> {html.escape(str(db_err))}", parse_mode='HTML')

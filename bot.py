@@ -3,7 +3,9 @@ import logging
 import html
 import threading
 import http.server
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
+from datetime import datetime
+from zoneinfo import ZoneInfo
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 from dotenv import load_dotenv
 from database.db_manager import db
@@ -34,6 +36,22 @@ def run_heartbeat():
 
 # Start heartbeat in a separate thread
 threading.Thread(target=run_heartbeat, daemon=True).start()
+
+
+def get_bot_token():
+    env = os.getenv("ENV", "production").lower()
+    if env in ("development", "test", "testing"):
+        token = os.getenv("TELEGRAM_BOT_TOKEN_TEST")
+        if token:
+            logging.info("Using TELEGRAM_BOT_TOKEN_TEST because ENV=%s", env)
+            return token
+
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    if token:
+        logging.info("Using TELEGRAM_BOT_TOKEN")
+        return token
+
+    raise RuntimeError("Telegram bot token is missing. Set TELEGRAM_BOT_TOKEN_TEST for development or TELEGRAM_BOT_TOKEN for production.")
 
 from handlers.menu_handler import show_categories, handle_callback
 from handlers.daily_v2_handler import start_daily_practice
@@ -69,6 +87,36 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(welcome_msg, reply_markup=main_menu_keyboard(), parse_mode='HTML')
 
+    web_app_url = os.getenv("WEB_APP_URL")
+    if web_app_url:
+        await update.message.reply_text(
+            "Mini App is available here:",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Open Practice App", web_app=WebAppInfo(web_app_url))]]
+            )
+        )
+    elif os.getenv("ENV", "production").lower() in ("development", "test", "testing"):
+        await update.message.reply_text(
+            "Mini App is not linked yet. Set WEB_APP_URL in .env, restart the bot, then send /app."
+        )
+
+
+async def open_practice_app(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    web_app_url = os.getenv("WEB_APP_URL")
+    if web_app_url:
+        await update.message.reply_text(
+            "Open the practice app:",
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Open Practice App", web_app=WebAppInfo(web_app_url))]]
+            )
+        )
+        return
+
+    await update.message.reply_text(
+        "WEB_APP_URL is not configured yet.\n\n"
+        "Run the UI server, expose it with an HTTPS tunnel, put that HTTPS URL in .env as WEB_APP_URL, then restart this test bot."
+    )
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     
@@ -78,6 +126,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_categories(update, context)
     elif text == "My Profile 👤":
         await show_profile(update, context)
+    elif text == "Open Practice App":
+        await open_practice_app(update, context)
 
 async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -101,6 +151,43 @@ async def db_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"{error_text}"
     )
     await update.message.reply_text(msg, parse_mode='HTML')
+
+
+async def send_smart_reminders(context: ContextTypes.DEFAULT_TYPE):
+    try:
+        db.ensure_engagement_schema()
+        settings = db.get_enabled_reminder_settings()
+    except Exception:
+        logging.exception("Failed to load reminder settings")
+        return
+
+    for row in settings:
+        try:
+            timezone = ZoneInfo(row.get("timezone") or "Asia/Kolkata")
+            now = datetime.now(timezone)
+            reminder_time = row.get("reminder_time") or "20:00"
+            hours, minutes = [int(part) for part in reminder_time.split(":")]
+            target_minutes = hours * 60 + minutes
+            current_minutes = now.hour * 60 + now.minute
+            if current_minutes < target_minutes or current_minutes - target_minutes > 10:
+                continue
+
+            last_reminded_at = row.get("last_reminded_at")
+            if last_reminded_at and last_reminded_at.astimezone(timezone).date() == now.date():
+                continue
+
+            user_id = row["user_id"]
+            if db.get_today_solved_count(user_id):
+                continue
+
+            first_name = row.get("first_name") or "there"
+            await context.bot.send_message(
+                user_id,
+                f"Hi {html.escape(first_name)}, your practice is still pending today. Open the app and solve a quick 5-question set.",
+            )
+            db.mark_reminder_sent(user_id)
+        except Exception:
+            logging.exception("Failed to send reminder for row: %s", row)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -140,15 +227,26 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
             logging.error(f"Failed to send error message to Telegram: {e}")
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(os.getenv("TELEGRAM_BOT_TOKEN")).connect_timeout(30).read_timeout(30).build()
+    try:
+        db.ensure_engagement_schema()
+    except Exception:
+        logging.exception("Could not initialize engagement schema on bot startup")
+
+    application = ApplicationBuilder().token(get_bot_token()).connect_timeout(30).read_timeout(30).build()
     
     application.add_handler(CommandHandler('start', start))
+    application.add_handler(CommandHandler('app', open_practice_app))
     application.add_handler(CommandHandler('db_status', db_status))
     application.add_handler(add_topic_conv)
     application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     application.add_handler(CallbackQueryHandler(handle_callback))
     
     application.add_error_handler(error_handler)
+
+    if application.job_queue:
+        application.job_queue.run_repeating(send_smart_reminders, interval=300, first=30)
+    else:
+        logging.warning("Smart reminders are disabled because python-telegram-bot job-queue extra is not installed.")
     
     print("Bot is starting...")
     application.run_polling()

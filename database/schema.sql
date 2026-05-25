@@ -43,12 +43,15 @@ CREATE TABLE IF NOT EXISTS questions (
     id SERIAL PRIMARY KEY,
     pattern_id INT REFERENCES patterns(id),
     question_text TEXT NOT NULL,
+    question_hash TEXT,
     options JSONB NOT NULL,
     correct_option_index INT NOT NULL,
     explanation TEXT,
     difficulty INT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS questions_pattern_hash_idx ON questions(pattern_id, question_hash);
 
 -- User Progress and SRS
 CREATE TABLE IF NOT EXISTS user_progress (
@@ -95,6 +98,38 @@ CREATE TABLE IF NOT EXISTS question_attempts (
     is_correct BOOLEAN NOT NULL,
     time_taken_seconds FLOAT DEFAULT 0.0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Mistake book keeps concrete wrong questions for later review/practice.
+CREATE TABLE IF NOT EXISTS mistake_book (
+    id SERIAL PRIMARY KEY,
+    user_id BIGINT REFERENCES users(user_id),
+    pattern_id INT REFERENCES patterns(id),
+    question_text TEXT NOT NULL,
+    question_hash TEXT NOT NULL,
+    options JSONB NOT NULL,
+    correct_option_index INT NOT NULL,
+    selected_option_index INT,
+    explanation TEXT,
+    difficulty INT DEFAULT 3,
+    status TEXT DEFAULT 'open',
+    missed_count INT DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_missed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_reviewed_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(user_id, question_hash)
+);
+
+CREATE INDEX IF NOT EXISTS mistake_book_user_status_idx ON mistake_book(user_id, status, last_missed_at DESC);
+
+-- Smart reminder preferences used by the Telegram bot reminder job.
+CREATE TABLE IF NOT EXISTS user_reminder_settings (
+    user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+    enabled BOOLEAN DEFAULT FALSE,
+    reminder_time TEXT DEFAULT '20:00',
+    timezone TEXT DEFAULT 'Asia/Kolkata',
+    last_reminded_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Insert Initial Categories
