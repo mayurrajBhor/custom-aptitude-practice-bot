@@ -1,5 +1,6 @@
 import os
 import random
+import re
 import secrets
 import time
 import logging
@@ -101,6 +102,41 @@ def health():
     return {"ok": True}
 
 
+@app.get("/api/db-status")
+def db_status():
+    try:
+        rows = db.execute_query(
+            """
+            SELECT
+                current_database() as database,
+                current_schema() as schema,
+                (SELECT COUNT(*) FROM users) as users,
+                (SELECT COUNT(*) FROM categories) as categories,
+                (SELECT COUNT(*) FROM topics) as topics,
+                (SELECT COUNT(*) FROM patterns) as patterns
+            """
+        )
+        row = rows[0] if rows else {}
+        return {
+            "ok": True,
+            "database": row.get("database"),
+            "schema": row.get("schema"),
+            "users": int(row.get("users") or 0),
+            "categories": int(row.get("categories") or 0),
+            "topics": int(row.get("topics") or 0),
+            "patterns": int(row.get("patterns") or 0),
+        }
+    except Exception as exc:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ok": False,
+                "error": _public_exception_message(exc),
+                "database_url_set": bool(os.getenv("DATABASE_URL")),
+            },
+        )
+
+
 @app.get("/api/web-config")
 def web_config():
     return {
@@ -171,7 +207,7 @@ def catalog():
         return {
             "categories": get_local_catalog_payload(),
             "source": "local",
-            "warning": "Using the local practice catalog because the database is unavailable.",
+            "warning": f"Using the local practice catalog because the database is unavailable. {_public_exception_message(exc)}",
         }
 
 
@@ -505,6 +541,16 @@ def _valid_time(value: str):
     if not hours.isdigit() or not minutes.isdigit():
         return False
     return 0 <= int(hours) <= 23 and 0 <= int(minutes) <= 59
+
+
+def _public_exception_message(exc: Exception):
+    message = str(exc).strip() or exc.__class__.__name__
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        message = message.replace(database_url, "[DATABASE_URL]")
+    message = re.sub(r"(postgres(?:ql)?://[^:\s]+:)[^@\s]+(@)", r"\1***\2", message)
+    message = re.sub(r"(password=)[^\s]+", r"\1***", message, flags=re.IGNORECASE)
+    return message[:600]
 
 
 def _reminder_public(row):
