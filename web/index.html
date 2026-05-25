@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aptitude Practice</title>
+    <link rel="stylesheet" href="/static/styles.css?v=10">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true">A</div>
+          <div>
+            <p class="eyebrow">GMAT and CAT trainer</p>
+            <h1>Aptitude Practice</h1>
+          </div>
+        </div>
+        <div class="user-chip" id="userChip">Guest</div>
+      </header>
+
+      <nav class="app-nav" aria-label="App sections">
+        <button class="tab is-active" data-screen-target="practice">
+          <span>Practice</span>
+          <small>Topics and tests</small>
+        </button>
+        <button class="tab" data-screen-target="progress">
+          <span>Progress</span>
+          <small>Stats and weak areas</small>
+        </button>
+      </nav>
+
+      <div class="status-banner" id="statusBanner" hidden></div>
+
+      <main>
+        <section class="screen is-active" id="practiceScreen">
+          <section class="mode-dock" aria-label="Practice mode">
+            <div class="mode-dock-copy">
+              <p class="panel-kicker">Challenge</p>
+              <h2>Choose your practice run</h2>
+            </div>
+            <div class="segmented" id="modeSelector" aria-label="Practice mode">
+              <button class="segment is-active" data-mode="quick" aria-label="Quick 5">
+                <strong>5Q</strong>
+              </button>
+              <button class="segment" data-mode="focused" aria-label="Focused 15">
+                <strong>15Q</strong>
+              </button>
+              <button class="segment" data-mode="full" aria-label="All variants">
+                <strong>All</strong>
+              </button>
+            </div>
+          </section>
+
+          <section class="workspace">
+            <aside class="selector-panel" aria-label="Practice selection">
+              <div class="section-heading">
+                <div>
+                  <p class="panel-kicker">Setup</p>
+                  <h2>Practice Setup</h2>
+                </div>
+                <span class="status-pill" id="catalogStatus">Loading</span>
+              </div>
+
+              <div class="category-tabs" id="categoryTabs"></div>
+              <div class="topic-list" id="topicList"></div>
+            </aside>
+
+            <section class="pattern-panel" aria-label="Patterns">
+              <div class="section-heading">
+                <div>
+                  <p class="panel-kicker">Patterns</p>
+                  <h2 id="topicTitle">Select a topic</h2>
+                </div>
+                <button class="quiet-button" id="selectTopicButton" type="button">Select topic</button>
+              </div>
+              <div class="pattern-list" id="patternList"></div>
+            </section>
+
+            <aside class="session-panel" aria-label="Session summary">
+              <div class="section-heading">
+                <div>
+                  <p class="panel-kicker">Selection</p>
+                  <h2>Session</h2>
+                </div>
+                <span class="status-pill" id="variantCount">0 variants</span>
+              </div>
+              <div class="session-metrics">
+                <div>
+                  <span>Patterns</span>
+                  <strong id="selectedPatternCount">0</strong>
+                </div>
+                <div>
+                  <span>Mode</span>
+                  <strong id="selectedModeLabel">Quick 5</strong>
+                </div>
+              </div>
+              <div class="selection-list" id="selectionList"></div>
+              <button class="primary-button" id="startButton" type="button" disabled>Start practice</button>
+            </aside>
+          </section>
+        </section>
+
+        <section class="screen" id="questionScreen">
+          <div class="question-layout">
+            <section class="question-panel">
+              <div class="question-meta">
+                <span id="questionCounter">Question 1</span>
+                <span id="questionTimer">0s</span>
+              </div>
+              <div class="progress-track"><div id="progressBar"></div></div>
+              <h2 id="questionText"></h2>
+              <div class="options-grid" id="optionsGrid"></div>
+            </section>
+            <aside class="feedback-panel" id="feedbackPanel">
+              <h2 id="feedbackTitle">Answer</h2>
+              <div class="answer-burst" id="answerBurst" hidden></div>
+              <p id="feedbackText">Choose an option to see the explanation.</p>
+              <div class="auto-advance" id="autoAdvanceText" hidden></div>
+              <button class="primary-button" id="nextButton" type="button" disabled>Next question</button>
+              <button class="quiet-button full-width" id="backToPracticeButton" type="button">Back to setup</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="screen" id="progressScreen">
+          <section class="progress-layout">
+            <div>
+              <div class="progress-heading">
+                <div>
+                  <p class="panel-kicker">Profile</p>
+                  <h2>Progress</h2>
+                </div>
+                <div class="profile-tools" id="profileTools">
+                  <input id="devUserIdInput" type="number" inputmode="numeric" placeholder="users.user_id" aria-label="Browser testing user id">
+                  <button class="quiet-button" id="loadProfileButton" type="button">Load progress</button>
+                </div>
+              </div>
+              <div class="profile-note" id="profileNote"></div>
+              <div class="stats-grid compact">
+                <div class="stat">
+                  <span class="stat-label">Today</span>
+                  <strong id="todaySolved">0</strong>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Accuracy</span>
+                  <strong id="accuracyStat">0%</strong>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Mastery</span>
+                  <strong id="masteryStat">0%</strong>
+                </div>
+              </div>
+              <div class="stats-grid compact">
+                <div class="stat">
+                  <span class="stat-label">Solved</span>
+                  <strong id="totalSolved">0</strong>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Correct</span>
+                  <strong id="totalCorrect">0</strong>
+                </div>
+                <div class="stat">
+                  <span class="stat-label">Avg Time</span>
+                  <strong id="avgTime">0s</strong>
+                </div>
+              </div>
+              <section class="progress-card reminder-card">
+                <div class="section-heading">
+                  <div>
+                    <p class="panel-kicker">Reminder</p>
+                    <h2>Smart Reminder</h2>
+                  </div>
+                  <label class="switch">
+                    <input id="reminderEnabled" type="checkbox">
+                    <span></span>
+                  </label>
+                </div>
+                <div class="reminder-controls">
+                  <input id="reminderTime" type="time" value="20:00" aria-label="Reminder time">
+                  <button class="quiet-button" id="saveReminderButton" type="button">Save</button>
+                </div>
+                <p class="helper-text" id="reminderText">Telegram can remind you if you miss practice.</p>
+              </section>
+              <section class="progress-card">
+                <div class="section-heading">
+                  <div>
+                    <p class="panel-kicker">Unlocks</p>
+                    <h2>Unlock Progress</h2>
+                  </div>
+                </div>
+                <div class="unlock-list" id="unlockList"></div>
+              </section>
+              <section class="progress-card">
+                <div class="section-heading">
+                  <div>
+                    <p class="panel-kicker">Review</p>
+                    <h2>Mistake Book</h2>
+                  </div>
+                  <button class="quiet-button" id="practiceMistakesButton" type="button">Practice</button>
+                </div>
+                <div class="mistake-list" id="mistakeList"></div>
+              </section>
+            </div>
+            <div>
+              <h2>Focus Areas</h2>
+              <div class="weak-list" id="weakList"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="screen" id="resultScreen">
+          <div class="result-panel" id="resultPanel">
+            <p class="eyebrow">Session complete</p>
+            <h2 id="resultScore">0 / 0</h2>
+            <p id="resultAccuracy">Accuracy 0%</p>
+            <div class="result-actions">
+              <button class="primary-button" id="reviewAnswersButton" type="button">Review answers</button>
+              <button class="primary-button" id="practiceAgainButton" type="button">Practice again</button>
+              <button class="quiet-button" id="backToSetupButton" type="button">Back to setup</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="reviewScreen">
+          <div class="review-header">
+            <div>
+              <p class="eyebrow">Answer review</p>
+              <h2>Practice Review</h2>
+            </div>
+            <button class="quiet-button" id="reviewBackButton" type="button">Back to result</button>
+          </div>
+          <div class="review-list" id="reviewList"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js?v=10"></script>
+  </body>
+</html>

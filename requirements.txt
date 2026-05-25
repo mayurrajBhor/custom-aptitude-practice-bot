@@ -1,5 +1,7 @@
-python-telegram-bot
+python-telegram-bot[job-queue]
 groq
 python-dotenv
 psycopg2-binary
 pydantic
+fastapi
+uvicorn

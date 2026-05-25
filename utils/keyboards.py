@@ -1,10 +1,15 @@
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
+import os
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, WebAppInfo
 
 def main_menu_keyboard():
+    web_app_url = os.getenv("WEB_APP_URL")
     keyboard = [
         [KeyboardButton("Daily Practice 🕒"), KeyboardButton("Custom Practice 🛠️")],
         [KeyboardButton("Add a topic ➕"), KeyboardButton("My Profile 👤")]
     ]
+    if web_app_url:
+        keyboard.insert(0, [KeyboardButton("Open Practice App", web_app=WebAppInfo(web_app_url))])
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def category_keyboard(categories):

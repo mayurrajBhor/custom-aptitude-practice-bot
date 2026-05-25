@@ -1,5 +1,6 @@
 import os
 import json
+import hashlib
 import psycopg2
 import logging
 from psycopg2.extras import RealDictCursor
@@ -101,6 +102,50 @@ class DatabaseManager:
             cur.execute(schema_sql)
             conn.commit()
 
+    def ensure_engagement_schema(self):
+        statements = [
+            "ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_hash TEXT",
+            "CREATE INDEX IF NOT EXISTS questions_pattern_hash_idx ON questions(pattern_id, question_hash)",
+            """
+            CREATE TABLE IF NOT EXISTS mistake_book (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(user_id),
+                pattern_id INT REFERENCES patterns(id),
+                question_text TEXT NOT NULL,
+                question_hash TEXT NOT NULL,
+                options JSONB NOT NULL,
+                correct_option_index INT NOT NULL,
+                selected_option_index INT,
+                explanation TEXT,
+                difficulty INT DEFAULT 3,
+                status TEXT DEFAULT 'open',
+                missed_count INT DEFAULT 1,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                last_missed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                last_reviewed_at TIMESTAMP WITH TIME ZONE,
+                UNIQUE(user_id, question_hash)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS mistake_book_user_status_idx ON mistake_book(user_id, status, last_missed_at DESC)",
+            """
+            CREATE TABLE IF NOT EXISTS user_reminder_settings (
+                user_id BIGINT PRIMARY KEY REFERENCES users(user_id),
+                enabled BOOLEAN DEFAULT FALSE,
+                reminder_time TEXT DEFAULT '20:00',
+                timezone TEXT DEFAULT 'Asia/Kolkata',
+                last_reminded_at TIMESTAMP WITH TIME ZONE,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+        ]
+        for statement in statements:
+            self.execute_query(statement)
+
+    @staticmethod
+    def question_hash(question_text):
+        normalized = " ".join(str(question_text or "").lower().split())
+        return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
     def get_user(self, user_id):
         return self.execute_query("SELECT * FROM users WHERE user_id = %s", (user_id,))
 
@@ -109,9 +154,9 @@ class DatabaseManager:
         INSERT INTO users (user_id, username, first_name, last_name)
         VALUES (%s, %s, %s, %s)
         ON CONFLICT (user_id) DO UPDATE SET
-            username = EXCLUDED.username,
-            first_name = EXCLUDED.first_name,
-            last_name = EXCLUDED.last_name
+            username = COALESCE(EXCLUDED.username, users.username),
+            first_name = COALESCE(EXCLUDED.first_name, users.first_name),
+            last_name = COALESCE(EXCLUDED.last_name, users.last_name)
         """
         return self.execute_query(query, (user_id, username, first_name, last_name)) is not None
 
@@ -151,13 +196,20 @@ class DatabaseManager:
 
     def save_question(self, pattern_id, question_text, options, correct_index, explanation, difficulty):
         query = """
-        INSERT INTO questions (pattern_id, question_text, options, correct_option_index, explanation, difficulty)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO questions (pattern_id, question_text, question_hash, options, correct_option_index, explanation, difficulty)
+        SELECT %s, %s, %s, %s, %s, %s, %s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM questions
+            WHERE pattern_id = %s AND question_hash = %s
+        )
         """
         # Explicit serialization because psycopg2 might default a Python list to text[] instead of jsonb
-        import json
         options_json = json.dumps(options)
-        self.execute_query(query, (pattern_id, question_text, options_json, correct_index, explanation, difficulty))
+        q_hash = self.question_hash(question_text)
+        self.execute_query(
+            query,
+            (pattern_id, question_text, q_hash, options_json, correct_index, explanation, difficulty, pattern_id, q_hash),
+        )
 
     def get_recent_questions(self, pattern_id, limit=50):
         query = "SELECT question_text FROM questions WHERE pattern_id = %s ORDER BY created_at DESC LIMIT %s"
@@ -231,6 +283,84 @@ class DatabaseManager:
         VALUES (%s, %s, %s, %s)
         """
         self.execute_query(query, (user_id, pattern_id, is_correct, time_taken_seconds))
+
+    def record_mistake(self, user_id, pattern_id, question_text, options, correct_index, selected_index, explanation, difficulty=3):
+        query = """
+        INSERT INTO mistake_book (
+            user_id, pattern_id, question_text, question_hash, options, correct_option_index,
+            selected_option_index, explanation, difficulty
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON CONFLICT (user_id, question_hash) DO UPDATE SET
+            pattern_id = EXCLUDED.pattern_id,
+            options = EXCLUDED.options,
+            correct_option_index = EXCLUDED.correct_option_index,
+            selected_option_index = EXCLUDED.selected_option_index,
+            explanation = EXCLUDED.explanation,
+            difficulty = EXCLUDED.difficulty,
+            status = 'open',
+            missed_count = mistake_book.missed_count + 1,
+            last_missed_at = CURRENT_TIMESTAMP
+        """
+        self.execute_query(
+            query,
+            (
+                user_id,
+                pattern_id,
+                question_text,
+                self.question_hash(question_text),
+                json.dumps(options),
+                correct_index,
+                selected_index,
+                explanation,
+                difficulty,
+            ),
+        )
+
+    def mark_mistake_reviewed(self, user_id, mistake_id):
+        query = """
+        UPDATE mistake_book
+        SET status = 'reviewed', last_reviewed_at = CURRENT_TIMESTAMP
+        WHERE user_id = %s AND id = %s
+        """
+        return self.execute_query(query, (user_id, mistake_id))
+
+    def get_mistake_book(self, user_id, limit=20):
+        query = """
+        SELECT
+            mb.id,
+            mb.pattern_id,
+            mb.question_text,
+            mb.options,
+            mb.correct_option_index,
+            mb.selected_option_index,
+            mb.explanation,
+            mb.difficulty,
+            mb.status,
+            mb.missed_count,
+            mb.last_missed_at,
+            p.name as pattern_name,
+            t.name as topic_name
+        FROM mistake_book mb
+        LEFT JOIN patterns p ON p.id = mb.pattern_id
+        LEFT JOIN topics t ON t.id = p.topic_id
+        WHERE mb.user_id = %s AND mb.status = 'open'
+        ORDER BY mb.last_missed_at DESC
+        LIMIT %s
+        """
+        return self.execute_query(query, (user_id, limit)) or []
+
+    def get_mistake_pattern_ids(self, user_id, limit=10):
+        query = """
+        SELECT pattern_id, COUNT(*) as wrong_count
+        FROM mistake_book
+        WHERE user_id = %s AND status = 'open' AND pattern_id IS NOT NULL
+        GROUP BY pattern_id
+        ORDER BY wrong_count DESC, MAX(last_missed_at) DESC
+        LIMIT %s
+        """
+        rows = self.execute_query(query, (user_id, limit)) or []
+        return [row["pattern_id"] for row in rows]
         
     def get_today_solved_count(self, user_id):
         query = """
@@ -240,6 +370,85 @@ class DatabaseManager:
         """
         res = self.execute_query(query, (user_id,))
         return res[0]['count'] if res else 0
+
+    def get_unlock_progress(self, user_id):
+        topic_query = """
+        SELECT
+            t.id as topic_id,
+            t.name as topic_name,
+            c.name as category_name,
+            COUNT(p.id) as total_patterns,
+            COUNT(up.pattern_id) as practiced_patterns,
+            COUNT(CASE WHEN up.mastery_score >= 0.8 THEN 1 END) as mastered_patterns,
+            COALESCE(AVG(up.mastery_score), 0) as avg_mastery
+        FROM topics t
+        JOIN categories c ON c.id = t.category_id
+        JOIN patterns p ON p.topic_id = t.id AND p.is_unlocked = TRUE
+        LEFT JOIN user_progress up ON up.pattern_id = p.id AND up.user_id = %s
+        GROUP BY t.id, t.name, c.name
+        ORDER BY c.name, t.name
+        """
+        pattern_query = """
+        SELECT
+            p.id,
+            p.name,
+            t.name as topic_name,
+            COALESCE(up.mastery_score, 0) as mastery_score,
+            COALESCE(up.total_attempts, 0) as total_attempts,
+            COALESCE(up.correct_attempts, 0) as correct_attempts
+        FROM patterns p
+        JOIN topics t ON t.id = p.topic_id
+        LEFT JOIN user_progress up ON up.pattern_id = p.id AND up.user_id = %s
+        WHERE p.is_unlocked = TRUE
+        ORDER BY p.id
+        """
+        return {
+            "topics": self.execute_query(topic_query, (user_id,)) or [],
+            "patterns": self.execute_query(pattern_query, (user_id,)) or [],
+        }
+
+    def get_reminder_settings(self, user_id):
+        query = """
+        INSERT INTO user_reminder_settings (user_id)
+        VALUES (%s)
+        ON CONFLICT (user_id) DO NOTHING
+        """
+        self.execute_query(query, (user_id,))
+        rows = self.execute_query(
+            "SELECT user_id, enabled, reminder_time, timezone, last_reminded_at FROM user_reminder_settings WHERE user_id = %s",
+            (user_id,),
+        )
+        return rows[0] if rows else None
+
+    def upsert_reminder_settings(self, user_id, enabled, reminder_time, timezone="Asia/Kolkata"):
+        query = """
+        INSERT INTO user_reminder_settings (user_id, enabled, reminder_time, timezone, updated_at)
+        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
+        ON CONFLICT (user_id) DO UPDATE SET
+            enabled = EXCLUDED.enabled,
+            reminder_time = EXCLUDED.reminder_time,
+            timezone = EXCLUDED.timezone,
+            updated_at = CURRENT_TIMESTAMP
+        RETURNING user_id, enabled, reminder_time, timezone, last_reminded_at
+        """
+        rows = self.execute_query(query, (user_id, enabled, reminder_time, timezone))
+        return rows[0] if rows else None
+
+    def get_enabled_reminder_settings(self):
+        return self.execute_query(
+            """
+            SELECT rs.user_id, rs.reminder_time, rs.timezone, rs.last_reminded_at, u.first_name
+            FROM user_reminder_settings rs
+            JOIN users u ON u.user_id = rs.user_id
+            WHERE rs.enabled = TRUE
+            """
+        ) or []
+
+    def mark_reminder_sent(self, user_id):
+        return self.execute_query(
+            "UPDATE user_reminder_settings SET last_reminded_at = CURRENT_TIMESTAMP WHERE user_id = %s",
+            (user_id,),
+        )
 
     def get_current_difficulty(self, user_id, pattern_id):
         res = self.execute_query("SELECT last_difficulty_level FROM user_progress WHERE user_id = %s AND pattern_id = %s", (user_id, pattern_id))
