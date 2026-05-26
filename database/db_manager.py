@@ -451,12 +451,40 @@ class DatabaseManager:
         )
 
     def get_current_difficulty(self, user_id, pattern_id):
-        res = self.execute_query("SELECT last_difficulty_level FROM user_progress WHERE user_id = %s AND pattern_id = %s", (user_id, pattern_id))
-        if res and res[0]['last_difficulty_level']:
-            return res[0]['last_difficulty_level']
-        
-        res = self.execute_query("SELECT difficulty_level FROM patterns WHERE id = %s", (pattern_id,))
-        return res[0]['difficulty_level'] if res else 2
+        res = self.execute_query(
+            """
+            SELECT
+                p.difficulty_level,
+                t.name as topic_name,
+                up.last_difficulty_level,
+                up.total_attempts,
+                up.correct_attempts
+            FROM patterns p
+            JOIN topics t ON p.topic_id = t.id
+            LEFT JOIN user_progress up ON up.pattern_id = p.id AND up.user_id = %s
+            WHERE p.id = %s
+            """,
+            (user_id, pattern_id),
+        )
+        if not res:
+            return 2
+
+        row = res[0]
+        base_difficulty = row.get('difficulty_level') or 2
+        current_difficulty = row.get('last_difficulty_level') or base_difficulty
+
+        if (row.get('topic_name') or '').strip().lower() == 'vedic math':
+            attempts = row.get('total_attempts') or 0
+            correct = row.get('correct_attempts') or 0
+            accuracy = (correct / attempts) if attempts else 0
+            if attempts < 3:
+                return 1
+            if attempts < 7:
+                return min(2, current_difficulty)
+            if attempts < 12 or accuracy < 0.7:
+                return min(3, current_difficulty)
+
+        return current_difficulty
 
     def add_pattern(self, topic_id, name, description, difficulty, user_id=None):
         query = """

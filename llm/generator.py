@@ -249,9 +249,20 @@ class QuestionGenerator:
         base_type, separator, forced_variant = hybrid_type.partition("::")
         return base_type, forced_variant if separator else None
 
-    def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None):
+    @staticmethod
+    def _is_difficulty_aware_hybrid(base_type):
+        return str(base_type or "").startswith("vedic_")
+
+    def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None, difficulty=None):
+        def call_generator():
+            if not generator_fn:
+                return None
+            if self._is_difficulty_aware_hybrid(base_type):
+                return generator_fn(difficulty=difficulty)
+            return generator_fn()
+
         if not generator_fn or not forced_variant:
-            return generator_fn() if generator_fn else None
+            return call_generator()
 
         subtype_list = self.HYBRID_SUBTYPES.get(base_type, [])
         forced_random_values = list(self.HYBRID_RANDOM_VALUES.get((base_type, forced_variant), []))
@@ -261,7 +272,7 @@ class QuestionGenerator:
 
         def choice_with_forced_subtype(seq):
             values = list(seq)
-            if values == subtype_list and forced_variant in values:
+            if forced_variant in values:
                 return forced_variant
             return real_choice(seq)
 
@@ -274,7 +285,7 @@ class QuestionGenerator:
         should_patch_random = bool(forced_random_values)
 
         if not should_patch_choice and not should_patch_random:
-            return generator_fn()
+            return call_generator()
 
         with self._forced_variant_lock:
             try:
@@ -282,12 +293,12 @@ class QuestionGenerator:
                     random.choice = choice_with_forced_subtype
                 if should_patch_random:
                     random.random = random_with_forced_values
-                return generator_fn()
+                return call_generator()
             finally:
                 random.choice = real_choice
                 random.random = real_random
 
-    def _generate_hybrid(self, hybrid_type):
+    def _generate_hybrid(self, hybrid_type, difficulty=None):
         dispatch = {
             "mixed_fraction": hybrid_generator.generate_mixed_fraction,
             "fraction_subtraction": hybrid_generator.generate_fraction_subtraction,
@@ -337,7 +348,7 @@ class QuestionGenerator:
         selected_type = self._select_hybrid_type(hybrid_type)
         base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
-        return self._call_hybrid_generator(generator_fn, base_type, forced_variant)
+        return self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
 
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""
@@ -452,7 +463,7 @@ class QuestionGenerator:
         # Check for Hybrid Patterns first
         hybrid_type = self._get_hybrid_type(pattern_name)
         if hybrid_type:
-            hybrid_result = self._generate_hybrid(hybrid_type)
+            hybrid_result = self._generate_hybrid(hybrid_type, difficulty=difficulty)
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
@@ -537,7 +548,7 @@ class QuestionGenerator:
         for p in patterns_info:
             ht = p.get('hybrid_type') or self._get_hybrid_type(p['name'])
             if ht:
-                hybrid_result = self._generate_hybrid(ht)
+                hybrid_result = self._generate_hybrid(ht, difficulty=p.get('difficulty'))
                 
                 if hybrid_result:
                     hybrid_results.append({**hybrid_result, "pattern_id": p['id']})

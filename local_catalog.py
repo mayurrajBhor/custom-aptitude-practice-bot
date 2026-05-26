@@ -136,7 +136,7 @@ LOCAL_PATTERNS.update(
 )
 LOCAL_PATTERNS.update(
     {
-        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description)
+        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description, difficulty=1)
         for pattern_id, name, description in VEDIC_MATH_PATTERNS
     }
 )
