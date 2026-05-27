@@ -808,6 +808,10 @@ h2 {
   border-left-color: var(--danger);
 }
 
+.review-card.is-skipped {
+  border-left-color: var(--amber);
+}
+
 .review-card-header,
 .review-answer-grid {
   display: grid;

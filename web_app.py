@@ -215,6 +215,7 @@ def catalog():
 def profile(user_id: int):
     try:
         _ensure_engagement_schema()
+        _ensure_user_row(user_id)
         stats = db.execute_query(
             """
             SELECT
@@ -300,7 +301,7 @@ def start_session(request: StartSessionRequest):
     random.shuffle(queue)
 
     session_id = uuid4().hex
-    SESSIONS[session_id] = {
+    session = {
         "id": session_id,
         "user_id": user_id,
         "mode": request.mode,
@@ -316,17 +317,33 @@ def start_session(request: StartSessionRequest):
         "score": 0,
         "wrong_patterns": [],
         "history": [],
+        "skipped_count": 0,
+        "stopped": False,
+        "prefilled": False,
         "used_question_keys": set(),
         "used_question_texts": [],
         "started_at": time.time(),
     }
 
-    return _session_public(SESSIONS[session_id])
+    _fill_question_pool(session, batch_size=target_count)
+    generated_count = len(session["pool"])
+    if generated_count <= 0:
+        raise HTTPException(status_code=500, detail="Could not generate questions for this practice set.")
+    if generated_count < target_count:
+        logging.warning("Generated only %s of %s requested questions. Starting a shorter session.", generated_count, target_count)
+        session["total_questions"] = generated_count
+    session["prefilled"] = True
+
+    SESSIONS[session_id] = session
+    return _session_public(session)
 
 
 @app.post("/api/session/{session_id}/next")
 def next_question(session_id: str):
     session = _get_session(session_id)
+    if session.get("stopped"):
+        return {"complete": True, "summary": _session_summary(session)}
+
     if session["current_index"] >= session["total_questions"]:
         return {"complete": True, "summary": _session_summary(session)}
 
@@ -334,10 +351,7 @@ def next_question(session_id: str):
         return {"complete": False, "question": _question_public(session)}
 
     if not session["pool"]:
-        _fill_question_pool(session)
-
-    if not session["pool"]:
-        raise HTTPException(status_code=500, detail="Could not generate a question.")
+        raise HTTPException(status_code=500, detail="No pre-generated question is available. Please start a new session.")
 
     question = session["pool"].pop(0)
     question["question_number"] = session["current_index"] + 1
@@ -352,6 +366,9 @@ def next_question(session_id: str):
 @app.post("/api/session/{session_id}/answer")
 def answer_question(session_id: str, request: AnswerRequest):
     session = _get_session(session_id)
+    if session.get("stopped"):
+        raise HTTPException(status_code=409, detail="This practice session was stopped.")
+
     question = session.get("current_question")
     if not question:
         raise HTTPException(status_code=409, detail="No active question to answer.")
@@ -368,22 +385,7 @@ def answer_question(session_id: str, request: AnswerRequest):
     elif pattern_id:
         session["wrong_patterns"].append(pattern_id)
 
-    session["history"].append(
-        {
-            "question_number": question.get("question_number"),
-            "question_text": question.get("question_text"),
-            "options": question.get("options", []),
-            "selected_option_index": request.answer_index,
-            "selected_option": question["options"][request.answer_index],
-            "correct_option_index": question["correct_option_index"],
-            "correct_option": question["options"][question["correct_option_index"]],
-            "is_correct": is_correct,
-            "explanation": question.get("explanation") or "",
-            "difficulty": question.get("difficulty", 3),
-            "time_taken": time_taken,
-            "pattern_id": pattern_id,
-        }
-    )
+    session["history"].append(_question_history_entry(question, request.answer_index, time_taken))
 
     if session.get("user_id") and pattern_id:
         try:
@@ -428,6 +430,36 @@ def answer_question(session_id: str, request: AnswerRequest):
     }
 
 
+@app.post("/api/session/{session_id}/stop")
+def stop_session(session_id: str):
+    session = _get_session(session_id)
+
+    if session.get("stopped"):
+        return {
+            "summary": _session_summary(session),
+            "questions": session.get("history", []),
+        }
+
+    question = session.get("current_question")
+    if question:
+        time_taken = round(time.monotonic() - (session.get("current_started_at") or time.monotonic()), 2)
+        session["history"].append(_question_history_entry(question, None, time_taken, is_skipped=True))
+        session["skipped_count"] = session.get("skipped_count", 0) + 1
+        session["current_index"] += 1
+
+    session["stopped"] = True
+    session["stopped_at"] = time.time()
+    session["current_question"] = None
+    session["current_started_at"] = None
+    session["queue"] = []
+    session["pool"] = []
+
+    return {
+        "summary": _session_summary(session),
+        "questions": session.get("history", []),
+    }
+
+
 @app.get("/api/session/{session_id}/review")
 def review_session(session_id: str):
     session = _get_session(session_id)
@@ -464,6 +496,7 @@ def mark_mistake_reviewed(user_id: int, mistake_id: int):
 def reminder_settings(user_id: int):
     try:
         _ensure_engagement_schema()
+        _ensure_user_row(user_id)
         return _reminder_public(db.get_reminder_settings(user_id))
     except Exception as exc:
         raise HTTPException(status_code=503, detail=f"Reminder settings unavailable: {exc}") from exc
@@ -475,6 +508,7 @@ def update_reminder_settings(user_id: int, request: ReminderRequest):
         raise HTTPException(status_code=400, detail="Reminder time must be in HH:MM format.")
     try:
         _ensure_engagement_schema()
+        _ensure_user_row(user_id)
         return _reminder_public(
             db.upsert_reminder_settings(
                 user_id,
@@ -494,6 +528,10 @@ def _get_session(session_id: str):
     return session
 
 
+def _ensure_user_row(user_id: int):
+    db.register_user(user_id, None, "Web", "Learner")
+
+
 def _session_public(session: dict[str, Any]):
     return {
         "session_id": session["id"],
@@ -507,15 +545,22 @@ def _session_public(session: dict[str, Any]):
 
 
 def _session_summary(session: dict[str, Any]):
-    total = session["total_questions"]
+    planned_total = session["total_questions"]
+    review_count = len(session.get("history", []))
+    stopped = bool(session.get("stopped"))
+    total = review_count if stopped else planned_total
     score = session["score"]
     return {
         "score": score,
         "total_questions": total,
+        "planned_total_questions": planned_total,
+        "answered": review_count,
         "accuracy": round((score / total) * 100, 1) if total else 0,
         "wrong_count": len(session["wrong_patterns"]),
+        "skipped_count": session.get("skipped_count", 0),
+        "stopped": stopped,
         "pattern_names": session["pattern_names"],
-        "review_count": len(session.get("history", [])),
+        "review_count": review_count,
     }
 
 
@@ -599,6 +644,35 @@ def _question_public(session: dict[str, Any]):
     }
 
 
+def _question_history_entry(
+    question: dict[str, Any],
+    selected_option_index: Optional[int],
+    time_taken: float,
+    is_skipped: bool = False,
+):
+    options = question.get("options", [])
+    correct_option_index = question.get("correct_option_index", 0)
+    selected_option = None if selected_option_index is None else options[selected_option_index]
+    correct_option = options[correct_option_index] if 0 <= correct_option_index < len(options) else ""
+    is_correct = (selected_option_index == correct_option_index) if selected_option_index is not None else False
+
+    return {
+        "question_number": question.get("question_number"),
+        "question_text": question.get("question_text"),
+        "options": options,
+        "selected_option_index": selected_option_index,
+        "selected_option": selected_option,
+        "correct_option_index": correct_option_index,
+        "correct_option": correct_option,
+        "is_correct": is_correct,
+        "is_skipped": is_skipped,
+        "explanation": question.get("explanation") or "",
+        "difficulty": question.get("difficulty", 3),
+        "time_taken": time_taken,
+        "pattern_id": question.get("pattern_id"),
+    }
+
+
 def _build_session_items(pattern_ids: list[int]):
     session_items = []
     pattern_names = []
@@ -645,14 +719,16 @@ def _build_session_items(pattern_ids: list[int]):
 
 def _fill_question_pool(session: dict[str, Any], batch_size: int = 3):
     remaining = session["total_questions"] - session["current_index"]
-    batch_size = min(batch_size, remaining)
+    target_pool_size = min(len(session["pool"]) + batch_size, remaining)
     attempts = 0
+    max_attempts = max(5, batch_size * 2)
     last_error = None
 
-    while len(session["pool"]) < batch_size and attempts < 5:
+    while len(session["pool"]) < target_pool_size and attempts < max_attempts:
         attempts += 1
+        needed_count = target_pool_size - len(session["pool"])
         selected_items = []
-        while len(selected_items) < batch_size:
+        while len(selected_items) < needed_count:
             if not session["queue"]:
                 session["queue"] = session["items"].copy()
                 random.shuffle(session["queue"])
@@ -715,12 +791,12 @@ def _fill_question_pool(session: dict[str, Any], batch_size: int = 3):
             pattern_id = question.get("pattern_id")
             if q_key in session["used_question_keys"]:
                 continue
-            if pattern_id and q_key in recent_by_pattern.get(pattern_id, set()) and attempts < 5:
+            if pattern_id and q_key in recent_by_pattern.get(pattern_id, set()) and attempts < max_attempts:
                 continue
             session["used_question_keys"].add(q_key)
             session["used_question_texts"].append(question.get("question_text", ""))
             session["pool"].append(question)
-            if len(session["pool"]) >= batch_size:
+            if len(session["pool"]) >= target_pool_size:
                 break
 
     if last_error and not session["pool"]:

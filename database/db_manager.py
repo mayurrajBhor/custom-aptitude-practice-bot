@@ -66,6 +66,7 @@ class DatabaseManager:
                 
             try:
                 cur = conn.cursor()
+                cur.execute("SET search_path TO aptitude_practice, public")
                 if params:
                     cur.execute(query, params)
                 else:

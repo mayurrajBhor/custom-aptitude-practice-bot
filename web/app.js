@@ -601,12 +601,13 @@ async function startPractice() {
 
   clearStatus();
   $("#startButton").disabled = true;
-  $("#startButton").textContent = "Starting";
+  $("#startButton").textContent = "Preparing questions";
 
   try {
     const mode = MODE_CONFIG[state.selectedMode];
     state.session = await api("/api/session/start", {
       method: "POST",
+      timeoutMs: 120000,
       body: JSON.stringify({
         pattern_ids: patternIds,
         mode: state.selectedMode,
@@ -665,7 +666,7 @@ async function loadNextQuestion() {
   $("#feedbackText").textContent = "Choose an option to see the explanation.";
   $("#autoAdvanceText").hidden = true;
   $("#optionsGrid").innerHTML = "";
-  $("#questionText").textContent = "Generating question";
+  $("#questionText").textContent = "Loading question";
 
   try {
     const data = await api(`/api/session/${state.session.session_id}/next`, { method: "POST", timeoutMs: 45000 });
@@ -752,11 +753,47 @@ async function submitAnswer(answerIndex) {
   loadProfile();
 }
 
+async function stopPractice() {
+  if (!state.session?.session_id) {
+    clearAutoAdvance();
+    clearQuestionTimer();
+    setScreen("practice");
+    return;
+  }
+
+  clearAutoAdvance();
+  clearQuestionTimer();
+  const stopButton = $("#stopPracticeButton");
+  stopButton.disabled = true;
+  stopButton.textContent = "Stopping";
+
+  try {
+    const result = await api(`/api/session/${state.session.session_id}/stop`, { method: "POST" });
+    state.activeQuestion = null;
+    state.answered = true;
+    showResults(result.summary);
+  } catch (error) {
+    showStatus(error.message);
+  } finally {
+    stopButton.disabled = false;
+    stopButton.textContent = "Stop practice";
+  }
+}
+
 function showResults(summary) {
   clearAutoAdvance();
   clearQuestionTimer();
-  $("#resultScore").textContent = `${summary.score} / ${summary.total_questions}`;
-  $("#resultAccuracy").textContent = `Accuracy ${summary.accuracy}%`;
+  const total = summary.total_questions || 0;
+  $("#resultScore").textContent = `${summary.score} / ${total}`;
+  if (summary.stopped) {
+    const plannedTotal = summary.planned_total_questions || total;
+    const answered = summary.answered || summary.review_count || 0;
+    const skipped = summary.skipped_count || 0;
+    const skippedText = skipped ? ` · ${skipped} skipped` : "";
+    $("#resultAccuracy").textContent = `Stopped after ${answered} of ${plannedTotal} · Accuracy ${summary.accuracy}%${skippedText}`;
+  } else {
+    $("#resultAccuracy").textContent = `Accuracy ${summary.accuracy}%`;
+  }
   setScreen("result");
   replayAnimation($("#resultPanel"), "is-complete");
 }
@@ -788,10 +825,14 @@ function renderReview(questions) {
   }
 
   $("#reviewList").innerHTML = questions.map((question) => {
-    const selectedLabel = String.fromCharCode(65 + question.selected_option_index);
+    const skipped = question.is_skipped || question.selected_option_index === null || question.selected_option_index === undefined;
+    const selectedLabel = skipped ? "" : String.fromCharCode(65 + question.selected_option_index);
     const correctLabel = String.fromCharCode(65 + question.correct_option_index);
-    const statusClass = question.is_correct ? "is-correct" : "is-wrong";
-    const statusText = question.is_correct ? "Correct" : "Incorrect";
+    const statusClass = skipped ? "is-skipped" : question.is_correct ? "is-correct" : "is-wrong";
+    const statusText = skipped ? "Skipped" : question.is_correct ? "Correct" : "Incorrect";
+    const selectedAnswer = skipped
+      ? "Skipped"
+      : `${selectedLabel}. ${escapeHtml(String(question.selected_option))}`;
 
     return `
       <article class="review-card ${statusClass}">
@@ -803,7 +844,7 @@ function renderReview(questions) {
         <div class="review-answer-grid">
           <div>
             <span>Your answer</span>
-            <strong>${selectedLabel}. ${escapeHtml(String(question.selected_option))}</strong>
+            <strong>${selectedAnswer}</strong>
           </div>
           <div>
             <span>Correct answer</span>
@@ -923,11 +964,7 @@ function bindEvents() {
       $("#loadProfileButton").click();
     }
   });
-  $("#backToPracticeButton").addEventListener("click", () => {
-    clearAutoAdvance();
-    clearQuestionTimer();
-    setScreen("practice");
-  });
+  $("#stopPracticeButton").addEventListener("click", stopPractice);
 }
 
 async function markMistakeReviewed(mistakeId) {
