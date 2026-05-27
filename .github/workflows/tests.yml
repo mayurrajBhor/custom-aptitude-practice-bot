@@ -1,0 +1,40 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: test-key
+      ENV: test
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Compile Python modules
+        run: python -m py_compile web_app.py database/db_manager.py llm/generator.py llm/hybrid_gen.py
+
+      - name: Run automated tests
+        run: python -m unittest discover -s tests -p "test_*.py"
+
+      - name: Check frontend JavaScript syntax
+        run: node --check web/app.js
