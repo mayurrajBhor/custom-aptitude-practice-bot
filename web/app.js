@@ -5,6 +5,8 @@ const MODE_CONFIG = {
 };
 
 const AUTO_ADVANCE_MS = 1400;
+const GAME_MODE_KEYS = ["vedicSprint", "cricketChase", "mistakeRevenge", "directionMaze", "discountShop"];
+const GAME_TARGET_CAP = 15;
 
 const state = {
   telegramUser: null,
@@ -27,6 +29,9 @@ const state = {
   webConfig: null,
   webAccessKey: null,
   webAccessDenied: false,
+  activeGameId: null,
+  activeGameMode: null,
+  gameState: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -265,7 +270,7 @@ function setScreen(name) {
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("is-active"));
 
   $(`#${name}Screen`)?.classList.add("is-active");
-  const navTarget = name === "progress" ? "progress" : "practice";
+  const navTarget = name === "progress" || name === "arcade" ? name : "practice";
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
 }
 
@@ -284,6 +289,7 @@ async function loadCatalog() {
       showStatus(data.warning || "Using local catalog because the database is unavailable.", "info");
     }
     renderCatalog();
+    renderGameModes();
   } catch (error) {
     $("#catalogStatus").textContent = "Offline";
     $("#topicList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
@@ -369,6 +375,7 @@ async function loadMistakes() {
   try {
     const data = await api(`/api/mistakes/${state.telegramUser.id}`);
     renderMistakes(data.mistakes || [], data.pattern_ids || []);
+    renderGameModes();
   } catch (error) {
     $("#mistakeList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
     state.mistakePatternIds = [];
@@ -592,8 +599,309 @@ function selectWholeTopic() {
   renderSelection();
 }
 
-async function startPractice() {
-  const patternIds = [...state.selectedPatternIds];
+function getGameModes() {
+  const registry = window.AptitudeGameModes || {};
+  return GAME_MODE_KEYS.map((key) => ({ key, mode: registry[key] })).filter((entry) => entry.mode);
+}
+
+function getGameMode(gameId) {
+  return getGameModes().find((entry) => entry.key === gameId || entry.mode.id === gameId)?.mode || null;
+}
+
+function gameModeKey(game) {
+  return getGameModes().find((entry) => entry.mode === game || entry.mode.id === game?.id)?.key || game?.id || "";
+}
+
+function renderGamePreview(key) {
+  return `
+    <div class="game-mode-preview-visual game-mode-preview-${escapeHtml(key)}" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </div>
+  `;
+}
+
+function renderGameModes() {
+  const grid = $("#gameModeGrid");
+  if (!grid) {
+    return;
+  }
+
+  const games = getGameModes();
+  if (!games.length) {
+    grid.innerHTML = `<div class="empty-state">Game modes are still loading.</div>`;
+    return;
+  }
+
+  grid.innerHTML = games.map(({ key, mode }) => {
+    const patternCount = resolveGamePatternIds(mode).length;
+    const targetCount = Number(mode.targetCount || 5);
+    return `
+      <article class="game-mode-card" style="--game-accent: ${escapeHtml(mode.accent || "#0f766e")}">
+        <div class="game-mode-glow" aria-hidden="true"></div>
+        <div class="game-mode-card-head">
+          <span>${escapeHtml(mode.category || "Aptitude")}</span>
+          <strong>${escapeHtml(mode.shortTitle || mode.title)}</strong>
+        </div>
+        <h3>${escapeHtml(mode.title)}</h3>
+        <p>${escapeHtml(mode.subtitle || "A timed aptitude game mode.")}</p>
+        <div class="game-mode-meta">
+          <span>${targetCount} questions</span>
+          <span>${patternCount || "Auto"} patterns</span>
+        </div>
+        ${renderGamePreview(key)}
+        <button class="primary-button" type="button" data-game-id="${escapeHtml(key)}">Launch mode</button>
+      </article>
+    `;
+  }).join("");
+}
+
+function allPatternsWithContext() {
+  return state.catalog.flatMap((category) =>
+    (category.topics || []).flatMap((topic) =>
+      (topic.patterns || []).map((pattern) => ({
+        ...pattern,
+        category_name: category.name,
+        topic_name: topic.name,
+      }))
+    )
+  );
+}
+
+function normalizeSearch(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function specialGameTerms(game) {
+  const key = gameModeKey(game);
+  if (key === "vedicSprint") {
+    return ["vedic math", "speed", "addition", "subtraction", "multiplication", "division", "tables", "squares", "cubes"];
+  }
+  if (key === "cricketChase") {
+    return ["vedic math", "percentage", "calculation", "tables", "speed", "discount"];
+  }
+  if (key === "mistakeRevenge") {
+    return ["mistake", "weak", "review"];
+  }
+  if (key === "directionMaze") {
+    return ["direction", "distance", "turns", "clockwise", "shadow", "movement"];
+  }
+  if (key === "discountShop") {
+    return ["percentage", "discount", "successive", "marked price", "selling price", "profit", "loss"];
+  }
+  return [];
+}
+
+function patternScoreForGame(game, pattern) {
+  const haystack = normalizeSearch([
+    pattern.name,
+    pattern.description,
+    pattern.topic_name,
+    pattern.category_name,
+  ].join(" "));
+  const terms = [
+    game.title,
+    game.shortTitle,
+    game.category,
+    ...(game.recommendedPatternNames || []),
+    ...specialGameTerms(game),
+  ].map(normalizeSearch).filter(Boolean);
+
+  return terms.reduce((score, term) => {
+    if (!term) {
+      return score;
+    }
+    if (haystack.includes(term)) {
+      return score + Math.max(2, term.split(" ").length + 1);
+    }
+    const words = term.split(" ").filter((word) => word.length > 3);
+    const wordMatches = words.filter((word) => haystack.includes(word)).length;
+    return score + wordMatches;
+  }, 0);
+}
+
+function resolveGamePatternIds(game) {
+  const available = allPatternsWithContext();
+  const availableIds = new Set(available.map((pattern) => Number(pattern.id)));
+  const key = gameModeKey(game);
+
+  if (key === "mistakeRevenge" && state.mistakePatternIds.length) {
+    const mistakeIds = state.mistakePatternIds.map(Number).filter((id) => availableIds.has(id));
+    if (mistakeIds.length) {
+      return mistakeIds.slice(0, 8);
+    }
+  }
+
+  const scored = available
+    .map((pattern) => ({ pattern, score: patternScoreForGame(game, pattern) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || Number(a.pattern.id) - Number(b.pattern.id));
+
+  if (scored.length) {
+    const limit = key === "cricketChase" ? 8 : 6;
+    return scored.slice(0, limit).map((entry) => Number(entry.pattern.id));
+  }
+
+  const selected = getSelectedPatterns().map((pattern) => Number(pattern.id));
+  if (selected.length) {
+    return selected.slice(0, 6);
+  }
+
+  return available.slice(0, 4).map((pattern) => Number(pattern.id));
+}
+
+async function launchGameMode(gameId) {
+  const game = getGameMode(gameId);
+  if (!game) {
+    showStatus("Game mode is not available yet.");
+    return;
+  }
+
+  const patternIds = resolveGamePatternIds(game);
+  if (!patternIds.length) {
+    showStatus("No matching practice patterns are available for this game yet.");
+    return;
+  }
+
+  state.activeGameId = gameModeKey(game);
+  state.activeGameMode = game;
+  state.gameState = {
+    modeId: game.id,
+    modeKey: state.activeGameId,
+    startedAt: Date.now(),
+  };
+  state.selectedPatternIds = new Set(patternIds);
+  state.selectedMode = "quick";
+  document.querySelectorAll("[data-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mode === "quick");
+  });
+  renderSelection();
+  setScreen("arcade");
+  await startPractice({
+    gameMode: game,
+    patternIds,
+    mode: "quick",
+    targetCount: Number(game.targetCount || MODE_CONFIG.quick.targetCount),
+  });
+}
+
+function clearGameMode() {
+  state.activeGameId = null;
+  state.activeGameMode = null;
+  state.gameState = null;
+  $("#gameStage")?.setAttribute("hidden", "");
+  $("#gameHud")?.setAttribute("hidden", "");
+  $("#gameResultLines")?.setAttribute("hidden", "");
+}
+
+function renderGameIntro() {
+  if (!state.activeGameMode || !state.gameState) {
+    return;
+  }
+  const stage = $("#gameStage");
+  const scene = $("#gameScene");
+  const hud = $("#gameHud");
+  if (stage && scene) {
+    stage.hidden = false;
+    scene.innerHTML = state.activeGameMode.renderIntro ? state.activeGameMode.renderIntro() : "";
+  }
+  if (hud) {
+    hud.hidden = false;
+    hud.innerHTML = state.activeGameMode.renderHud ? state.activeGameMode.renderHud(state.gameState) : "";
+  }
+}
+
+function renderGamePanels() {
+  if (!state.activeGameMode || !state.gameState) {
+    return;
+  }
+  const stage = $("#gameStage");
+  const scene = $("#gameScene");
+  const hud = $("#gameHud");
+  try {
+    if (stage && scene) {
+      stage.hidden = false;
+      scene.innerHTML = state.activeGameMode.renderScene ? state.activeGameMode.renderScene(state.gameState) : "";
+    }
+    if (hud) {
+      hud.hidden = false;
+      hud.innerHTML = state.activeGameMode.renderHud ? state.activeGameMode.renderHud(state.gameState) : "";
+    }
+  } catch (error) {
+    showStatus(`Game display issue: ${error.message}`);
+  }
+}
+
+function syncGameQuestion(question) {
+  if (!state.activeGameMode || !state.gameState) {
+    $("#gameStage")?.setAttribute("hidden", "");
+    $("#gameHud")?.setAttribute("hidden", "");
+    return;
+  }
+  state.gameState.activeQuestion = question;
+  state.gameState.questionStartedAt = state.questionStartedAt;
+  state.gameState.session = {
+    sessionId: state.session?.session_id,
+    currentIndex: Math.max(0, Number(question.question_number || 1) - 1),
+    totalQuestions: question.total_questions,
+  };
+  state.activeGameMode.onQuestion?.(question, state.gameState);
+  renderGamePanels();
+}
+
+function syncGameAnswer(result, answerIndex) {
+  if (!state.activeGameMode || !state.gameState) {
+    return;
+  }
+  const elapsedMs = Number(result.time_taken || 0) * 1000;
+  const gameResult = {
+    ...result,
+    correct: result.is_correct,
+    isCorrect: result.is_correct,
+    answer_index: answerIndex,
+    selected_option_index: answerIndex,
+    question: state.activeQuestion,
+    elapsed_ms: elapsedMs,
+    elapsed_seconds: result.time_taken,
+  };
+  state.activeGameMode.onAnswer?.(gameResult, state.gameState);
+  renderGamePanels();
+}
+
+function syncGameStop() {
+  if (!state.activeGameMode || !state.gameState) {
+    return;
+  }
+  state.activeGameMode.onStop?.(state.gameState);
+  renderGamePanels();
+}
+
+function renderGameResult(summary) {
+  const target = $("#gameResultLines");
+  if (!target || !state.activeGameMode || !state.gameState) {
+    target?.setAttribute("hidden", "");
+    return;
+  }
+
+  const lines = state.activeGameMode.getSummaryLines?.(summary, state.gameState) || [];
+  target.hidden = false;
+  target.innerHTML = `
+    <div class="game-result-heading">
+      <span>${escapeHtml(state.activeGameMode.shortTitle || state.activeGameMode.title)}</span>
+      <strong>Game report</strong>
+    </div>
+    <div class="game-result-grid">
+      ${lines.map((line) => `<div>${escapeHtml(line)}</div>`).join("")}
+    </div>
+  `;
+}
+
+async function startPractice(options = {}) {
+  const gameMode = options.gameMode || null;
+  if (!gameMode) {
+    clearGameMode();
+  }
+
+  const patternIds = options.patternIds ? [...options.patternIds] : [...state.selectedPatternIds];
   if (!patternIds.length) {
     showStatus("Select at least one pattern to start.");
     return;
@@ -604,18 +912,21 @@ async function startPractice() {
   $("#startButton").textContent = "Preparing questions";
 
   try {
-    const mode = MODE_CONFIG[state.selectedMode];
+    const modeKey = options.mode || state.selectedMode;
+    const mode = MODE_CONFIG[modeKey] || MODE_CONFIG.quick;
+    const targetCount = options.targetCount === undefined ? mode.targetCount : options.targetCount;
     state.session = await api("/api/session/start", {
       method: "POST",
       timeoutMs: 120000,
       body: JSON.stringify({
         pattern_ids: patternIds,
-        mode: state.selectedMode,
-        target_count: mode.targetCount,
+        mode: modeKey,
+        target_count: targetCount,
         telegram_user: state.telegramUser,
       }),
     });
     setScreen("question");
+    renderGameIntro();
     await loadNextQuestion();
   } catch (error) {
     $("#selectionList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
@@ -699,6 +1010,7 @@ function renderQuestion(question) {
   `).join("");
   replayAnimation(document.querySelector(".question-panel"), "is-entering");
   startQuestionTimer();
+  syncGameQuestion(question);
 }
 
 async function submitAnswer(answerIndex) {
@@ -735,6 +1047,7 @@ async function submitAnswer(answerIndex) {
   $("#feedbackTitle").textContent = result.is_correct ? "Correct" : "Review";
   $("#feedbackText").textContent = result.explanation || `Correct answer: ${result.correct_option}`;
   playAnswerFeedback(result.is_correct);
+  syncGameAnswer(result, answerIndex);
 
   if (result.complete) {
     $("#nextButton").textContent = "View result";
@@ -771,6 +1084,7 @@ async function stopPractice() {
     const result = await api(`/api/session/${state.session.session_id}/stop`, { method: "POST" });
     state.activeQuestion = null;
     state.answered = true;
+    syncGameStop();
     showResults(result.summary);
   } catch (error) {
     showStatus(error.message);
@@ -789,11 +1103,12 @@ function showResults(summary) {
     const plannedTotal = summary.planned_total_questions || total;
     const answered = summary.answered || summary.review_count || 0;
     const skipped = summary.skipped_count || 0;
-    const skippedText = skipped ? ` · ${skipped} skipped` : "";
-    $("#resultAccuracy").textContent = `Stopped after ${answered} of ${plannedTotal} · Accuracy ${summary.accuracy}%${skippedText}`;
+    const skippedText = skipped ? ` - ${skipped} skipped` : "";
+    $("#resultAccuracy").textContent = `Stopped after ${answered} of ${plannedTotal} - Accuracy ${summary.accuracy}%${skippedText}`;
   } else {
     $("#resultAccuracy").textContent = `Accuracy ${summary.accuracy}%`;
   }
+  renderGameResult(summary);
   setScreen("result");
   replayAnimation($("#resultPanel"), "is-complete");
 }
@@ -929,6 +1244,12 @@ function bindEvents() {
       return;
     }
 
+    const gameButton = event.target.closest("[data-game-id]");
+    if (gameButton) {
+      launchGameMode(gameButton.dataset.gameId);
+      return;
+    }
+
     const answerButton = event.target.closest("[data-answer-index]");
     if (answerButton) {
       submitAnswer(Number(answerButton.dataset.answerIndex));
@@ -943,13 +1264,22 @@ function bindEvents() {
 
   $("#selectTopicButton").addEventListener("click", selectWholeTopic);
   $("#startButton").addEventListener("click", startPractice);
-  $("#practiceAgainButton").addEventListener("click", startPractice);
-  $("#backToSetupButton").addEventListener("click", () => setScreen("practice"));
+  $("#practiceAgainButton").addEventListener("click", () => {
+    if (state.activeGameId) {
+      launchGameMode(state.activeGameId);
+    } else {
+      startPractice();
+    }
+  });
+  $("#backToSetupButton").addEventListener("click", () => {
+    clearGameMode();
+    setScreen("practice");
+  });
   $("#reviewAnswersButton").addEventListener("click", showReview);
   $("#reviewBackButton").addEventListener("click", () => setScreen("result"));
   $("#saveReminderButton").addEventListener("click", saveReminder);
   $("#reminderEnabled").addEventListener("change", saveReminder);
-  $("#practiceMistakesButton").addEventListener("click", () => startPracticeWithPatternIds(state.mistakePatternIds));
+  $("#practiceMistakesButton").addEventListener("click", () => launchGameMode("mistakeRevenge"));
   $("#loadProfileButton").addEventListener("click", () => {
     const userId = parseUserId($("#devUserIdInput").value);
     if (!userId) {
@@ -984,6 +1314,7 @@ async function boot() {
   initTelegram();
   bindEvents();
   await Promise.all([loadCatalog(), loadProfile()]);
+  renderGameModes();
 }
 
 boot();

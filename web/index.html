@@ -4,7 +4,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aptitude Practice</title>
-    <link rel="stylesheet" href="/static/styles.css?v=10">
+    <link rel="stylesheet" href="/static/styles.css?v=11">
+    <link rel="stylesheet" href="/static/games/vedic_sprint.css?v=1">
+    <link rel="stylesheet" href="/static/games/cricket_chase.css?v=1">
+    <link rel="stylesheet" href="/static/games/mistake_revenge.css?v=1">
+    <link rel="stylesheet" href="/static/games/direction_maze.css?v=1">
+    <link rel="stylesheet" href="/static/games/discount_shop.css?v=1">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
@@ -24,6 +29,10 @@
         <button class="tab is-active" data-screen-target="practice">
           <span>Practice</span>
           <small>Topics and tests</small>
+        </button>
+        <button class="tab" data-screen-target="arcade">
+          <span>Arcade</span>
+          <small>Game modes</small>
         </button>
         <button class="tab" data-screen-target="progress">
           <span>Progress</span>
@@ -102,9 +111,28 @@
           </section>
         </section>
 
+        <section class="screen" id="arcadeScreen">
+          <section class="arcade-hero">
+            <div>
+              <p class="panel-kicker">Arcade</p>
+              <h2>Serious practice, game pressure.</h2>
+              <p>Launch cinematic aptitude modes built around speed, recovery, navigation, pricing, and match pressure.</p>
+            </div>
+            <div class="arcade-hero-console" aria-hidden="true">
+              <span></span>
+              <strong>5</strong>
+              <em>live modes</em>
+            </div>
+          </section>
+          <section class="game-mode-grid" id="gameModeGrid"></section>
+        </section>
+
         <section class="screen" id="questionScreen">
           <div class="question-layout">
             <section class="question-panel">
+              <div class="game-stage" id="gameStage" hidden>
+                <div id="gameScene"></div>
+              </div>
               <div class="question-meta">
                 <span id="questionCounter">Question 1</span>
                 <span id="questionTimer">0s</span>
@@ -114,6 +142,7 @@
               <div class="options-grid" id="optionsGrid"></div>
             </section>
             <aside class="feedback-panel" id="feedbackPanel">
+              <div class="game-hud-slot" id="gameHud" hidden></div>
               <h2 id="feedbackTitle">Answer</h2>
               <div class="answer-burst" id="answerBurst" hidden></div>
               <p id="feedbackText">Choose an option to see the explanation.</p>
@@ -215,6 +244,7 @@
             <p class="eyebrow">Session complete</p>
             <h2 id="resultScore">0 / 0</h2>
             <p id="resultAccuracy">Accuracy 0%</p>
+            <div class="game-result-lines" id="gameResultLines" hidden></div>
             <div class="result-actions">
               <button class="primary-button" id="reviewAnswersButton" type="button">Review answers</button>
               <button class="primary-button" id="practiceAgainButton" type="button">Practice again</button>
@@ -236,6 +266,11 @@
       </main>
     </div>
 
-    <script src="/static/app.js?v=11"></script>
+    <script src="/static/games/vedic_sprint.js?v=1"></script>
+    <script src="/static/games/cricket_chase.js?v=1"></script>
+    <script src="/static/games/mistake_revenge.js?v=1"></script>
+    <script src="/static/games/direction_maze.js?v=1"></script>
+    <script src="/static/games/discount_shop.js?v=1"></script>
+    <script src="/static/app.js?v=12"></script>
   </body>
 </html>

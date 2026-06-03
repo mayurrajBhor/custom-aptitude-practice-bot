@@ -166,6 +166,31 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("Skipped", app_js)
         self.assertIn(".review-card.is-skipped", styles_css)
 
+    def test_arcade_assets_are_registered(self):
+        root = Path(__file__).resolve().parents[1]
+        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
+        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
+
+        expected_assets = [
+            "vedic_sprint",
+            "cricket_chase",
+            "mistake_revenge",
+            "direction_maze",
+            "discount_shop",
+        ]
+        for asset in expected_assets:
+            self.assertIn(f"/static/games/{asset}.css", index_html)
+            self.assertIn(f"/static/games/{asset}.js", index_html)
+
+        self.assertIn('data-screen-target="arcade"', index_html)
+        self.assertIn('id="gameModeGrid"', index_html)
+        self.assertIn('id="gameStage"', index_html)
+        self.assertIn('id="gameHud"', index_html)
+        self.assertIn('id="gameResultLines"', index_html)
+        self.assertIn("GAME_MODE_KEYS", app_js)
+        self.assertIn("launchGameMode", app_js)
+        self.assertIn("renderGameResult", app_js)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -37,4 +37,10 @@ jobs:
         run: python -m unittest discover -s tests -p "test_*.py"
 
       - name: Check frontend JavaScript syntax
-        run: node --check web/app.js
+        run: |
+          node --check web/app.js
+          node --check web/games/vedic_sprint.js
+          node --check web/games/cricket_chase.js
+          node --check web/games/mistake_revenge.js
+          node --check web/games/direction_maze.js
+          node --check web/games/discount_shop.js

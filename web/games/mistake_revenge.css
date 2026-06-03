@@ -1,0 +1,382 @@
+.game-revenge-shell,
+.game-revenge-board,
+.game-revenge-hud {
+  color: #eef3f0;
+  font-family: inherit;
+}
+
+.game-revenge-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(214, 168, 90, 0.28);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(13, 18, 21, 0.96), rgba(28, 34, 34, 0.94)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 48px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
+}
+
+.game-revenge-shell::before,
+.game-revenge-board-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(214, 168, 90, 0.09), transparent 28%),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: auto, 100% 42px;
+}
+
+.game-revenge-hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  padding: 28px;
+}
+
+.game-revenge-kicker {
+  margin: 0 0 8px;
+  color: #d6a85a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-revenge-hero h2,
+.game-revenge-board-header h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.game-revenge-hero p:not(.game-revenge-kicker) {
+  max-width: 620px;
+  margin: 12px 0 0;
+  color: rgba(238, 243, 240, 0.76);
+  line-height: 1.55;
+}
+
+.game-revenge-case-stamp {
+  display: grid;
+  place-items: center;
+  width: 132px;
+  min-height: 132px;
+  border: 1px solid rgba(214, 168, 90, 0.42);
+  background: rgba(214, 168, 90, 0.08);
+  text-align: center;
+  transform: rotate(-2deg);
+}
+
+.game-revenge-case-stamp span {
+  color: #d6a85a;
+  font-size: 2.2rem;
+  font-weight: 900;
+}
+
+.game-revenge-case-stamp strong {
+  color: rgba(238, 243, 240, 0.74);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.game-revenge-intro-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.game-revenge-intro-grid > div {
+  padding: 20px 24px 24px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.game-revenge-intro-grid > div:last-child {
+  border-right: 0;
+}
+
+.game-revenge-intro-grid span,
+.game-revenge-stat span,
+.game-revenge-meter span,
+.game-revenge-answer-row span {
+  display: block;
+  color: rgba(238, 243, 240, 0.56);
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.game-revenge-intro-grid strong,
+.game-revenge-stat strong,
+.game-revenge-meter strong {
+  display: block;
+  margin-top: 6px;
+  color: #ffffff;
+  font-size: 1.12rem;
+}
+
+.game-revenge-intro-grid p {
+  margin: 8px 0 0;
+  color: rgba(238, 243, 240, 0.7);
+  line-height: 1.45;
+}
+
+.game-revenge-hud {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(92px, 0.65fr));
+  gap: 10px;
+}
+
+.game-revenge-meter,
+.game-revenge-stat {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(23, 30, 31, 0.94), rgba(10, 14, 16, 0.96));
+  padding: 14px;
+}
+
+.game-revenge-track {
+  height: 7px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.game-revenge-track > div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5cc8a7, #d6a85a, #d66b5a);
+  transition: width 220ms ease;
+}
+
+.game-revenge-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 14px;
+}
+
+.game-revenge-board-main,
+.game-revenge-dossier {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: #101719;
+}
+
+.game-revenge-board-main {
+  min-height: 320px;
+  padding: 24px;
+}
+
+.game-revenge-board-header,
+.game-revenge-dossier-head,
+.game-revenge-evidence-head,
+.game-revenge-answer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.game-revenge-status {
+  flex: 0 0 auto;
+  border: 1px solid rgba(214, 168, 90, 0.36);
+  border-radius: 999px;
+  background: rgba(214, 168, 90, 0.1);
+  color: #f3d59a;
+  padding: 7px 10px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-revenge-status.is-repaired {
+  border-color: rgba(92, 200, 167, 0.36);
+  background: rgba(92, 200, 167, 0.1);
+  color: #9ce3ce;
+}
+
+.game-revenge-question-file {
+  position: relative;
+  margin-top: 34px;
+  border-left: 3px solid #d6a85a;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 22px 24px;
+}
+
+.game-revenge-question-file span {
+  position: absolute;
+  top: -10px;
+  left: 18px;
+  width: 92px;
+  height: 6px;
+  background: #d6a85a;
+  box-shadow: 116px 0 0 rgba(214, 168, 90, 0.34), 232px 0 0 rgba(214, 168, 90, 0.18);
+}
+
+.game-revenge-question-file p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+
+.game-revenge-scanline {
+  position: absolute;
+  right: -20%;
+  bottom: 34px;
+  left: -20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(92, 200, 167, 0.64), transparent);
+  box-shadow: 0 0 22px rgba(92, 200, 167, 0.42);
+}
+
+.game-revenge-dossier {
+  padding: 18px;
+  background: linear-gradient(180deg, #141b1d, #0d1113);
+}
+
+.game-revenge-dossier-head {
+  margin-bottom: 14px;
+}
+
+.game-revenge-dossier-head strong {
+  color: #ffffff;
+}
+
+.game-revenge-evidence-list {
+  display: grid;
+  gap: 10px;
+}
+
+.game-revenge-evidence {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-left-color: #d66b5a;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 12px;
+}
+
+.game-revenge-evidence.is-repaired {
+  border-left-color: #5cc8a7;
+}
+
+.game-revenge-evidence-index {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(238, 243, 240, 0.64);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.game-revenge-evidence-head strong {
+  min-width: 0;
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.game-revenge-evidence-head span {
+  flex: 0 0 auto;
+  color: #d6a85a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.game-revenge-evidence.is-repaired .game-revenge-evidence-head span {
+  color: #8bdabc;
+}
+
+.game-revenge-evidence p,
+.game-revenge-evidence small,
+.game-revenge-empty p {
+  margin: 8px 0 0;
+  color: rgba(238, 243, 240, 0.68);
+  line-height: 1.45;
+}
+
+.game-revenge-evidence small {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.game-revenge-answer-row {
+  align-items: flex-start;
+  margin-top: 10px;
+}
+
+.game-revenge-answer-row span {
+  color: rgba(238, 243, 240, 0.62);
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+.game-revenge-empty {
+  border: 1px dashed rgba(214, 168, 90, 0.34);
+  border-radius: 8px;
+  padding: 18px;
+  background: rgba(214, 168, 90, 0.055);
+}
+
+.game-revenge-empty span {
+  display: block;
+  width: 52px;
+  height: 4px;
+  background: #d6a85a;
+}
+
+@media (max-width: 860px) {
+  .game-revenge-hero,
+  .game-revenge-board,
+  .game-revenge-hud,
+  .game-revenge-intro-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-revenge-case-stamp {
+    width: 100%;
+    min-height: 92px;
+    transform: none;
+  }
+
+  .game-revenge-intro-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .game-revenge-intro-grid > div:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 540px) {
+  .game-revenge-hero,
+  .game-revenge-board-main,
+  .game-revenge-dossier {
+    padding: 18px;
+  }
+
+  .game-revenge-board-header,
+  .game-revenge-dossier-head,
+  .game-revenge-answer-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .game-revenge-status {
+    white-space: normal;
+  }
+}
