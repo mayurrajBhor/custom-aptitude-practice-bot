@@ -134,6 +134,10 @@
     return "middle";
   }
 
+  function isTerminal(game) {
+    return runsNeeded(game) === 0 || game.wickets >= game.wicketsLimit || ballsLeft(game) === 0;
+  }
+
   function inferElapsedMs(result, state, game) {
     var explicit = result && (
       result.elapsed_ms ||
@@ -381,6 +385,11 @@
 
   function onQuestion(question, state) {
     var game = ensureState(state);
+    if (isTerminal(game)) {
+      game.phase = phaseFor(game);
+      game.status = outcomeText(game);
+      return state;
+    }
     game.questionStartedAt = Date.now();
     game.activeQuestionNumber = question && (question.question_number || question.number || question.id) || null;
     game.phase = phaseFor(game);
@@ -392,6 +401,11 @@
 
   function onAnswer(result, state) {
     var game = ensureState(state);
+    if (isTerminal(game)) {
+      game.phase = phaseFor(game);
+      game.status = outcomeText(game);
+      return state;
+    }
     var correct = isCorrect(result);
     var runs = runsForAnswer(result, state, game);
     var wicket = !correct;
@@ -430,6 +444,10 @@
     game.status = commentaryFor(entry, game);
 
     return state;
+  }
+
+  function isComplete(state) {
+    return isTerminal(ensureState(state));
   }
 
   function onStop(state) {
@@ -481,6 +499,7 @@
     onQuestion: onQuestion,
     onAnswer: onAnswer,
     onStop: onStop,
+    isComplete: isComplete,
     getSummaryLines: getSummaryLines
   };
 })();

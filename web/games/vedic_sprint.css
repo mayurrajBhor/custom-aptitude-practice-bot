@@ -355,6 +355,30 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.045);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.game-vedic-option:hover:not(:disabled) {
+  border-color: rgba(25, 211, 255, 0.52);
+  background: rgba(25, 211, 255, 0.11);
+  transform: translateY(-1px);
+}
+
+.game-vedic-option:disabled {
+  cursor: default;
+}
+
+.game-vedic-option.is-correct {
+  border-color: rgba(109, 247, 189, 0.64);
+  background: rgba(109, 247, 189, 0.14);
+}
+
+.game-vedic-option.is-wrong {
+  border-color: rgba(255, 95, 115, 0.62);
+  background: rgba(255, 95, 115, 0.12);
 }
 
 .game-vedic-option span {

@@ -3,6 +3,7 @@ import json
 import hashlib
 import psycopg2
 import logging
+import threading
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
@@ -13,6 +14,7 @@ class DatabaseManager:
         self.conn_url = os.getenv("DATABASE_URL")
         self.conn = None
         self.driver = 'postgres'
+        self._lock = threading.RLock()
 
     def get_connection(self):
         # Check if connection exists and is alive
@@ -51,47 +53,55 @@ class DatabaseManager:
         return self.conn
 
     def execute_query(self, query, params=None, retries=1):
-        for attempt in range(retries + 1):
-            try:
-                conn = self.get_connection()
-            except Exception as conn_err:
-                if attempt == retries:
-                    raise conn_err
-                continue
+        with self._lock:
+            for attempt in range(retries + 1):
+                try:
+                    conn = self.get_connection()
+                except Exception as conn_err:
+                    if attempt == retries:
+                        raise conn_err
+                    continue
 
-            if not conn:
-                if attempt == retries:
-                    raise Exception("Failed to establish a database connection.")
-                continue
-                
-            try:
-                cur = conn.cursor()
-                cur.execute("SET search_path TO aptitude_practice, public")
-                if params:
-                    cur.execute(query, params)
-                else:
-                    cur.execute(query)
-                
-                if cur.description:
-                    results = cur.fetchall()
-                else:
-                    results = True
-                conn.commit()
-                return results
-            except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
-                logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
-                self.conn = None # Force reconnection
-                if attempt == retries:
+                if not conn:
+                    if attempt == retries:
+                        raise Exception("Failed to establish a database connection.")
+                    continue
+
+                cur = None
+                try:
+                    cur = conn.cursor()
+                    cur.execute("SET search_path TO aptitude_practice, public")
+                    if params:
+                        cur.execute(query, params)
+                    else:
+                        cur.execute(query)
+
+                    if cur.description:
+                        results = cur.fetchall()
+                    else:
+                        results = True
+                    conn.commit()
+                    return results
+                except (psycopg2.OperationalError, psycopg2.InterfaceError) as e:
+                    logging.error(f"Connection lost, retrying ({attempt+1}/{retries}): {e}")
+                    self.conn = None # Force reconnection
+                    if attempt == retries:
+                        raise e
+                except Exception as e:
+                    logging.error(f"Database error executing query: {e}\nQuery: {query}")
+                    if conn:
+                        try:
+                            conn.rollback()
+                        except:
+                            pass
                     raise e
-            except Exception as e:
-                logging.error(f"Database error executing query: {e}\nQuery: {query}")
-                if conn:
-                    try:
-                        conn.rollback()
-                    except:
-                        pass
-                raise e
-        return None
+                finally:
+                    if cur:
+                        try:
+                            cur.close()
+                        except AttributeError:
+                            pass
+            return None
 
     def init_db(self):
         schema_path = os.path.join(os.path.dirname(__file__), "schema.sql")
@@ -105,6 +115,53 @@ class DatabaseManager:
 
     def ensure_engagement_schema(self):
         statements = [
+            """
+            CREATE TABLE IF NOT EXISTS practice_sessions (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(user_id),
+                session_type TEXT,
+                started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP WITH TIME ZONE,
+                score INT,
+                total_questions INT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS question_attempts (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(user_id),
+                pattern_id INT REFERENCES patterns(id),
+                is_correct BOOLEAN NOT NULL,
+                time_taken_seconds FLOAT DEFAULT 0.0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS session_uuid TEXT",
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS stopped_at TIMESTAMP WITH TIME ZONE",
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'",
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS planned_total_questions INT",
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS pattern_ids JSONB",
+            "ALTER TABLE practice_sessions ADD COLUMN IF NOT EXISTS pattern_names JSONB",
+            "CREATE UNIQUE INDEX IF NOT EXISTS practice_sessions_session_uuid_idx ON practice_sessions(session_uuid)",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS session_uuid TEXT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS question_number INT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS question_text TEXT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS question_hash TEXT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS options JSONB",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS correct_option_index INT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS selected_option_index INT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS explanation TEXT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS difficulty INT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS is_skipped BOOLEAN DEFAULT FALSE",
+            "CREATE INDEX IF NOT EXISTS question_attempts_user_created_idx ON question_attempts(user_id, created_at DESC)",
+            "CREATE INDEX IF NOT EXISTS question_attempts_session_idx ON question_attempts(session_uuid, question_number)",
+            "ALTER TABLE user_progress ADD COLUMN IF NOT EXISTS wrong_attempts INT DEFAULT 0",
+            """
+            UPDATE user_progress
+            SET wrong_attempts = GREATEST(total_attempts - correct_attempts, 0)
+            WHERE wrong_attempts IS NULL
+               OR (wrong_attempts = 0 AND total_attempts > correct_attempts)
+            """,
             "ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_hash TEXT",
             "CREATE INDEX IF NOT EXISTS questions_pattern_hash_idx ON questions(pattern_id, question_hash)",
             """
@@ -136,6 +193,18 @@ class DatabaseManager:
                 timezone TEXT DEFAULT 'Asia/Kolkata',
                 last_reminded_at TIMESTAMP WITH TIME ZONE,
                 updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS user_daily_rewards (
+                user_id BIGINT REFERENCES users(user_id),
+                reward_date DATE DEFAULT CURRENT_DATE,
+                mission_key TEXT NOT NULL,
+                xp INT DEFAULT 0,
+                coins INT DEFAULT 0,
+                streak_shields INT DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, reward_date, mission_key)
             )
             """,
         ]
@@ -229,10 +298,24 @@ class DatabaseManager:
             elif not is_correct: next_diff = max(1, base_diff - 1)
 
             query = """
-            INSERT INTO user_progress (user_id, pattern_id, mastery_score, total_attempts, correct_attempts, last_practiced_at, avg_time_seconds, last_difficulty_level)
-            VALUES (%s, %s, %s, 1, %s, CURRENT_TIMESTAMP, %s, %s)
+            INSERT INTO user_progress (
+                user_id, pattern_id, mastery_score, total_attempts, correct_attempts,
+                wrong_attempts, last_practiced_at, avg_time_seconds, last_difficulty_level
+            )
+            VALUES (%s, %s, %s, 1, %s, %s, CURRENT_TIMESTAMP, %s, %s)
             """
-            self.execute_query(query, (user_id, pattern_id, 0.1 if is_correct else 0.0, 1 if is_correct else 0, time_taken, next_diff))
+            self.execute_query(
+                query,
+                (
+                    user_id,
+                    pattern_id,
+                    0.1 if is_correct else 0.0,
+                    1 if is_correct else 0,
+                    0 if is_correct else 1,
+                    time_taken,
+                    next_diff,
+                ),
+            )
         else:
             p = progress[0]
             q = performance_score
@@ -264,6 +347,7 @@ class DatabaseManager:
             UPDATE user_progress SET
                 total_attempts = total_attempts + 1,
                 correct_attempts = correct_attempts + %s,
+                wrong_attempts = COALESCE(wrong_attempts, GREATEST(total_attempts - correct_attempts, 0)) + %s,
                 last_practiced_at = CURRENT_TIMESTAMP,
                 next_review_at = CURRENT_TIMESTAMP + (%s * interval '1 day'),
                 srs_interval = %s,
@@ -274,16 +358,225 @@ class DatabaseManager:
             WHERE id = %s
             """
             new_mastery = min(1.0, (p['correct_attempts'] + (1 if is_correct else 0)) / (p['total_attempts'] + 1))
-            params = (1 if is_correct else 0, new_interval, new_interval, new_ef, new_mastery, new_avg_time, new_diff, p['id'])
+            params = (
+                1 if is_correct else 0,
+                0 if is_correct else 1,
+                new_interval,
+                new_interval,
+                new_ef,
+                new_mastery,
+                new_avg_time,
+                new_diff,
+                p['id'],
+            )
             
             self.execute_query(query, params)
 
-    def record_question_attempt(self, user_id, pattern_id, is_correct, time_taken_seconds):
+    def create_practice_session(self, user_id, session_uuid, session_type, pattern_ids, pattern_names, total_questions):
         query = """
-        INSERT INTO question_attempts (user_id, pattern_id, is_correct, time_taken_seconds)
-        VALUES (%s, %s, %s, %s)
+        INSERT INTO practice_sessions (
+            user_id, session_uuid, session_type, status, total_questions,
+            planned_total_questions, pattern_ids, pattern_names
+        )
+        VALUES (%s, %s, %s, 'active', %s, %s, %s, %s)
+        ON CONFLICT (session_uuid) DO UPDATE SET
+            user_id = EXCLUDED.user_id,
+            session_type = EXCLUDED.session_type,
+            status = 'active',
+            total_questions = EXCLUDED.total_questions,
+            planned_total_questions = EXCLUDED.planned_total_questions,
+            pattern_ids = EXCLUDED.pattern_ids,
+            pattern_names = EXCLUDED.pattern_names
         """
-        self.execute_query(query, (user_id, pattern_id, is_correct, time_taken_seconds))
+        self.execute_query(
+            query,
+            (
+                user_id,
+                session_uuid,
+                session_type,
+                total_questions,
+                total_questions,
+                json.dumps(pattern_ids or []),
+                json.dumps(pattern_names or []),
+            ),
+        )
+
+    def get_today_attempt_summary(self, user_id):
+        query = """
+        SELECT
+            COUNT(*) as total_attempts,
+            COUNT(CASE WHEN is_correct THEN 1 END) as correct_attempts,
+            COUNT(DISTINCT pattern_id) as practiced_patterns
+        FROM question_attempts
+        WHERE user_id = %s
+          AND created_at >= CURRENT_DATE
+          AND COALESCE(is_skipped, FALSE) = FALSE
+        """
+        rows = self.execute_query(query, (user_id,)) or []
+        return rows[0] if rows else {"total_attempts": 0, "correct_attempts": 0, "practiced_patterns": 0}
+
+    def get_today_pattern_attempts(self, user_id, pattern_ids=None):
+        filters = [
+            "qa.user_id = %s",
+            "qa.created_at >= CURRENT_DATE",
+            "COALESCE(qa.is_skipped, FALSE) = FALSE",
+            "qa.pattern_id IS NOT NULL",
+        ]
+        params = [user_id]
+        if pattern_ids:
+            placeholders = ", ".join(["%s"] * len(pattern_ids))
+            filters.append(f"qa.pattern_id IN ({placeholders})")
+            params.extend(pattern_ids)
+        query = f"""
+        SELECT
+            qa.pattern_id,
+            p.name as pattern_name,
+            COUNT(*) as attempts,
+            COUNT(CASE WHEN qa.is_correct THEN 1 END) as correct
+        FROM question_attempts qa
+        LEFT JOIN patterns p ON p.id = qa.pattern_id
+        WHERE {" AND ".join(filters)}
+        GROUP BY qa.pattern_id, p.name
+        ORDER BY correct DESC, attempts DESC
+        """
+        return self.execute_query(query, tuple(params)) or []
+
+    def get_today_mistake_retry_count(self, user_id):
+        query = """
+        SELECT COUNT(*) as retry_count
+        FROM question_attempts qa
+        JOIN practice_sessions ps ON ps.session_uuid = qa.session_uuid
+        WHERE qa.user_id = %s
+          AND ps.user_id = %s
+          AND ps.session_type = 'mistake_retry'
+          AND qa.created_at >= CURRENT_DATE
+          AND COALESCE(qa.is_skipped, FALSE) = FALSE
+        """
+        rows = self.execute_query(query, (user_id, user_id)) or []
+        return int(rows[0].get("retry_count") or 0) if rows else 0
+
+    def get_today_reviewed_mistake_count(self, user_id):
+        query = """
+        SELECT COUNT(*) as reviewed_count
+        FROM mistake_book
+        WHERE user_id = %s
+          AND status = 'reviewed'
+          AND last_reviewed_at >= CURRENT_DATE
+        """
+        rows = self.execute_query(query, (user_id,)) or []
+        return int(rows[0].get("reviewed_count") or 0) if rows else 0
+
+    def grant_daily_mission_rewards(self, user_id, missions):
+        completed = [mission for mission in missions if mission.get("completed")]
+        for mission in completed:
+            reward = mission.get("reward") or {}
+            self.execute_query(
+                """
+                INSERT INTO user_daily_rewards (user_id, reward_date, mission_key, xp, coins, streak_shields)
+                VALUES (%s, CURRENT_DATE, %s, %s, %s, %s)
+                ON CONFLICT (user_id, reward_date, mission_key) DO NOTHING
+                """,
+                (
+                    user_id,
+                    mission.get("key"),
+                    int(reward.get("xp") or 0),
+                    int(reward.get("coins") or 0),
+                    int(reward.get("streak_shields") or 0),
+                ),
+            )
+        return self.get_today_reward_keys(user_id)
+
+    def get_today_reward_keys(self, user_id):
+        rows = self.execute_query(
+            """
+            SELECT mission_key
+            FROM user_daily_rewards
+            WHERE user_id = %s AND reward_date = CURRENT_DATE
+            """,
+            (user_id,),
+        ) or []
+        return {row["mission_key"] for row in rows}
+
+    def get_reward_wallet(self, user_id):
+        rows = self.execute_query(
+            """
+            SELECT
+                COALESCE(SUM(xp), 0) as xp,
+                COALESCE(SUM(coins), 0) as coins,
+                COALESCE(SUM(streak_shields), 0) as streak_shields
+            FROM user_daily_rewards
+            WHERE user_id = %s
+            """,
+            (user_id,),
+        ) or []
+        wallet = rows[0] if rows else {}
+        xp = int(wallet.get("xp") or 0)
+        return {
+            "xp": xp,
+            "coins": int(wallet.get("coins") or 0),
+            "streak_shields": int(wallet.get("streak_shields") or 0),
+            "level": max(1, (xp // 500) + 1),
+            "next_level_xp": ((xp // 500) + 1) * 500,
+        }
+
+    def complete_practice_session(self, session_uuid, score, total_questions, status="completed", stopped=False):
+        query = """
+        UPDATE practice_sessions
+        SET
+            completed_at = CURRENT_TIMESTAMP,
+            stopped_at = CASE WHEN %s THEN CURRENT_TIMESTAMP ELSE stopped_at END,
+            status = %s,
+            score = %s,
+            total_questions = %s
+        WHERE session_uuid = %s
+        """
+        self.execute_query(query, (stopped, status, score, total_questions, session_uuid))
+
+    def record_question_attempt(
+        self,
+        user_id,
+        pattern_id,
+        is_correct,
+        time_taken_seconds,
+        session_uuid=None,
+        question_number=None,
+        question_text=None,
+        options=None,
+        correct_option_index=None,
+        selected_option_index=None,
+        explanation=None,
+        difficulty=None,
+        is_skipped=False,
+    ):
+        query = """
+        INSERT INTO question_attempts (
+            user_id, pattern_id, session_uuid, question_number, question_text, question_hash,
+            options, correct_option_index, selected_option_index, explanation, difficulty,
+            is_correct, is_skipped, time_taken_seconds
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """
+        options_json = json.dumps(options) if options is not None else None
+        q_hash = self.question_hash(question_text) if question_text else None
+        self.execute_query(
+            query,
+            (
+                user_id,
+                pattern_id,
+                session_uuid,
+                question_number,
+                question_text,
+                q_hash,
+                options_json,
+                correct_option_index,
+                selected_option_index,
+                explanation,
+                difficulty,
+                is_correct,
+                is_skipped,
+                time_taken_seconds,
+            ),
+        )
 
     def record_mistake(self, user_id, pattern_id, question_text, options, correct_index, selected_index, explanation, difficulty=3):
         query = """
@@ -362,6 +655,121 @@ class DatabaseManager:
         """
         rows = self.execute_query(query, (user_id, limit)) or []
         return [row["pattern_id"] for row in rows]
+
+    def get_mistake_questions(self, user_id, mistake_ids=None, pattern_id=None, limit=20):
+        filters = ["mb.user_id = %s", "mb.status = 'open'"]
+        params = [user_id]
+        if mistake_ids:
+            placeholders = ", ".join(["%s"] * len(mistake_ids))
+            filters.append(f"mb.id IN ({placeholders})")
+            params.extend(mistake_ids)
+        if pattern_id:
+            filters.append("mb.pattern_id = %s")
+            params.append(pattern_id)
+        params.append(limit)
+        query = f"""
+        SELECT
+            mb.id,
+            mb.pattern_id,
+            mb.question_text,
+            mb.options,
+            mb.correct_option_index,
+            mb.selected_option_index,
+            mb.explanation,
+            mb.difficulty,
+            mb.missed_count,
+            p.name as pattern_name,
+            t.name as topic_name
+        FROM mistake_book mb
+        LEFT JOIN patterns p ON p.id = mb.pattern_id
+        LEFT JOIN topics t ON t.id = p.topic_id
+        WHERE {" AND ".join(filters)}
+        ORDER BY mb.missed_count DESC, mb.last_missed_at DESC
+        LIMIT %s
+        """
+        return self.execute_query(query, tuple(params)) or []
+
+    def get_pattern_progress_details(self, user_id, pattern_ids=None):
+        filters = ["p.is_unlocked = TRUE"]
+        params = [user_id]
+        if pattern_ids:
+            placeholders = ", ".join(["%s"] * len(pattern_ids))
+            filters.append(f"p.id IN ({placeholders})")
+            params.extend(pattern_ids)
+        query = f"""
+        SELECT
+            p.id,
+            p.name,
+            p.description,
+            p.difficulty_level,
+            t.id as topic_id,
+            t.name as topic_name,
+            c.id as category_id,
+            c.name as category_name,
+            COALESCE(up.mastery_score, 0) as mastery_score,
+            COALESCE(up.total_attempts, 0) as total_attempts,
+            COALESCE(up.correct_attempts, 0) as correct_attempts,
+            COALESCE(up.wrong_attempts, GREATEST(COALESCE(up.total_attempts, 0) - COALESCE(up.correct_attempts, 0), 0)) as wrong_attempts,
+            COALESCE(up.avg_time_seconds, 0) as avg_time_seconds,
+            up.last_practiced_at,
+            COALESCE(up.last_difficulty_level, p.difficulty_level) as last_difficulty_level,
+            COALESCE(open_mistakes.open_mistakes, 0) as open_mistakes
+        FROM patterns p
+        JOIN topics t ON t.id = p.topic_id
+        JOIN categories c ON c.id = t.category_id
+        LEFT JOIN user_progress up ON up.pattern_id = p.id AND up.user_id = %s
+        LEFT JOIN (
+            SELECT pattern_id, COUNT(*) as open_mistakes
+            FROM mistake_book
+            WHERE user_id = %s AND status = 'open'
+            GROUP BY pattern_id
+        ) open_mistakes ON open_mistakes.pattern_id = p.id
+        WHERE {" AND ".join(filters)}
+        ORDER BY c.id, t.id, p.id
+        """
+        params.insert(1, user_id)
+        rows = self.execute_query(query, tuple(params)) or []
+        return [self._enrich_pattern_progress(row) for row in rows]
+
+    def get_weak_pattern_ids(self, user_id, pattern_ids=None, limit=10):
+        rows = self.get_pattern_progress_details(user_id, pattern_ids)
+        rows.sort(key=lambda row: (-row["weakness_score"], row["total_attempts"], row["id"]))
+        return [row["id"] for row in rows[:limit]]
+
+    @staticmethod
+    def _enrich_pattern_progress(row):
+        total = int(row.get("total_attempts") or 0)
+        correct = int(row.get("correct_attempts") or 0)
+        wrong = int(row.get("wrong_attempts") or max(total - correct, 0))
+        mastery = float(row.get("mastery_score") or 0)
+        avg_time = float(row.get("avg_time_seconds") or 0)
+        open_mistakes = int(row.get("open_mistakes") or 0)
+        accuracy = (correct / total) if total else 0.0
+        wrong_rate = (wrong / total) if total else 0.0
+        slow_penalty = min(avg_time / 120.0, 1.0) * 12 if total else 0
+        new_boost = 18 if total == 0 else 0
+        mistake_boost = min(open_mistakes, 4) * 5
+        weakness_score = round(
+            ((1 - mastery) * 46) + (wrong_rate * 26) + slow_penalty + new_boost + mistake_boost,
+            2,
+        )
+        if total == 0:
+            status = "locked"
+        elif mastery >= 0.8 and total >= 5:
+            status = "mastered"
+        elif mastery >= 0.55:
+            status = "improving"
+        else:
+            status = "learning"
+        row.update(
+            {
+                "wrong_attempts": wrong,
+                "accuracy": round(accuracy * 100, 1),
+                "weakness_score": weakness_score,
+                "status": status,
+            }
+        )
+        return row
         
     def get_today_solved_count(self, user_id):
         query = """
@@ -393,19 +801,36 @@ class DatabaseManager:
         SELECT
             p.id,
             p.name,
+            p.description,
+            p.difficulty_level,
+            t.id as topic_id,
             t.name as topic_name,
+            c.id as category_id,
+            c.name as category_name,
             COALESCE(up.mastery_score, 0) as mastery_score,
             COALESCE(up.total_attempts, 0) as total_attempts,
-            COALESCE(up.correct_attempts, 0) as correct_attempts
+            COALESCE(up.correct_attempts, 0) as correct_attempts,
+            COALESCE(up.wrong_attempts, GREATEST(COALESCE(up.total_attempts, 0) - COALESCE(up.correct_attempts, 0), 0)) as wrong_attempts,
+            COALESCE(up.avg_time_seconds, 0) as avg_time_seconds,
+            up.last_practiced_at,
+            COALESCE(up.last_difficulty_level, p.difficulty_level) as last_difficulty_level,
+            COALESCE(open_mistakes.open_mistakes, 0) as open_mistakes
         FROM patterns p
         JOIN topics t ON t.id = p.topic_id
+        JOIN categories c ON c.id = t.category_id
         LEFT JOIN user_progress up ON up.pattern_id = p.id AND up.user_id = %s
+        LEFT JOIN (
+            SELECT pattern_id, COUNT(*) as open_mistakes
+            FROM mistake_book
+            WHERE user_id = %s AND status = 'open'
+            GROUP BY pattern_id
+        ) open_mistakes ON open_mistakes.pattern_id = p.id
         WHERE p.is_unlocked = TRUE
         ORDER BY p.id
         """
         return {
             "topics": self.execute_query(topic_query, (user_id,)) or [],
-            "patterns": self.execute_query(pattern_query, (user_id,)) or [],
+            "patterns": [self._enrich_pattern_progress(row) for row in (self.execute_query(pattern_query, (user_id, user_id)) or [])],
         }
 
     def get_reminder_settings(self, user_id):

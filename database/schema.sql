@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS user_progress (
     mastery_score FLOAT DEFAULT 0.0,
     total_attempts INT DEFAULT 0,
     correct_attempts INT DEFAULT 0,
+    wrong_attempts INT DEFAULT 0,
     last_practiced_at TIMESTAMP WITH TIME ZONE,
     next_review_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     srs_interval INT DEFAULT 1,
@@ -83,11 +84,17 @@ CREATE TABLE IF NOT EXISTS user_added_patterns (
 CREATE TABLE IF NOT EXISTS practice_sessions (
     id SERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
+    session_uuid TEXT UNIQUE,
     session_type TEXT,
     started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP WITH TIME ZONE,
+    stopped_at TIMESTAMP WITH TIME ZONE,
+    status TEXT DEFAULT 'active',
     score INT,
-    total_questions INT
+    total_questions INT,
+    planned_total_questions INT,
+    pattern_ids JSONB,
+    pattern_names JSONB
 );
 
 -- Question Attempts (Timing and specific history)
@@ -95,10 +102,23 @@ CREATE TABLE IF NOT EXISTS question_attempts (
     id SERIAL PRIMARY KEY,
     user_id BIGINT REFERENCES users(user_id),
     pattern_id INT REFERENCES patterns(id),
+    session_uuid TEXT,
+    question_number INT,
+    question_text TEXT,
+    question_hash TEXT,
+    options JSONB,
+    correct_option_index INT,
+    selected_option_index INT,
+    explanation TEXT,
+    difficulty INT,
     is_correct BOOLEAN NOT NULL,
+    is_skipped BOOLEAN DEFAULT FALSE,
     time_taken_seconds FLOAT DEFAULT 0.0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS question_attempts_user_created_idx ON question_attempts(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS question_attempts_session_idx ON question_attempts(session_uuid, question_number);
 
 -- Mistake book keeps concrete wrong questions for later review/practice.
 CREATE TABLE IF NOT EXISTS mistake_book (
@@ -130,6 +150,18 @@ CREATE TABLE IF NOT EXISTS user_reminder_settings (
     timezone TEXT DEFAULT 'Asia/Kolkata',
     last_reminded_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Daily mission reward ledger for XP, coins, and streak shields.
+CREATE TABLE IF NOT EXISTS user_daily_rewards (
+    user_id BIGINT REFERENCES users(user_id),
+    reward_date DATE DEFAULT CURRENT_DATE,
+    mission_key TEXT NOT NULL,
+    xp INT DEFAULT 0,
+    coins INT DEFAULT 0,
+    streak_shields INT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, reward_date, mission_key)
 );
 
 -- Insert Initial Categories

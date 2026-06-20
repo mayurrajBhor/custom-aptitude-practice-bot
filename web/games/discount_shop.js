@@ -39,7 +39,7 @@
   }
 
   function questionText(question) {
-    return String(question?.question || question?.text || question?.prompt || "");
+    return String(question?.question_text || question?.question || question?.text || question?.prompt || "");
   }
 
   function hashText(text) {

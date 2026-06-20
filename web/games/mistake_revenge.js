@@ -231,8 +231,8 @@
               <p class="game-revenge-kicker">Active case</p>
               <h2>${escapeHtml(game.currentPattern)}</h2>
             </div>
-            <span class="game-revenge-status ${game.lastOutcome === "repaired" ? "is-repaired" : ""}">
-              ${game.lastOutcome === "repaired" ? "Case repaired" : game.lastOutcome === "missed" ? "Defect isolated" : "Evidence intake"}
+            <span class="game-revenge-status ${game.lastOutcome === "repaired" ? "is-repaired" : game.lastOutcome === "stopped" ? "is-stopped" : ""}">
+              ${game.lastOutcome === "repaired" ? "Case repaired" : game.lastOutcome === "missed" ? "Defect isolated" : game.lastOutcome === "stopped" ? "Session stopped" : "Evidence intake"}
             </span>
           </div>
           <div class="game-revenge-question-file">

@@ -204,6 +204,12 @@
   color: #9ce3ce;
 }
 
+.game-revenge-status.is-stopped {
+  border-color: rgba(238, 243, 240, 0.24);
+  background: rgba(238, 243, 240, 0.08);
+  color: rgba(238, 243, 240, 0.78);
+}
+
 .game-revenge-question-file {
   position: relative;
   margin-top: 34px;
@@ -360,6 +366,10 @@
   .game-revenge-intro-grid > div:last-child {
     border-bottom: 0;
   }
+
+  .game-revenge-board-main {
+    min-height: 240px;
+  }
 }
 
 @media (max-width: 540px) {
@@ -378,5 +388,14 @@
 
   .game-revenge-status {
     white-space: normal;
+  }
+
+  .game-revenge-board-main {
+    min-height: 0;
+  }
+
+  .game-revenge-question-file {
+    margin-top: 18px;
+    padding: 14px 16px;
   }
 }

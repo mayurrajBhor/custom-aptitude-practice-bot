@@ -398,11 +398,17 @@
     padding: 22px;
   }
 
+  .game-discount-scene {
+    min-height: 0;
+    padding: 16px;
+  }
+
   .game-discount-dashboard {
     grid-template-areas:
       "deal"
       "radar"
       "queue";
+    gap: 10px;
   }
 
   .game-discount-hud,
@@ -412,6 +418,14 @@
 
   .game-discount-product-row {
     grid-template-columns: 1fr;
+  }
+
+  .game-discount-radar-panel {
+    min-height: 190px;
+  }
+
+  .game-discount-radar-visual {
+    min-height: 128px;
   }
 }
 
@@ -427,5 +441,24 @@
 
   .game-discount-scene {
     padding: 14px;
+  }
+
+  .game-discount-deal-board,
+  .game-discount-radar-panel,
+  .game-discount-queue-panel {
+    padding: 12px;
+  }
+
+  .game-discount-radar-panel {
+    min-height: 150px;
+  }
+
+  .game-discount-radar-visual {
+    min-height: 92px;
+  }
+
+  .game-discount-queue {
+    min-height: 54px;
+    padding: 10px;
   }
 }

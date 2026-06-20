@@ -52,6 +52,7 @@
 
   function questionText(question) {
     return (
+      question?.question_text ||
       question?.text ||
       question?.question ||
       question?.prompt ||
@@ -124,6 +125,32 @@
     return game.total ? Math.max(1, Math.round(game.totalMs / game.total / 1000)) : 0;
   }
 
+  function sessionTotal(state) {
+    return number(
+      state?.session?.totalQuestions ||
+      state?.activeQuestion?.total_questions ||
+      state?.question?.total_questions,
+      TARGET_COUNT
+    );
+  }
+
+  function renderOption(option, index, state) {
+    const answer = state?.lastAnswer || null;
+    const selected = Number(answer?.selected_option_index ?? answer?.answer_index);
+    const correct = Number(answer?.correct_option_index);
+    const classes = [
+      "game-vedic-option",
+      answer && index === correct ? "is-correct" : "",
+      answer && index === selected && selected !== correct ? "is-wrong" : "",
+    ].filter(Boolean).join(" ");
+    return `
+      <button class="${classes}" type="button" data-answer-index="${index}" ${state?.answered ? "disabled" : ""}>
+        <span>${String.fromCharCode(65 + index)}</span>
+        <strong>${escapeHtml(option?.text ?? option?.label ?? option)}</strong>
+      </button>
+    `;
+  }
+
   function renderIntro() {
     return `
       <section class="game-vedic-intro" aria-label="Vedic Math Sprint briefing">
@@ -178,7 +205,8 @@
     const current = game.current;
     const question = current?.question || state.activeQuestion || state.question || null;
     const options = questionOptions(question);
-    const answeredPct = (game.total / TARGET_COUNT) * 100;
+    const totalQuestions = sessionTotal(state);
+    const answeredPct = (game.total / totalQuestions) * 100;
     const timerPct = current?.startedAt ? clamp(((Date.now() - current.startedAt) / STEADY_MS) * 100, 0, 100) : 0;
 
     return `
@@ -187,7 +215,7 @@
           <div class="game-vedic-topline">
             <span class="game-vedic-status-light"></span>
             <span>Timing cockpit armed</span>
-            <strong>${escapeHtml(game.total + 1)} / ${TARGET_COUNT}</strong>
+            <strong>${escapeHtml(Math.min(game.total + 1, totalQuestions))} / ${totalQuestions}</strong>
           </div>
           <div class="game-vedic-timer">
             <div class="game-vedic-timer-head">
@@ -202,17 +230,12 @@
             <p class="game-vedic-kicker">Live calculation</p>
             <h2 class="game-vedic-question-text">${escapeHtml(questionText(question))}</h2>
             <div class="game-vedic-options" aria-label="Answer choices">
-              ${options.map((option, index) => `
-                <div class="game-vedic-option">
-                  <span>${String.fromCharCode(65 + index)}</span>
-                  <strong>${escapeHtml(option?.text ?? option?.label ?? option)}</strong>
-                </div>
-              `).join("") || `<div class="game-vedic-option game-vedic-option-empty"><span>--</span><strong>Use the app answer controls to engage.</strong></div>`}
+              ${options.map((option, index) => renderOption(option, index, state)).join("") || `<div class="game-vedic-option game-vedic-option-empty"><span>--</span><strong>Question loading</strong></div>`}
             </div>
           </div>
           <div class="game-vedic-progress-panel">
             <div class="game-vedic-ring" style="--game-vedic-progress: ${pct(answeredPct)}">
-              <span>${Math.min(game.total, TARGET_COUNT)}</span>
+              <span>${Math.min(game.total, totalQuestions)}</span>
               <em>cleared</em>
             </div>
             <div class="game-vedic-stack">

@@ -4,9 +4,20 @@ const MODE_CONFIG = {
   full: { label: "All Variants", targetCount: null },
 };
 
-const AUTO_ADVANCE_MS = 1400;
-const GAME_MODE_KEYS = ["vedicSprint", "cricketChase", "mistakeRevenge", "directionMaze", "discountShop"];
-const GAME_TARGET_CAP = 15;
+const AUTO_ADVANCE_MS = 600;
+const GAME_MODE_KEYS = [
+  "vedicSprint",
+  "cricketChase",
+  "mistakeRevenge",
+  "directionMaze",
+  "discountShop",
+  "aptitudeHeist",
+  "marketTrader",
+  "trainControl",
+  "escapeGrid",
+  "auctionBattle",
+];
+const GAME_TARGET_CAP = 30;
 
 const state = {
   telegramUser: null,
@@ -24,14 +35,36 @@ const state = {
   lastSelection: [],
   profileOffline: false,
   patternProgress: new Map(),
+  unlockProgress: { topics: [], patterns: [] },
+  recommendedPatternIds: [],
+  smartPlan: null,
+  mistakes: [],
   mistakePatternIds: [],
   reminderSettings: null,
   webConfig: null,
   webAccessKey: null,
   webAccessDenied: false,
+  progressCategoryId: null,
+  progressTopicId: null,
+  progressPatternId: null,
   activeGameId: null,
   activeGameMode: null,
   gameState: null,
+  launchingGameId: null,
+  finishingGameEarly: false,
+  currentStreak: 0,
+  bestStreak: 0,
+  soundEnabled: true,
+  renderedSmartPlanOnce: false,
+  celebratedMissionKeys: new Set(),
+  profileStats: {
+    total_attempts: 0,
+    total_correct: 0,
+    accuracy: 0,
+    mastery: 0,
+    today_solved: 0,
+    mistake_count: 0,
+  },
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -72,7 +105,7 @@ function replayAnimation(element, className) {
 }
 
 function clearAnswerFeedback() {
-  $("#feedbackPanel")?.classList.remove("is-correct", "is-wrong");
+  $("#feedbackPanel")?.classList.remove("is-checking", "is-correct", "is-wrong");
   const burst = $("#answerBurst");
   if (burst) {
     burst.hidden = true;
@@ -83,7 +116,7 @@ function clearAnswerFeedback() {
 function playAnswerFeedback(isCorrect) {
   const panel = $("#feedbackPanel");
   if (panel) {
-    panel.classList.remove("is-correct", "is-wrong");
+    panel.classList.remove("is-checking", "is-correct", "is-wrong");
     void panel.offsetWidth;
     panel.classList.add(isCorrect ? "is-correct" : "is-wrong");
   }
@@ -95,6 +128,152 @@ function playAnswerFeedback(isCorrect) {
   burst.textContent = isCorrect ? "+1 momentum" : "Pattern locked";
   burst.hidden = false;
   replayAnimation(burst, "answer-burst");
+}
+
+function markAnswerPending(answerIndex) {
+  document.querySelectorAll(".option-button").forEach((button) => {
+    const index = Number(button.dataset.answerIndex);
+    button.disabled = true;
+    button.classList.remove("is-correct", "is-wrong", "is-dimmed", "is-pending");
+    button.classList.toggle("is-pending", index === answerIndex);
+    button.classList.toggle("is-dimmed", index !== answerIndex);
+  });
+
+  const feedbackPanel = $("#feedbackPanel");
+  if (feedbackPanel) {
+    feedbackPanel.classList.remove("is-correct", "is-wrong");
+    feedbackPanel.classList.add("is-checking");
+  }
+  $("#feedbackTitle").textContent = "Locked";
+  $("#feedbackText").textContent = "Checking instantly...";
+  const burst = $("#answerBurst");
+  if (burst) {
+    burst.textContent = "Answer locked";
+    burst.hidden = false;
+    replayAnimation(burst, "answer-burst");
+  }
+}
+
+function resetAnswerPending() {
+  document.querySelectorAll(".option-button").forEach((button) => {
+    button.disabled = false;
+    button.classList.remove("is-pending", "is-dimmed", "is-correct", "is-wrong");
+  });
+  clearAnswerFeedback();
+}
+
+function readSoundPreference() {
+  try {
+    const stored = window.localStorage?.getItem("aptitudePracticeSound");
+    return stored === null ? true : stored === "on";
+  } catch {
+    return true;
+  }
+}
+
+function writeSoundPreference(enabled) {
+  try {
+    window.localStorage?.setItem("aptitudePracticeSound", enabled ? "on" : "off");
+  } catch {
+    // Some embedded webviews block localStorage.
+  }
+}
+
+function setSoundEnabled(enabled) {
+  state.soundEnabled = Boolean(enabled);
+  writeSoundPreference(state.soundEnabled);
+  const button = $("#soundToggleButton");
+  if (button) {
+    button.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
+    button.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
+  }
+}
+
+function playTone(type = "tap") {
+  if (!state.soundEnabled) {
+    return;
+  }
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) {
+      return;
+    }
+    const context = new AudioContext();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    const frequency = type === "correct" ? 620 : type === "wrong" ? 190 : type === "mission" ? 760 : 360;
+    oscillator.type = type === "wrong" ? "sawtooth" : "sine";
+    oscillator.frequency.setValueAtTime(frequency, context.currentTime);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(type === "tap" ? 0.018 : 0.045, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (type === "mission" ? 0.28 : 0.16));
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + (type === "mission" ? 0.32 : 0.18));
+    window.setTimeout(() => context.close?.(), 420);
+  } catch {
+    // Audio is best-effort only.
+  }
+}
+
+function triggerHaptic(type = "light") {
+  try {
+    const haptics = window.Telegram?.WebApp?.HapticFeedback;
+    if (!haptics) {
+      return;
+    }
+    if (type === "success" || type === "error") {
+      haptics.notificationOccurred(type);
+    } else {
+      haptics.impactOccurred(type);
+    }
+  } catch {
+    // Haptics are only available inside Telegram.
+  }
+}
+
+function triggerConfetti(tone = "success") {
+  const layer = $("#confettiLayer");
+  if (!layer) {
+    return;
+  }
+  const colors = tone === "mission"
+    ? ["#f7c66a", "#088475", "#126fb4", "#ffffff"]
+    : ["#088475", "#126fb4", "#dff5f0", "#f7c66a"];
+  layer.innerHTML = Array.from({ length: 26 }, (_, index) => {
+    const left = 5 + Math.random() * 90;
+    const delay = Math.random() * 160;
+    const drift = -42 + Math.random() * 84;
+    const color = colors[index % colors.length];
+    return `<span style="--x:${left}%;--delay:${delay}ms;--drift:${drift}px;--color:${color}"></span>`;
+  }).join("");
+  layer.hidden = false;
+  replayAnimation(layer, "is-bursting");
+  window.setTimeout(() => {
+    layer.hidden = true;
+    layer.innerHTML = "";
+  }, 1300);
+}
+
+function tapFeedback(element, event) {
+  if (!element) {
+    return;
+  }
+  const rect = element.getBoundingClientRect();
+  const x = event?.clientX ? event.clientX - rect.left : rect.width / 2;
+  const y = event?.clientY ? event.clientY - rect.top : rect.height / 2;
+  element.style.setProperty("--tap-x", `${Math.round(x)}px`);
+  element.style.setProperty("--tap-y", `${Math.round(y)}px`);
+  replayAnimation(element, "is-tapping");
+  replayAnimation(element, "is-rippling");
+  window.setTimeout(() => {
+    element.classList.remove("is-rippling", "is-tapping");
+  }, 620);
+  triggerHaptic("light");
+  if (!element.matches("[data-answer-index]")) {
+    playTone("tap");
+  }
 }
 
 function setCatalogLoading() {
@@ -274,27 +453,145 @@ function setScreen(name) {
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
 }
 
+function updateQuestionHud(question = state.activeQuestion) {
+  const score = Number(state.session?.score || 0);
+  const total = Number(question?.total_questions || state.session?.total_questions || 0);
+  const answered = Math.max(0, Number(question?.question_number || state.session?.answered || 1) - 1);
+  const scoreTarget = $("#questionScore");
+  const streakTarget = $("#questionStreak");
+  const comboTarget = $("#questionCombo");
+  const progressTarget = $("#questionProgressText");
+  if (scoreTarget) {
+    scoreTarget.textContent = `${score}`;
+  }
+  if (streakTarget) {
+    streakTarget.textContent = `${state.currentStreak}x`;
+  }
+  if (comboTarget) {
+    comboTarget.textContent = state.currentStreak >= 5 ? "Hot" : state.currentStreak >= 3 ? "Combo" : "Ready";
+  }
+  if (progressTarget) {
+    progressTarget.textContent = total ? `${Math.min(answered, total)}/${total}` : "0/0";
+  }
+}
+
+function renderProgressVisuals() {
+  const mastery = Number(state.profileStats.mastery || 0);
+  const total = Number(state.profileStats.total_attempts || 0);
+  const correct = Number(state.profileStats.total_correct || 0);
+  const mistakeCount = Number(state.profileStats.mistake_count || state.mistakes.length || 0);
+  const ring = $("#masteryRingSummary");
+  const masteryText = $("#masteryVisualText");
+  if (ring) {
+    ring.style.setProperty("--ring", `${Math.max(0, Math.min(100, mastery))}%`);
+    ring.innerHTML = `<strong>${Math.round(mastery)}%</strong><span>mastery</span>`;
+  }
+  if (masteryText) {
+    masteryText.textContent = total
+      ? `${correct}/${total} correct with ${Math.round(Number(state.profileStats.accuracy || 0))}% accuracy.`
+      : "Start practicing to build mastery.";
+  }
+
+  const heatmap = $("#weeklyHeatmap");
+  if (heatmap) {
+    const today = Number(state.profileStats.today_solved || 0);
+    const values = Array.from({ length: 7 }, (_, index) => {
+      const weight = index === 6 ? today : Math.max(0, Math.round((today * (index + 2)) / 12) - (index % 2));
+      return Math.min(4, Math.max(0, weight ? Math.ceil(weight / 5) : 0));
+    });
+    const labels = ["M", "T", "W", "T", "F", "S", "Today"];
+    heatmap.innerHTML = values.map((value, index) => `
+      <span class="heat-cell heat-${value}" title="${labels[index]}">
+        <em>${escapeHtml(labels[index])}</em>
+      </span>
+    `).join("");
+  }
+
+  const radar = $("#weakRadar");
+  if (radar) {
+    const rows = [...state.patternProgress.values()]
+      .sort((a, b) => Number(b.weakness_score || 0) - Number(a.weakness_score || 0))
+      .slice(0, 4);
+    radar.innerHTML = rows.length
+      ? rows.map((item) => {
+          const score = Math.max(8, Math.min(100, Number(item.weakness_score || 0)));
+          return `
+            <div class="weak-radar-row">
+              <span>${escapeHtml(item.name || "Pattern")}</span>
+              <div><b style="width:${score}%"></b></div>
+              <strong>${Math.round(score)}</strong>
+            </div>
+          `;
+        }).join("")
+      : `<div class="empty-mini">Practice a set to map risk patterns.</div>`;
+  }
+
+  const recovery = $("#recoveryStats");
+  if (recovery) {
+    const openMistakes = Math.max(mistakeCount, state.mistakes.length);
+    const recovered = Math.max(0, total - openMistakes);
+    const recoveryRate = total ? Math.round((recovered / total) * 100) : 0;
+    recovery.innerHTML = `
+      <div><span>Open misses</span><strong>${openMistakes}</strong></div>
+      <div><span>Recovery rate</span><strong>${recoveryRate}%</strong></div>
+      <div><span>Best streak</span><strong>${state.bestStreak}x</strong></div>
+    `;
+  }
+}
+
 async function loadCatalog() {
   clearStatus();
   setCatalogLoading();
-  $("#catalogStatus").textContent = "Syncing";
+  $("#catalogStatus").textContent = "Fast";
   try {
-    const data = await api("/api/catalog");
-    state.catalog = data.categories || [];
-    const firstCategory = state.catalog[0];
-    state.activeCategoryId = firstCategory?.id || null;
-    state.activeTopicId = firstCategory?.topics?.[0]?.id || null;
-    $("#catalogStatus").textContent = data.source === "local" ? "Local" : "Ready";
-    if (data.source === "local") {
-      showStatus(data.warning || "Using local catalog because the database is unavailable.", "info");
+    const fastData = await api("/api/catalog/fast", { timeoutMs: 8000 });
+    applyCatalogPayload(fastData);
+    if (fastData.source !== "database" || fastData.fast) {
+      void refreshCatalogFromDatabase();
     }
-    renderCatalog();
-    renderGameModes();
   } catch (error) {
     $("#catalogStatus").textContent = "Offline";
     $("#topicList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
     $("#patternList").innerHTML = `<div class="empty-state">Catalog unavailable.</div>`;
     showStatus(error.message);
+  }
+}
+
+function applyCatalogPayload(data) {
+  const previousCategoryId = state.activeCategoryId;
+  const previousTopicId = state.activeTopicId;
+  state.catalog = data.categories || [];
+  const firstCategory = state.catalog[0];
+  const matchingCategory = state.catalog.find((category) => Number(category.id) === Number(previousCategoryId));
+  state.activeCategoryId = matchingCategory?.id || firstCategory?.id || null;
+  const activeCategory = getActiveCategory();
+  const matchingTopic = (activeCategory?.topics || []).find((topic) => Number(topic.id) === Number(previousTopicId));
+  state.activeTopicId = matchingTopic?.id || activeCategory?.topics?.[0]?.id || null;
+  $("#catalogStatus").textContent = data.source === "database"
+    ? data.cached ? "Cached" : "Ready"
+    : data.fast ? "Fast"
+    : "Local";
+  if (data.source === "local" && data.warning) {
+    showStatus(data.warning, "info");
+  }
+  renderCatalog();
+  renderGameModes();
+  renderProgressTracker();
+}
+
+async function refreshCatalogFromDatabase() {
+  try {
+    const data = await api("/api/catalog", { timeoutMs: 30000 });
+    applyCatalogPayload(data);
+    if (data.source === "database") {
+      clearStatus();
+    }
+  } catch (error) {
+    if (!state.catalog.length) {
+      showStatus(error.message);
+    } else {
+      updateProfileNote("Practice is ready. Full database catalog is still syncing in the background.");
+    }
   }
 }
 
@@ -308,6 +605,7 @@ async function loadProfile() {
       avg_time: 0,
       today_solved: 0,
       weak_patterns: [],
+      smart_plan: null,
     });
     renderUnlockProgress({ topics: [], patterns: [] });
     renderMistakes([], []);
@@ -316,14 +614,23 @@ async function loadProfile() {
     return;
   }
 
+  renderSmartPlan(null);
+  updateProfileNote("Loading fast profile summary.");
   try {
-    const profile = await api(`/api/profile/${state.telegramUser.id}`);
-    renderProfile(profile);
+    const profile = await api(`/api/profile/${state.telegramUser.id}/summary`, { timeoutMs: 12000 });
+    renderProfileSummary(profile);
     updateProfileNote(profile.offline
       ? "Database is unavailable from this server, so live progress cannot be loaded here."
-      : "Personal profile synced across devices.");
+      : "Stats loaded. Syncing coach, mistakes, and progress map in the background.");
+    if (profile.offline) {
+      applySmartPlanPayload(profile);
+      applyProgressPayload(profile);
+      renderMistakes([], []);
+      renderReminder(null);
+      return;
+    }
     if (!profile.offline) {
-      await Promise.all([loadMistakes(), loadReminder()]);
+      void loadProfileChunks();
     }
   } catch (error) {
     renderProfile({
@@ -334,6 +641,7 @@ async function loadProfile() {
       avg_time: 0,
       today_solved: 0,
       weak_patterns: [],
+      smart_plan: null,
     });
     renderUnlockProgress({ topics: [], patterns: [] });
     renderMistakes([], []);
@@ -342,28 +650,219 @@ async function loadProfile() {
   }
 }
 
+async function loadProfileChunks() {
+  if (!state.telegramUser?.id) {
+    return;
+  }
+
+  try {
+    const smart = await api(`/api/profile/${state.telegramUser.id}/smart-plan`, { timeoutMs: 24000 });
+    applySmartPlanPayload(smart);
+    updateProfileNote(smart.offline ? "Coach is offline. Practice still works with local data." : "Coach loaded. Progress map is syncing.");
+  } catch (error) {
+    updateProfileNote(`Coach sync is delayed: ${error.message}`);
+  }
+
+  try {
+    const progress = await api(`/api/profile/${state.telegramUser.id}/progress`, { timeoutMs: 30000 });
+    applyProgressPayload(progress);
+    updateProfileNote(progress.offline ? "Progress map is offline right now." : "Personal profile synced across devices.");
+  } catch (error) {
+    updateProfileNote(`Progress sync is delayed: ${error.message}`);
+  }
+
+  await Promise.allSettled([loadMistakes(), loadReminder()]);
+}
+
 function renderProfile(profile) {
-  const unlockProgress = profile.unlock_progress || { topics: [], patterns: [] };
-  state.patternProgress = new Map((unlockProgress.patterns || []).map((item) => [Number(item.id), item]));
+  renderProfileSummary(profile);
+  applySmartPlanPayload(profile);
+  applyProgressPayload(profile);
+}
+
+function renderProfileSummary(profile) {
+  state.profileStats = {
+    ...state.profileStats,
+    total_attempts: Number(profile.total_attempts || 0),
+    total_correct: Number(profile.total_correct || 0),
+    accuracy: Number(profile.accuracy || 0),
+    mastery: Number(profile.mastery || 0),
+    today_solved: Number(profile.today_solved || 0),
+    mistake_count: Number(profile.mistake_count || state.profileStats.mistake_count || 0),
+  };
+  renderSmartPlan(profile.smart_plan);
   $("#todaySolved").textContent = profile.today_solved || 0;
   $("#accuracyStat").textContent = `${profile.accuracy || 0}%`;
   $("#masteryStat").textContent = `${profile.mastery || 0}%`;
   $("#totalSolved").textContent = profile.total_attempts || 0;
   $("#totalCorrect").textContent = profile.total_correct || 0;
   $("#avgTime").textContent = `${profile.avg_time || 0}s`;
+  if (typeof profile.mistake_count !== "undefined") {
+    $("#practiceMistakesButton").disabled = Number(profile.mistake_count || 0) === 0;
+  }
+  renderProgressVisuals();
+}
 
+function applySmartPlanPayload(profile) {
+  state.recommendedPatternIds = (profile.recommended_pattern_ids || state.recommendedPatternIds || []).map(Number).filter(Boolean);
+  if (typeof profile.mistake_count !== "undefined") {
+    state.profileStats.mistake_count = Number(profile.mistake_count || 0);
+  }
+  renderSmartPlan(profile.smart_plan || state.smartPlan);
   const weak = profile.weak_patterns || [];
   $("#weakList").innerHTML = weak.length
     ? weak.map((item) => `
         <div class="weak-item">
           <strong>${escapeHtml(item.name)}</strong>
-          <span>${escapeHtml(item.topic_name)} - ${Math.round((item.mastery_score || 0) * 100)}% mastery</span>
+          <span>${escapeHtml(item.topic_name)} - ${Math.round((item.mastery_score || 0) * 100)}% mastery - ${Number(item.wrong_attempts || 0)} wrong</span>
+          <button class="quiet-button" type="button" data-adaptive-practice="${Number(item.id)}">Practice</button>
         </div>
       `).join("")
     : `<div class="empty-state">No weak patterns yet.</div>`;
+  renderGameModes();
+  renderProgressVisuals();
+}
 
+function applyProgressPayload(profile) {
+  const unlockProgress = profile.unlock_progress || { topics: [], patterns: [] };
+  state.unlockProgress = unlockProgress;
+  state.patternProgress = new Map((unlockProgress.patterns || []).map((item) => [Number(item.id), item]));
   renderUnlockProgress(unlockProgress);
+  renderProgressTracker();
   renderPatterns();
+  renderProgressVisuals();
+}
+
+function defaultSmartPlan() {
+  return {
+    coach_line: state.telegramUser?.id
+      ? "Solve a few questions today so the coach can rank your weak patterns."
+      : "Connect your profile to unlock smart revision and daily missions.",
+    revision_queue: [],
+    missions: [
+      {
+        key: "solve_20",
+        title: "Solve 20 questions",
+        description: "Daily volume mission.",
+        progress: 0,
+        target: 20,
+        unit: "questions",
+        percent: 0,
+        completed: false,
+        reward: { xp: 120, coins: 40, streak_shields: 0 },
+        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 15 },
+      },
+      {
+        key: "improve_weak",
+        title: "Improve one weak pattern",
+        description: "Win 3 answers from one weak pattern.",
+        progress: 0,
+        target: 3,
+        unit: "wins",
+        percent: 0,
+        completed: false,
+        reward: { xp: 180, coins: 55, streak_shields: 0 },
+        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 5 },
+      },
+      {
+        key: "retry_5_mistakes",
+        title: "Retry 5 mistakes",
+        description: "Clear saved mistakes.",
+        progress: 0,
+        target: 5,
+        unit: "mistakes",
+        percent: 0,
+        completed: false,
+        reward: { xp: 150, coins: 45, streak_shields: 1 },
+        action: { type: "mistakes", label: "Open mistakes", pattern_ids: [], mode: "quick", target_count: 5 },
+      },
+    ],
+    wallet: { xp: 0, coins: 0, streak_shields: 0, level: 1, next_level_xp: 500, today_xp: 0, today_coins: 0 },
+  };
+}
+
+function renderSmartPlan(plan) {
+  const coachLine = $("#coachLine");
+  const revisionQueue = $("#revisionQueue");
+  const dailyMissions = $("#dailyMissions");
+  const coachWallet = $("#coachWallet");
+  if (!coachLine || !revisionQueue || !dailyMissions || !coachWallet) {
+    return;
+  }
+
+  state.smartPlan = plan || defaultSmartPlan();
+  const activePlan = state.smartPlan;
+  const wallet = activePlan.wallet || {};
+  coachLine.textContent = activePlan.coach_line || defaultSmartPlan().coach_line;
+  coachWallet.innerHTML = `
+    <span>Lv ${Number(wallet.level || 1)}</span>
+    <strong>${Number(wallet.xp || 0)} XP</strong>
+    <span>${Number(wallet.coins || 0)} coins</span>
+  `;
+
+  const queue = activePlan.revision_queue || [];
+  revisionQueue.innerHTML = queue.length
+    ? `
+      <button class="revision-start" type="button" data-smart-revision-all>
+        <span>Start Queue</span>
+        <strong>${queue.length} patterns</strong>
+      </button>
+      ${queue.map((item, index) => `
+        <button class="revision-chip" type="button" data-smart-revision="${Number(item.id)}">
+          <span>${index + 1}</span>
+          <strong>${escapeHtml(item.name)}</strong>
+          <em>${escapeHtml(item.reason || `${Number(item.mastery || 0)}% mastery`)}</em>
+        </button>
+      `).join("")}
+    `
+    : `<div class="smart-empty">No weak queue yet. Start a quick set to create your first signal.</div>`;
+
+  const missions = activePlan.missions?.length ? activePlan.missions : defaultSmartPlan().missions;
+  dailyMissions.innerHTML = missions.map((mission) => {
+    const reward = mission.reward || {};
+    const percent = clampProgressPercent(mission.percent ?? ((Number(mission.progress || 0) / Number(mission.target || 1)) * 100));
+    const rewardText = [
+      reward.xp ? `${reward.xp} XP` : "",
+      reward.coins ? `${reward.coins} coins` : "",
+      reward.streak_shields ? `${reward.streak_shields} shield` : "",
+    ].filter(Boolean).join(" + ");
+    return `
+      <article class="mission-row ${mission.completed ? "is-complete" : ""}">
+        <div class="mission-main">
+          <div class="mission-title-line">
+            <strong>${escapeHtml(mission.title)}</strong>
+            <span>${Number(mission.progress || 0)}/${Number(mission.target || 0)} ${escapeHtml(mission.unit || "")}</span>
+          </div>
+          <p>${escapeHtml(mission.description || "")}</p>
+          <div class="mission-track"><div style="width: ${percent}%"></div></div>
+          <span class="mission-reward">${mission.reward_claimed ? "Reward earned" : escapeHtml(rewardText || "Reward")}</span>
+        </div>
+        <button class="mission-action" type="button" data-mission-key="${escapeHtml(mission.key)}">
+          ${mission.completed ? "Review" : escapeHtml(mission.action?.label || "Start")}
+        </button>
+      </article>
+    `;
+  }).join("");
+
+  if (state.renderedSmartPlanOnce) {
+    const newlyCompleted = missions.find((mission) =>
+      mission.completed
+      && mission.reward_claimed
+      && !state.celebratedMissionKeys.has(mission.key)
+    );
+    if (newlyCompleted) {
+      state.celebratedMissionKeys.add(newlyCompleted.key);
+      triggerConfetti("mission");
+      triggerHaptic("success");
+      playTone("mission");
+    }
+  }
+  missions.forEach((mission) => {
+    if (mission.completed && mission.reward_claimed) {
+      state.celebratedMissionKeys.add(mission.key);
+    }
+  });
+  state.renderedSmartPlanOnce = true;
 }
 
 async function loadMistakes() {
@@ -456,9 +955,332 @@ function renderUnlockProgress(progress) {
   }).join("");
 }
 
+function clampProgressPercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(number)));
+}
+
+function allCatalogPatternsWithContext() {
+  return state.catalog.flatMap((category) =>
+    (category.topics || []).flatMap((topic) =>
+      (topic.patterns || []).map((pattern) => ({ category, topic, pattern }))
+    )
+  );
+}
+
+function progressForPattern(pattern) {
+  const saved = state.patternProgress.get(Number(pattern?.id)) || {};
+  const attempts = Number(saved.total_attempts || 0);
+  const correct = Number(saved.correct_attempts || 0);
+  const wrong = Number(saved.wrong_attempts ?? Math.max(attempts - correct, 0));
+  const avgTime = Number(saved.avg_time_seconds || 0);
+  const weaknessScore = Number(saved.weakness_score || 0);
+  const mastery = clampProgressPercent(Number(saved.mastery_score || 0) * 100);
+  const accuracy = attempts ? clampProgressPercent((correct / attempts) * 100) : 0;
+  const statusKey = saved.status || (attempts === 0 ? "locked" : mastery >= 80 ? "mastered" : mastery >= 55 ? "improving" : "learning");
+  const status = {
+    locked: "Locked",
+    learning: "Learning",
+    improving: "Improving",
+    mastered: "Mastered",
+  }[statusKey] || "Learning";
+
+  return {
+    attempts,
+    correct,
+    wrong,
+    avgTime,
+    weaknessScore,
+    lastPracticedAt: saved.last_practiced_at || null,
+    openMistakes: Number(saved.open_mistakes || 0),
+    mastery,
+    accuracy,
+    status,
+    statusKey,
+  };
+}
+
+function summarizePatternContexts(contexts) {
+  const total = contexts.length;
+  const rows = contexts.map(({ pattern }) => progressForPattern(pattern));
+  const practiced = rows.filter((item) => item.attempts > 0).length;
+  const mastered = rows.filter((item) => item.mastery >= 80).length;
+  const attempts = rows.reduce((sum, item) => sum + item.attempts, 0);
+  const correct = rows.reduce((sum, item) => sum + item.correct, 0);
+  const wrong = rows.reduce((sum, item) => sum + item.wrong, 0);
+  const avgMastery = total
+    ? clampProgressPercent(rows.reduce((sum, item) => sum + item.mastery, 0) / total)
+    : 0;
+  const coverage = total ? clampProgressPercent((practiced / total) * 100) : 0;
+  const accuracy = attempts ? clampProgressPercent((correct / attempts) * 100) : 0;
+
+  return {
+    total,
+    practiced,
+    mastered,
+    attempts,
+    correct,
+    wrong,
+    avgMastery,
+    coverage,
+    accuracy,
+  };
+}
+
+function summarizeTopic(topic) {
+  return summarizePatternContexts((topic?.patterns || []).map((pattern) => ({ pattern })));
+}
+
+function summarizeCategory(category) {
+  return summarizePatternContexts(
+    (category?.topics || []).flatMap((topic) =>
+      (topic.patterns || []).map((pattern) => ({ topic, pattern }))
+    )
+  );
+}
+
+function summarizeAllProgress() {
+  return summarizePatternContexts(allCatalogPatternsWithContext());
+}
+
+function formatLastPracticed(value) {
+  if (!value) {
+    return "Never";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Recent";
+  }
+  const diffMs = Date.now() - date.getTime();
+  const diffDays = Math.max(0, Math.floor(diffMs / 86400000));
+  if (diffDays === 0) {
+    return "Today";
+  }
+  if (diffDays === 1) {
+    return "Yesterday";
+  }
+  return `${diffDays}d ago`;
+}
+
+function statusClass(statusKey) {
+  return `is-${String(statusKey || "learning").replace(/[^a-z0-9-]/gi, "")}`;
+}
+
+function progressCategories() {
+  return state.catalog.filter((category) => (category.topics || []).some((topic) => (topic.patterns || []).length));
+}
+
+function getProgressCategory() {
+  return progressCategories().find((category) => Number(category.id) === Number(state.progressCategoryId)) || null;
+}
+
+function getProgressTopic() {
+  return (getProgressCategory()?.topics || []).find((topic) => Number(topic.id) === Number(state.progressTopicId)) || null;
+}
+
+function getProgressPattern() {
+  return (getProgressTopic()?.patterns || []).find((pattern) => Number(pattern.id) === Number(state.progressPatternId)) || null;
+}
+
+function findPatternContext(patternId) {
+  return allCatalogPatternsWithContext().find(({ pattern }) => Number(pattern.id) === Number(patternId)) || null;
+}
+
+function ensureProgressSelection() {
+  const categories = progressCategories();
+  if (!categories.length) {
+    state.progressCategoryId = null;
+    state.progressTopicId = null;
+    state.progressPatternId = null;
+    return;
+  }
+
+  if (!categories.some((category) => Number(category.id) === Number(state.progressCategoryId))) {
+    const activeCategory = categories.find((category) => Number(category.id) === Number(state.activeCategoryId));
+    state.progressCategoryId = (activeCategory || categories[0]).id;
+  }
+
+  const category = getProgressCategory();
+  const topics = (category?.topics || []).filter((topic) => (topic.patterns || []).length);
+  if (!topics.some((topic) => Number(topic.id) === Number(state.progressTopicId))) {
+    state.progressTopicId = topics[0]?.id || null;
+  }
+
+  const topic = getProgressTopic();
+  const patterns = topic?.patterns || [];
+  if (!patterns.some((pattern) => Number(pattern.id) === Number(state.progressPatternId))) {
+    state.progressPatternId = patterns[0]?.id || null;
+  }
+}
+
+function renderProgressTracker() {
+  const categoryTabs = $("#progressCategoryTabs");
+  const topicList = $("#progressTopicList");
+  const patternList = $("#progressPatternList");
+  const detail = $("#progressPatternDetail");
+  const snapshot = $("#progressSnapshot");
+  if (!categoryTabs || !topicList || !patternList || !detail || !snapshot) {
+    return;
+  }
+
+  ensureProgressSelection();
+  const categories = progressCategories();
+  if (!categories.length) {
+    snapshot.innerHTML = "";
+    categoryTabs.innerHTML = `<div class="empty-state">No progress catalog available.</div>`;
+    topicList.innerHTML = "";
+    patternList.innerHTML = "";
+    detail.innerHTML = `<div class="empty-state">Load the catalog to track patterns.</div>`;
+    return;
+  }
+
+  const overall = summarizeAllProgress();
+  snapshot.innerHTML = `
+    <div class="progress-ring" style="--ring:${overall.avgMastery}%">
+      <strong>${overall.avgMastery}%</strong>
+      <span>Mastery</span>
+    </div>
+    <div class="progress-snapshot-stack">
+      <div class="progress-snapshot-row">
+        <span>Coverage</span>
+        <strong>${overall.practiced}/${overall.total}</strong>
+        <div class="mini-track"><div style="width: ${overall.coverage}%"></div></div>
+      </div>
+      <div class="progress-snapshot-row">
+        <span>Mastered</span>
+        <strong>${overall.mastered}/${overall.total}</strong>
+        <div class="mini-track"><div style="width: ${overall.total ? Math.round((overall.mastered / overall.total) * 100) : 0}%"></div></div>
+      </div>
+      <div class="progress-snapshot-row">
+        <span>Accuracy</span>
+        <strong>${overall.accuracy}%</strong>
+        <div class="mini-track"><div style="width: ${overall.accuracy}%"></div></div>
+      </div>
+    </div>
+  `;
+
+  categoryTabs.innerHTML = categories.map((category) => {
+    const summary = summarizeCategory(category);
+    const active = Number(category.id) === Number(state.progressCategoryId);
+    return `
+      <button class="progress-category-tab ${active ? "is-active" : ""}" type="button" data-progress-category-id="${category.id}">
+        <strong>${escapeHtml(category.name)}</strong>
+        <span>${summary.mastered}/${summary.total} mastered</span>
+        <div class="mini-track"><div style="width: ${summary.coverage}%"></div></div>
+      </button>
+    `;
+  }).join("");
+
+  const category = getProgressCategory();
+  const topics = (category?.topics || []).filter((topic) => (topic.patterns || []).length);
+  topicList.innerHTML = topics.length
+    ? topics.map((topic) => {
+        const summary = summarizeTopic(topic);
+        const active = Number(topic.id) === Number(state.progressTopicId);
+        return `
+          <button class="progress-topic-button ${active ? "is-active" : ""}" type="button" data-progress-topic-id="${topic.id}">
+            <strong>${escapeHtml(topic.name)}</strong>
+            <span>${summary.coverage}% unlocked - ${summary.avgMastery}% mastery</span>
+          </button>
+        `;
+      }).join("")
+    : `<div class="empty-state">No topics in this category.</div>`;
+
+  const topic = getProgressTopic();
+  const patterns = topic?.patterns || [];
+  patternList.innerHTML = patterns.length
+    ? patterns.map((pattern) => {
+        const progress = progressForPattern(pattern);
+        const active = Number(pattern.id) === Number(state.progressPatternId);
+        return `
+          <button class="progress-pattern-card ${active ? "is-active" : ""} ${statusClass(progress.statusKey)}" type="button" data-progress-pattern-id="${pattern.id}">
+            <span class="progress-pattern-topline">
+              <strong>${escapeHtml(pattern.name)}</strong>
+              <em>${progress.status}</em>
+            </span>
+            <span>${progress.attempts} tried - ${progress.correct} correct - ${progress.wrong} wrong</span>
+            <div class="mini-track"><div style="width: ${progress.mastery}%"></div></div>
+          </button>
+        `;
+      }).join("")
+    : `<div class="empty-state">No patterns in this topic.</div>`;
+
+  renderProgressPatternDetail();
+}
+
+function renderProgressPatternDetail() {
+  const detail = $("#progressPatternDetail");
+  if (!detail) {
+    return;
+  }
+
+  const pattern = getProgressPattern();
+  const topic = getProgressTopic();
+  const category = getProgressCategory();
+  if (!pattern) {
+    detail.innerHTML = `<div class="empty-state">Select a pattern to see its progress.</div>`;
+    return;
+  }
+
+  const progress = progressForPattern(pattern);
+  const variantCount = Number(pattern.variant_count || 0);
+  const weakLabel = progress.weaknessScore ? `${Math.round(progress.weaknessScore)}/100` : "New";
+  detail.innerHTML = `
+    <div class="progress-detail-head">
+      <span>${escapeHtml(category?.name || "Category")} / ${escapeHtml(topic?.name || "Topic")}</span>
+      <strong>${escapeHtml(progress.status)}</strong>
+    </div>
+    <h3>${escapeHtml(pattern.name)}</h3>
+    <p>${escapeHtml(pattern.description || "Practice pattern")}</p>
+    <div class="progress-detail-gauge" style="--ring:${progress.mastery}%">
+      <strong>${progress.mastery}%</strong>
+      <span>mastery</span>
+    </div>
+    <div class="progress-detail-grid">
+      <div><span>Practiced</span><strong>${progress.attempts}</strong></div>
+      <div><span>Correct</span><strong>${progress.correct}</strong></div>
+      <div><span>Wrong</span><strong>${progress.wrong}</strong></div>
+      <div><span>Accuracy</span><strong>${progress.accuracy}%</strong></div>
+      <div><span>Speed</span><strong>${progress.avgTime ? `${Math.round(progress.avgTime)}s` : "0s"}</strong></div>
+      <div><span>Last</span><strong>${escapeHtml(formatLastPracticed(progress.lastPracticedAt))}</strong></div>
+      <div><span>Weak Score</span><strong>${escapeHtml(weakLabel)}</strong></div>
+      <div><span>Variants</span><strong>${variantCount}</strong></div>
+    </div>
+    <div class="progress-action-row">
+      <button class="primary-button full-width" type="button" data-progress-practice-pattern="${pattern.id}">Practice this pattern</button>
+      <button class="quiet-button full-width" type="button" data-adaptive-practice="${pattern.id}">Smart weak drill</button>
+    </div>
+  `;
+}
+
+function preparePatternPracticeFromProgress(patternId) {
+  const context = findPatternContext(patternId);
+  if (!context) {
+    showStatus("This pattern is not available in the current catalog.");
+    return;
+  }
+
+  clearGameMode();
+  state.activeCategoryId = context.category.id;
+  state.activeTopicId = context.topic.id;
+  state.selectedPatternIds = new Set([Number(context.pattern.id)]);
+  state.selectedMode = "quick";
+  document.querySelectorAll("[data-mode]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.mode === "quick");
+  });
+  renderCatalog();
+  setScreen("practice");
+}
+
 function renderMistakes(mistakes, patternIds) {
+  state.mistakes = mistakes || [];
   state.mistakePatternIds = patternIds.map(Number).filter(Boolean);
+  state.profileStats.mistake_count = state.mistakes.length;
   $("#practiceMistakesButton").disabled = state.mistakePatternIds.length === 0;
+  renderProgressVisuals();
 
   if (!mistakes.length) {
     $("#mistakeList").innerHTML = `<div class="empty-state">No mistakes saved yet.</div>`;
@@ -472,7 +1294,24 @@ function renderMistakes(mistakes, patternIds) {
         <span>${item.missed_count}x missed</span>
       </div>
       <p>${escapeHtml(item.question_text)}</p>
+      <div class="mistake-answer-grid">
+        <div>
+          <span>Your answer</span>
+          <strong>${escapeHtml(item.selected_option ?? "Not answered")}</strong>
+        </div>
+        <div>
+          <span>Correct</span>
+          <strong>${escapeHtml(item.correct_option ?? "Check options")}</strong>
+        </div>
+      </div>
+      <div class="mistake-why">
+        <span>Why this went wrong</span>
+        <p>${escapeHtml(item.explanation || "Review the setup, then solve one similar question immediately.")}</p>
+      </div>
       <div class="mistake-actions">
+        <button class="primary-button" type="button" data-mistake-retry="${item.id}">Retry exact</button>
+        <button class="quiet-button" type="button" data-mistake-similar="${item.pattern_id}">Similar</button>
+        <button class="quiet-button" type="button" data-mistake-pattern="${item.pattern_id}">Pattern</button>
         <button class="quiet-button" type="button" data-mistake-review="${item.id}">Mark reviewed</button>
       </div>
     </article>
@@ -612,12 +1451,48 @@ function gameModeKey(game) {
   return getGameModes().find((entry) => entry.mode === game || entry.mode.id === game?.id)?.key || game?.id || "";
 }
 
-function renderGamePreview(key) {
-  return `
-    <div class="game-mode-preview-visual game-mode-preview-${escapeHtml(key)}" aria-hidden="true">
-      <span></span><span></span><span></span><span></span>
-    </div>
-  `;
+function getGameTargetCount(game) {
+  const requested = Number(game?.targetCount || MODE_CONFIG.quick.targetCount);
+  return Math.max(3, Math.min(Number.isFinite(requested) ? requested : MODE_CONFIG.quick.targetCount, GAME_TARGET_CAP));
+}
+
+function gameModeTileIcon(key) {
+  return {
+    vedicSprint: "x2",
+    cricketChase: "6",
+    mistakeRevenge: "!",
+    directionMaze: "N",
+    discountShop: "%",
+    aptitudeHeist: "VH",
+    marketTrader: "MT",
+    trainControl: "TC",
+    escapeGrid: "EG",
+    auctionBattle: "AB",
+  }[key] || "GO";
+}
+
+function gameDifficultyLabel(mode) {
+  const range = mode?.difficultyRange || mode?.adaptiveDifficultyRange;
+  if (Array.isArray(range) && range.length >= 2) {
+    const avg = (Number(range[0]) + Number(range[1])) / 2;
+    if (avg <= 2) {
+      return "Easy";
+    }
+    if (avg <= 3.5) {
+      return "Medium";
+    }
+    return "Hard";
+  }
+  return mode?.flagship ? "Elite" : "Mixed";
+}
+
+function gameRewardText(mode, targetCount) {
+  const base = Math.max(40, targetCount * (mode?.flagship ? 18 : 12));
+  return `${base} XP`;
+}
+
+function gameThumbnailClass(key) {
+  return `thumb-${String(key || "default").replace(/[^a-z0-9-]/gi, "")}`;
 }
 
 function renderGameModes() {
@@ -632,25 +1507,39 @@ function renderGameModes() {
     return;
   }
 
-  grid.innerHTML = games.map(({ key, mode }) => {
+  const orderedGames = games.slice().sort((a, b) => Number(Boolean(b.mode.flagship)) - Number(Boolean(a.mode.flagship)));
+  grid.innerHTML = orderedGames.map(({ key, mode }) => {
     const patternCount = resolveGamePatternIds(mode).length;
-    const targetCount = Number(mode.targetCount || 5);
+    const targetCount = getGameTargetCount(mode);
+    const launching = state.launchingGameId === key;
+    const unavailable = key === "mistakeRevenge" && patternCount === 0;
+    const continuing = state.activeGameId === key && state.session && !state.finishingGameEarly;
+    const actionText = unavailable ? "Need misses" : launching ? "Loading" : continuing ? "Continue" : "Play";
+    const patternText = unavailable ? "Mistake book" : `${patternCount || "Auto"} patterns`;
+    const classes = ["game-mode-card", mode.flagship ? "is-flagship" : "", continuing ? "is-continuing" : "", gameThumbnailClass(key)].filter(Boolean).join(" ");
     return `
-      <article class="game-mode-card" style="--game-accent: ${escapeHtml(mode.accent || "#0f766e")}">
+      <button class="${classes}" type="button" data-game-id="${escapeHtml(key)}" style="--game-accent: ${escapeHtml(mode.accent || "#0f766e")}" aria-label="${escapeHtml(actionText)} ${escapeHtml(mode.title)}" ${launching || unavailable ? "disabled" : ""}>
         <div class="game-mode-glow" aria-hidden="true"></div>
+        <div class="game-mode-thumb" aria-hidden="true"><span>${escapeHtml(gameModeTileIcon(key))}</span></div>
         <div class="game-mode-card-head">
-          <span>${escapeHtml(mode.category || "Aptitude")}</span>
-          <strong>${escapeHtml(mode.shortTitle || mode.title)}</strong>
+          <span class="game-mode-icon" aria-hidden="true">${escapeHtml(gameModeTileIcon(key))}</span>
+          <span class="game-mode-label">
+            <strong>${escapeHtml(mode.shortTitle || mode.title)}</strong>
+            <small>${escapeHtml(mode.category || "Aptitude")}</small>
+          </span>
         </div>
-        <h3>${escapeHtml(mode.title)}</h3>
         <p>${escapeHtml(mode.subtitle || "A timed aptitude game mode.")}</p>
-        <div class="game-mode-meta">
-          <span>${targetCount} questions</span>
-          <span>${patternCount || "Auto"} patterns</span>
+        <div class="game-mode-badges">
+          <span>${escapeHtml(gameDifficultyLabel(mode))}</span>
+          <span>${escapeHtml(gameRewardText(mode, targetCount))}</span>
+          ${mode.flagship ? "<strong>Flagship</strong>" : continuing ? "<strong>Continue mission</strong>" : ""}
         </div>
-        ${renderGamePreview(key)}
-        <button class="primary-button" type="button" data-game-id="${escapeHtml(key)}">Launch mode</button>
-      </article>
+        <div class="game-mode-meta">
+          <span>${targetCount}Q</span>
+          <span>${escapeHtml(patternText)}</span>
+          <strong>${escapeHtml(actionText)}</strong>
+        </div>
+      </button>
     `;
   }).join("");
 }
@@ -673,22 +1562,99 @@ function normalizeSearch(value) {
 
 function specialGameTerms(game) {
   const key = gameModeKey(game);
+  const configuredTerms = [
+    ...(game.adaptivePatternTerms || []),
+    ...(game.adaptiveTopicTerms || []),
+    ...(game.adaptiveCategoryTerms || []),
+  ];
   if (key === "vedicSprint") {
-    return ["vedic math", "speed", "addition", "subtraction", "multiplication", "division", "tables", "squares", "cubes"];
+    return [...configuredTerms, "vedic math", "speed", "addition", "subtraction", "multiplication", "division", "tables", "squares", "cubes"];
   }
   if (key === "cricketChase") {
-    return ["vedic math", "percentage", "calculation", "tables", "speed", "discount"];
+    return [...configuredTerms, "vedic math", "percentage", "calculation", "tables", "speed", "discount", "average", "ratio"];
   }
   if (key === "mistakeRevenge") {
-    return ["mistake", "weak", "review"];
+    return [...configuredTerms, "mistake", "weak", "review"];
   }
   if (key === "directionMaze") {
-    return ["direction", "distance", "turns", "clockwise", "shadow", "movement"];
+    return [...configuredTerms, "direction", "distance", "turns", "clockwise", "shadow", "movement", "seating", "coded"];
   }
   if (key === "discountShop") {
-    return ["percentage", "discount", "successive", "marked price", "selling price", "profit", "loss"];
+    return [...configuredTerms, "percentage", "discount", "successive", "marked price", "selling price", "profit", "loss"];
   }
-  return [];
+  if (key === "aptitudeHeist") {
+    return [...configuredTerms, "percentage", "ratio", "average", "series", "direction", "speed", "number sense", "logic"];
+  }
+  if (key === "marketTrader") {
+    return [...configuredTerms, "percentage", "profit", "loss", "average", "ratio", "change", "growth", "approximation"];
+  }
+  if (key === "trainControl") {
+    return [...configuredTerms, "speed", "distance", "time", "direction", "movement", "relative", "schedule", "average"];
+  }
+  if (key === "escapeGrid") {
+    return [...configuredTerms, "direction", "coded", "series", "arrangement", "logic", "percentage", "number"];
+  }
+  if (key === "auctionBattle") {
+    return [...configuredTerms, "percentage", "discount", "profit", "loss", "ratio", "average", "marked price", "selling price"];
+  }
+  return configuredTerms;
+}
+
+function difficultyLevel(pattern) {
+  const value = Number(pattern.difficulty_level ?? pattern.difficulty ?? 2);
+  return Number.isFinite(value) ? value : 2;
+}
+
+function progressProfileForPattern(patternId) {
+  const progress = state.patternProgress.get(Number(patternId)) || {};
+  const attempts = Number(progress.total_attempts || 0);
+  const mastery = Number(progress.mastery_score || 0);
+  const correct = Number(progress.correct_attempts || 0);
+  return { attempts, mastery, correct };
+}
+
+function adaptivePatternLimit(game) {
+  const requested = Number(game?.adaptivePatternLimit || game?.patternPoolSize || getGameTargetCount(game));
+  if (!Number.isFinite(requested)) {
+    return Math.min(12, GAME_TARGET_CAP);
+  }
+  return Math.max(4, Math.min(Math.round(requested), GAME_TARGET_CAP));
+}
+
+function gameDifficultyScore(game, pattern) {
+  const difficulty = difficultyLevel(pattern);
+  const range = game.difficultyRange || game.adaptiveDifficultyRange;
+  if (Array.isArray(range) && range.length >= 2) {
+    const min = Number(range[0]);
+    const max = Number(range[1]);
+    if (Number.isFinite(min) && Number.isFinite(max)) {
+      if (difficulty >= min && difficulty <= max) {
+        return 2;
+      }
+      return -Math.min(2, Math.abs(difficulty - ((min + max) / 2)));
+    }
+  }
+  return 0;
+}
+
+function patternWeaknessScore(pattern) {
+  const progress = progressProfileForPattern(pattern.id);
+  if (state.mistakePatternIds.map(Number).includes(Number(pattern.id))) {
+    return 6;
+  }
+  if (!progress.attempts) {
+    return 1.5;
+  }
+  if (progress.mastery < 0.45) {
+    return 5;
+  }
+  if (progress.mastery < 0.7) {
+    return 3;
+  }
+  if (progress.mastery >= 0.85) {
+    return -1;
+  }
+  return 0.5;
 }
 
 function patternScoreForGame(game, pattern) {
@@ -706,7 +1672,7 @@ function patternScoreForGame(game, pattern) {
     ...specialGameTerms(game),
   ].map(normalizeSearch).filter(Boolean);
 
-  return terms.reduce((score, term) => {
+  const naturalFit = terms.reduce((score, term) => {
     if (!term) {
       return score;
     }
@@ -717,6 +1683,13 @@ function patternScoreForGame(game, pattern) {
     const wordMatches = words.filter((word) => haystack.includes(word)).length;
     return score + wordMatches;
   }, 0);
+
+  const selectedBoost = state.selectedPatternIds.has(Number(pattern.id)) ? 4 : 0;
+  const weakBoost = game.adaptiveUseWeakAreas === false ? 0 : patternWeaknessScore(pattern);
+  const difficultyBoost = gameDifficultyScore(game, pattern);
+  const broadSupport = game.adaptiveBroadMatch ? 1 : 0;
+
+  return naturalFit + selectedBoost + weakBoost + difficultyBoost + broadSupport;
 }
 
 function resolveGamePatternIds(game) {
@@ -730,23 +1703,52 @@ function resolveGamePatternIds(game) {
       return mistakeIds.slice(0, 8);
     }
   }
+  if (key === "mistakeRevenge") {
+    return [];
+  }
 
   const scored = available
     .map((pattern) => ({ pattern, score: patternScoreForGame(game, pattern) }))
-    .filter((entry) => entry.score > 0)
+    .filter((entry) => entry.score > 0 || game.adaptiveBroadMatch)
     .sort((a, b) => b.score - a.score || Number(a.pattern.id) - Number(b.pattern.id));
 
   if (scored.length) {
-    const limit = key === "cricketChase" ? 8 : 6;
-    return scored.slice(0, limit).map((entry) => Number(entry.pattern.id));
+    const limit = adaptivePatternLimit(game);
+    const chosen = [];
+    const topicCounts = new Map();
+    const maxPerTopic = Math.max(2, Number(game.maxPatternsPerTopic || 5));
+
+    scored.forEach((entry) => {
+      if (chosen.length >= limit) {
+        return;
+      }
+      const topicName = entry.pattern.topic_name || "topic";
+      const used = topicCounts.get(topicName) || 0;
+      if (used >= maxPerTopic && scored.length > limit) {
+        return;
+      }
+      chosen.push(Number(entry.pattern.id));
+      topicCounts.set(topicName, used + 1);
+    });
+
+    if (chosen.length < Math.min(limit, scored.length)) {
+      scored.forEach((entry) => {
+        const id = Number(entry.pattern.id);
+        if (chosen.length < limit && !chosen.includes(id)) {
+          chosen.push(id);
+        }
+      });
+    }
+
+    return chosen;
   }
 
   const selected = getSelectedPatterns().map((pattern) => Number(pattern.id));
   if (selected.length) {
-    return selected.slice(0, 6);
+    return selected.slice(0, adaptivePatternLimit(game));
   }
 
-  return available.slice(0, 4).map((pattern) => Number(pattern.id));
+  return available.slice(0, adaptivePatternLimit(game)).map((pattern) => Number(pattern.id));
 }
 
 async function launchGameMode(gameId) {
@@ -762,6 +1764,8 @@ async function launchGameMode(gameId) {
     return;
   }
 
+  const gameKey = gameModeKey(game);
+  state.launchingGameId = gameKey;
   state.activeGameId = gameModeKey(game);
   state.activeGameMode = game;
   state.gameState = {
@@ -769,25 +1773,74 @@ async function launchGameMode(gameId) {
     modeKey: state.activeGameId,
     startedAt: Date.now(),
   };
+  state.activeGameMode.onLaunch?.(state.gameState);
   state.selectedPatternIds = new Set(patternIds);
   state.selectedMode = "quick";
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.mode === "quick");
   });
   renderSelection();
-  setScreen("arcade");
-  await startPractice({
-    gameMode: game,
-    patternIds,
-    mode: "quick",
-    targetCount: Number(game.targetCount || MODE_CONFIG.quick.targetCount),
-  });
+  renderGameModes();
+  clearStatus();
+  setScreen("question");
+  renderGameIntro();
+  $("#questionCounter").textContent = `${game.shortTitle || game.title}`;
+  $("#questionTimer").textContent = "Ready";
+  $("#progressBar").style.width = "0%";
+  $("#questionText").textContent = "Preparing game questions";
+  $("#optionsGrid").innerHTML = "";
+  $("#feedbackTitle").textContent = "Loading";
+  $("#feedbackText").textContent = "Building a fast playable set. The first question will appear automatically.";
+  $("#nextButton").disabled = true;
+  $("#nextButton").textContent = "Preparing";
+
+  try {
+    const started = await startPractice({
+      gameMode: game,
+      patternIds,
+      mode: "quick",
+      targetCount: getGameTargetCount(game),
+    });
+    if (!started) {
+      setScreen("arcade");
+    }
+  } finally {
+    state.launchingGameId = null;
+    renderGameModes();
+  }
+}
+
+async function finishGameSessionEarly() {
+  if (!state.session?.session_id || state.finishingGameEarly) {
+    return;
+  }
+
+  state.finishingGameEarly = true;
+  clearAutoAdvance();
+  clearQuestionTimer();
+  $("#nextButton").disabled = true;
+  $("#nextButton").textContent = "Preparing report";
+
+  try {
+    const result = await api(`/api/session/${state.session.session_id}/stop`, { method: "POST" });
+    syncGameStop();
+    showResults(result.summary);
+  } catch (error) {
+    showStatus(error.message);
+    $("#nextButton").disabled = false;
+    $("#nextButton").textContent = "View game report";
+    $("#nextButton").onclick = finishGameSessionEarly;
+  } finally {
+    state.finishingGameEarly = false;
+  }
 }
 
 function clearGameMode() {
   state.activeGameId = null;
   state.activeGameMode = null;
   state.gameState = null;
+  state.finishingGameEarly = false;
+  document.body.classList.remove("is-game-active", "is-heist-immersive");
   $("#gameStage")?.setAttribute("hidden", "");
   $("#gameHud")?.setAttribute("hidden", "");
   $("#gameResultLines")?.setAttribute("hidden", "");
@@ -800,6 +1853,8 @@ function renderGameIntro() {
   const stage = $("#gameStage");
   const scene = $("#gameScene");
   const hud = $("#gameHud");
+  document.body.classList.toggle("is-game-active", Boolean(state.activeGameMode));
+  document.body.classList.toggle("is-heist-immersive", state.activeGameId === "aptitudeHeist");
   if (stage && scene) {
     stage.hidden = false;
     scene.innerHTML = state.activeGameMode.renderIntro ? state.activeGameMode.renderIntro() : "";
@@ -838,6 +1893,8 @@ function syncGameQuestion(question) {
     return;
   }
   state.gameState.activeQuestion = question;
+  state.gameState.answered = false;
+  state.gameState.lastAnswer = null;
   state.gameState.questionStartedAt = state.questionStartedAt;
   state.gameState.session = {
     sessionId: state.session?.session_id,
@@ -863,6 +1920,8 @@ function syncGameAnswer(result, answerIndex) {
     elapsed_ms: elapsedMs,
     elapsed_seconds: result.time_taken,
   };
+  state.gameState.answered = true;
+  state.gameState.lastAnswer = gameResult;
   state.activeGameMode.onAnswer?.(gameResult, state.gameState);
   renderGamePanels();
 }
@@ -900,6 +1959,9 @@ async function startPractice(options = {}) {
   if (!gameMode) {
     clearGameMode();
   }
+  state.currentStreak = 0;
+  state.bestStreak = Math.max(state.bestStreak || 0, 0);
+  updateQuestionHud(null);
 
   const patternIds = options.patternIds ? [...options.patternIds] : [...state.selectedPatternIds];
   if (!patternIds.length) {
@@ -925,19 +1987,22 @@ async function startPractice(options = {}) {
         telegram_user: state.telegramUser,
       }),
     });
+    updateQuestionHud({ question_number: 1, total_questions: state.session.total_questions });
     setScreen("question");
     renderGameIntro();
     await loadNextQuestion();
+    return true;
   } catch (error) {
     $("#selectionList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
     showStatus(error.message);
+    return false;
   } finally {
     $("#startButton").disabled = false;
     $("#startButton").textContent = "Start practice";
   }
 }
 
-async function startPracticeWithPatternIds(patternIds) {
+async function startPracticeWithPatternIds(patternIds, options = {}) {
   const available = new Set(
     state.catalog
       .flatMap((category) => category.topics || [])
@@ -946,17 +2011,189 @@ async function startPracticeWithPatternIds(patternIds) {
   );
   const usableIds = patternIds.map(Number).filter((id) => available.has(id));
   if (!usableIds.length) {
-    showStatus("No mistake patterns are available in the current catalog.");
+    showStatus("No matching practice patterns are available in the current catalog.");
     return;
   }
+  const modeKey = options.mode || "quick";
   state.selectedPatternIds = new Set(usableIds);
-  state.selectedMode = "quick";
+  state.selectedMode = modeKey;
   document.querySelectorAll("[data-mode]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.mode === "quick");
+    button.classList.toggle("is-active", button.dataset.mode === modeKey);
   });
   renderSelection();
   setScreen("practice");
-  await startPractice();
+  await startPractice({
+    patternIds: usableIds,
+    mode: modeKey,
+    targetCount: options.targetCount,
+  });
+}
+
+async function startAdaptivePractice(patternIds = []) {
+  const ids = patternIds.length ? patternIds : state.recommendedPatternIds;
+  if (!ids.length) {
+    showStatus("Practice a few questions first so the app can detect weak patterns.", "info");
+    return;
+  }
+  await startPracticeWithPatternIds(ids);
+}
+
+async function startSmartRevision(patternIds = [], options = {}) {
+  const queueIds = (state.smartPlan?.revision_queue || []).map((item) => Number(item.id)).filter(Boolean);
+  const ids = patternIds.length ? patternIds : queueIds.length ? queueIds : state.recommendedPatternIds;
+  if (!ids.length) {
+    showStatus("Start one quick practice set first so the coach can build your revision queue.", "info");
+    return;
+  }
+  await startPracticeWithPatternIds(ids, {
+    mode: options.mode || (ids.length > 1 ? "focused" : "quick"),
+    targetCount: options.targetCount ?? (ids.length > 1 ? 15 : 5),
+  });
+}
+
+async function startMission(missionKey) {
+  const mission = (state.smartPlan?.missions || []).find((item) => item.key === missionKey);
+  if (!mission) {
+    showStatus("Mission is not available yet.", "info");
+    return;
+  }
+  const action = mission.action || {};
+  if (action.type === "mistakes") {
+    await startAllMistakeRetry();
+    return;
+  }
+  const ids = (action.pattern_ids || []).map(Number).filter(Boolean);
+  await startSmartRevision(ids, {
+    mode: action.mode || "quick",
+    targetCount: action.target_count ?? action.targetCount,
+  });
+}
+
+async function startMistakeRetry(mistakeId) {
+  if (!state.telegramUser?.id) {
+    showStatus("Connect your personal profile before retrying saved mistakes.");
+    return;
+  }
+  const mistake = state.mistakes.find((item) => Number(item.id) === Number(mistakeId));
+  const patternId = Number(mistake?.pattern_id || 0);
+  if (!patternId) {
+    showStatus("This mistake is missing a practice pattern.");
+    return;
+  }
+
+  clearGameMode();
+  clearStatus();
+  state.currentStreak = 0;
+  updateQuestionHud(null);
+  state.selectedPatternIds = new Set([patternId]);
+  state.selectedMode = "quick";
+  setScreen("question");
+  $("#questionCounter").textContent = "Mistake retry";
+  $("#questionTimer").textContent = "Ready";
+  $("#questionText").textContent = "Loading saved mistake";
+  $("#optionsGrid").innerHTML = "";
+  $("#feedbackTitle").textContent = "Review";
+  $("#feedbackText").textContent = "Retry the exact question from your mistake book.";
+  $("#nextButton").disabled = true;
+
+  try {
+    state.session = await api("/api/session/start", {
+      method: "POST",
+      timeoutMs: 45000,
+      body: JSON.stringify({
+        pattern_ids: [patternId],
+        mode: "quick",
+        target_count: 1,
+        telegram_user: state.telegramUser,
+        retry_mistakes: true,
+        mistake_ids: [Number(mistakeId)],
+      }),
+    });
+    await loadNextQuestion();
+  } catch (error) {
+    showStatus(error.message);
+    setScreen("progress");
+  }
+}
+
+async function startMistakePatternRetry(patternId) {
+  const id = Number(patternId);
+  if (!id || !state.telegramUser?.id) {
+    showStatus("Connect your personal profile before retrying saved mistakes.");
+    return;
+  }
+
+  clearGameMode();
+  clearStatus();
+  state.currentStreak = 0;
+  updateQuestionHud(null);
+  setScreen("question");
+  $("#questionCounter").textContent = "Pattern mistakes";
+  $("#questionText").textContent = "Loading mistakes from this pattern";
+  $("#optionsGrid").innerHTML = "";
+  $("#feedbackTitle").textContent = "Review";
+  $("#feedbackText").textContent = "Only open mistakes from this pattern will appear.";
+  $("#nextButton").disabled = true;
+
+  try {
+    state.session = await api("/api/session/start", {
+      method: "POST",
+      timeoutMs: 45000,
+      body: JSON.stringify({
+        pattern_ids: [id],
+        mode: "quick",
+        target_count: 5,
+        telegram_user: state.telegramUser,
+        retry_mistakes: true,
+        mistake_pattern_id: id,
+      }),
+    });
+    await loadNextQuestion();
+  } catch (error) {
+    showStatus(error.message);
+    setScreen("progress");
+  }
+}
+
+async function startAllMistakeRetry() {
+  if (!state.telegramUser?.id) {
+    showStatus("Connect your personal profile before retrying saved mistakes.");
+    return;
+  }
+  if (!state.mistakePatternIds.length) {
+    showStatus("No open mistakes to retry.", "info");
+    return;
+  }
+
+  clearGameMode();
+  clearStatus();
+  state.currentStreak = 0;
+  updateQuestionHud(null);
+  setScreen("question");
+  $("#questionCounter").textContent = "Mistake book";
+  $("#questionText").textContent = "Loading open mistakes";
+  $("#optionsGrid").innerHTML = "";
+  $("#feedbackTitle").textContent = "Review";
+  $("#feedbackText").textContent = "Only open mistake-book questions will appear.";
+  $("#nextButton").disabled = true;
+
+  try {
+    state.session = await api("/api/session/start", {
+      method: "POST",
+      timeoutMs: 45000,
+      body: JSON.stringify({
+        pattern_ids: state.mistakePatternIds,
+        mode: "quick",
+        target_count: 5,
+        telegram_user: state.telegramUser,
+        retry_mistakes: true,
+      }),
+    });
+    await loadNextQuestion();
+  } catch (error) {
+    showStatus(error.message);
+    setScreen("progress");
+  }
 }
 
 async function loadNextQuestion() {
@@ -978,6 +2215,7 @@ async function loadNextQuestion() {
   $("#autoAdvanceText").hidden = true;
   $("#optionsGrid").innerHTML = "";
   $("#questionText").textContent = "Loading question";
+  updateQuestionHud(null);
 
   try {
     const data = await api(`/api/session/${state.session.session_id}/next`, { method: "POST", timeoutMs: 45000 });
@@ -1003,12 +2241,15 @@ function renderQuestion(question) {
   $("#questionCounter").textContent = `Question ${question.question_number} of ${question.total_questions}`;
   $("#questionText").textContent = question.question_text;
   $("#progressBar").style.width = `${((question.question_number - 1) / question.total_questions) * 100}%`;
+  updateQuestionHud(question);
   $("#optionsGrid").innerHTML = question.options.map((option, index) => `
     <button class="option-button" data-answer-index="${index}">
-      ${String.fromCharCode(65 + index)}. ${escapeHtml(String(option))}
+      <span class="option-label">${String.fromCharCode(65 + index)}</span>
+      <span class="option-value">${escapeHtml(String(option))}</span>
     </button>
   `).join("");
   replayAnimation(document.querySelector(".question-panel"), "is-entering");
+  replayAnimation($("#optionsGrid"), "is-entering");
   startQuestionTimer();
   syncGameQuestion(question);
 }
@@ -1019,6 +2260,8 @@ async function submitAnswer(answerIndex) {
   }
   state.answered = true;
   clearQuestionTimer();
+  clearAutoAdvance();
+  markAnswerPending(answerIndex);
 
   let result;
   try {
@@ -1028,6 +2271,7 @@ async function submitAnswer(answerIndex) {
     });
   } catch (error) {
     state.answered = false;
+    resetAnswerPending();
     startQuestionTimer();
     showStatus(error.message);
     return;
@@ -1036,6 +2280,7 @@ async function submitAnswer(answerIndex) {
   document.querySelectorAll(".option-button").forEach((button) => {
     const index = Number(button.dataset.answerIndex);
     button.disabled = true;
+    button.classList.remove("is-pending", "is-dimmed");
     if (index === result.correct_option_index) {
       button.classList.add("is-correct");
     } else if (index === answerIndex) {
@@ -1043,18 +2288,35 @@ async function submitAnswer(answerIndex) {
     }
   });
 
+  if (result.is_correct) {
+    state.currentStreak += 1;
+    state.bestStreak = Math.max(state.bestStreak, state.currentStreak);
+    triggerHaptic("success");
+    playTone("correct");
+  } else {
+    state.currentStreak = 0;
+    triggerHaptic("error");
+    playTone("wrong");
+  }
+  if (state.session) {
+    state.session.score = result.score;
+    state.session.answered = result.answered;
+  }
   $("#progressBar").style.width = `${(result.answered / result.total_questions) * 100}%`;
+  updateQuestionHud({ ...state.activeQuestion, question_number: result.answered + 1, total_questions: result.total_questions });
   $("#feedbackTitle").textContent = result.is_correct ? "Correct" : "Review";
   $("#feedbackText").textContent = result.explanation || `Correct answer: ${result.correct_option}`;
   playAnswerFeedback(result.is_correct);
   syncGameAnswer(result, answerIndex);
+  const gameComplete = Boolean(state.activeGameMode?.isComplete?.(state.gameState));
 
-  if (result.complete) {
-    $("#nextButton").textContent = "View result";
-    $("#nextButton").onclick = () => showResults(result.summary);
-    $("#autoAdvanceText").textContent = "Showing result automatically...";
+  if (result.complete || gameComplete) {
+    const finishEarly = gameComplete && !result.complete;
+    $("#nextButton").textContent = finishEarly ? "View game report" : "View result";
+    $("#nextButton").onclick = finishEarly ? finishGameSessionEarly : () => showResults(result.summary);
+    $("#autoAdvanceText").textContent = finishEarly ? "Showing game report automatically..." : "Showing result automatically...";
     $("#autoAdvanceText").hidden = false;
-    state.autoAdvanceId = window.setTimeout(() => showResults(result.summary), AUTO_ADVANCE_MS);
+    state.autoAdvanceId = window.setTimeout(finishEarly ? finishGameSessionEarly : () => showResults(result.summary), AUTO_ADVANCE_MS);
   } else {
     $("#nextButton").textContent = "Next question";
     $("#nextButton").onclick = loadNextQuestion;
@@ -1063,7 +2325,9 @@ async function submitAnswer(answerIndex) {
     state.autoAdvanceId = window.setTimeout(loadNextQuestion, AUTO_ADVANCE_MS);
   }
   $("#nextButton").disabled = false;
-  loadProfile();
+  if (result.complete) {
+    window.setTimeout(() => loadProfile(), 250);
+  }
 }
 
 async function stopPractice() {
@@ -1111,6 +2375,10 @@ function showResults(summary) {
   renderGameResult(summary);
   setScreen("result");
   replayAnimation($("#resultPanel"), "is-complete");
+  if (!summary.stopped && summary.total_questions && Number(summary.accuracy || 0) >= 80) {
+    triggerConfetti("success");
+    playTone("mission");
+  }
 }
 
 async function showReview() {
@@ -1178,6 +2446,9 @@ function startQuestionTimer() {
   state.timerId = window.setInterval(() => {
     const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
     $("#questionTimer").textContent = `${elapsed}s`;
+    if (state.activeGameMode && state.gameState && !state.answered) {
+      renderGamePanels();
+    }
   }, 1000);
 }
 
@@ -1199,6 +2470,89 @@ function escapeHtml(value) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    const tappedButton = event.target.closest("button");
+    if (tappedButton && !tappedButton.disabled) {
+      tapFeedback(tappedButton, event);
+    }
+
+    const soundToggleButton = event.target.closest("#soundToggleButton");
+    if (soundToggleButton) {
+      event.preventDefault();
+      setSoundEnabled(!state.soundEnabled);
+      playTone("tap");
+      return;
+    }
+
+    const smartRevisionAllButton = event.target.closest("[data-smart-revision-all]");
+    if (smartRevisionAllButton) {
+      event.preventDefault();
+      startSmartRevision();
+      return;
+    }
+
+    const smartRevisionButton = event.target.closest("[data-smart-revision]");
+    if (smartRevisionButton) {
+      event.preventDefault();
+      startSmartRevision([Number(smartRevisionButton.dataset.smartRevision)]);
+      return;
+    }
+
+    const missionButton = event.target.closest("[data-mission-key]");
+    if (missionButton) {
+      event.preventDefault();
+      startMission(missionButton.dataset.missionKey);
+      return;
+    }
+
+    const progressPracticeButton = event.target.closest("[data-progress-practice-pattern]");
+    if (progressPracticeButton) {
+      event.preventDefault();
+      preparePatternPracticeFromProgress(Number(progressPracticeButton.dataset.progressPracticePattern));
+      return;
+    }
+
+    const adaptivePracticeButton = event.target.closest("[data-adaptive-practice]");
+    if (adaptivePracticeButton) {
+      event.preventDefault();
+      const patternId = Number(adaptivePracticeButton.dataset.adaptivePractice);
+      startAdaptivePractice(patternId ? [patternId] : []);
+      return;
+    }
+
+    const progressPatternButton = event.target.closest("[data-progress-pattern-id]");
+    if (progressPatternButton) {
+      state.progressPatternId = Number(progressPatternButton.dataset.progressPatternId);
+      renderProgressTracker();
+      return;
+    }
+
+    const progressTopicButton = event.target.closest("[data-progress-topic-id]");
+    if (progressTopicButton) {
+      state.progressTopicId = Number(progressTopicButton.dataset.progressTopicId);
+      const topic = getProgressTopic();
+      state.progressPatternId = topic?.patterns?.[0]?.id || null;
+      renderProgressTracker();
+      return;
+    }
+
+    const progressCategoryButton = event.target.closest("[data-progress-category-id]");
+    if (progressCategoryButton) {
+      state.progressCategoryId = Number(progressCategoryButton.dataset.progressCategoryId);
+      const category = getProgressCategory();
+      const topic = (category?.topics || []).find((item) => (item.patterns || []).length);
+      state.progressTopicId = topic?.id || null;
+      state.progressPatternId = topic?.patterns?.[0]?.id || null;
+      renderProgressTracker();
+      return;
+    }
+
+    const gameButton = event.target.closest("[data-game-id]");
+    if (gameButton) {
+      event.preventDefault();
+      launchGameMode(gameButton.dataset.gameId);
+      return;
+    }
+
     const categoryButton = event.target.closest("[data-category-id]");
     if (categoryButton) {
       state.activeCategoryId = Number(categoryButton.dataset.categoryId);
@@ -1244,15 +2598,30 @@ function bindEvents() {
       return;
     }
 
-    const gameButton = event.target.closest("[data-game-id]");
-    if (gameButton) {
-      launchGameMode(gameButton.dataset.gameId);
-      return;
-    }
-
     const answerButton = event.target.closest("[data-answer-index]");
     if (answerButton) {
       submitAnswer(Number(answerButton.dataset.answerIndex));
+      return;
+    }
+
+    const mistakeRetryButton = event.target.closest("[data-mistake-retry]");
+    if (mistakeRetryButton) {
+      event.preventDefault();
+      startMistakeRetry(Number(mistakeRetryButton.dataset.mistakeRetry));
+      return;
+    }
+
+    const mistakeSimilarButton = event.target.closest("[data-mistake-similar]");
+    if (mistakeSimilarButton) {
+      event.preventDefault();
+      startPracticeWithPatternIds([Number(mistakeSimilarButton.dataset.mistakeSimilar)]);
+      return;
+    }
+
+    const mistakePatternButton = event.target.closest("[data-mistake-pattern]");
+    if (mistakePatternButton) {
+      event.preventDefault();
+      startMistakePatternRetry(Number(mistakePatternButton.dataset.mistakePattern));
       return;
     }
 
@@ -1263,6 +2632,15 @@ function bindEvents() {
   });
 
   $("#selectTopicButton").addEventListener("click", selectWholeTopic);
+  $("#gameModeGrid")?.addEventListener("click", (event) => {
+    const gameButton = event.target.closest("[data-game-id]");
+    if (!gameButton) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    launchGameMode(gameButton.dataset.gameId);
+  });
   $("#startButton").addEventListener("click", startPractice);
   $("#practiceAgainButton").addEventListener("click", () => {
     if (state.activeGameId) {
@@ -1279,7 +2657,7 @@ function bindEvents() {
   $("#reviewBackButton").addEventListener("click", () => setScreen("result"));
   $("#saveReminderButton").addEventListener("click", saveReminder);
   $("#reminderEnabled").addEventListener("change", saveReminder);
-  $("#practiceMistakesButton").addEventListener("click", () => launchGameMode("mistakeRevenge"));
+  $("#practiceMistakesButton").addEventListener("click", startAllMistakeRetry);
   $("#loadProfileButton").addEventListener("click", () => {
     const userId = parseUserId($("#devUserIdInput").value);
     if (!userId) {
@@ -1312,8 +2690,12 @@ async function markMistakeReviewed(mistakeId) {
 async function boot() {
   await initWebConfig();
   initTelegram();
+  setSoundEnabled(readSoundPreference());
   bindEvents();
-  await Promise.all([loadCatalog(), loadProfile()]);
+  renderSmartPlan(null);
+  renderProgressVisuals();
+  void loadCatalog();
+  void loadProfile();
   renderGameModes();
 }
 

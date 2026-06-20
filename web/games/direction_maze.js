@@ -28,7 +28,7 @@
     const link = document.createElement("link");
     link.id = "game-direction-maze-css";
     link.rel = "stylesheet";
-    link.href = "/static/games/direction_maze.css?v=1";
+    link.href = "/static/games/direction_maze.css?v=2";
     document.head.appendChild(link);
   }
 
@@ -100,8 +100,17 @@
     return cells;
   }
 
+  function normalizeDirectionText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/\bnorth[\s-]+east\b/g, "northeast")
+      .replace(/\bsouth[\s-]+east\b/g, "southeast")
+      .replace(/\bsouth[\s-]+west\b/g, "southwest")
+      .replace(/\bnorth[\s-]+west\b/g, "northwest");
+  }
+
   function parseHeading(question) {
-    const text = getQuestionText(question).toLowerCase();
+    const text = normalizeDirectionText(getQuestionText(question));
     const compound = [
       ["north east", "northeast"],
       ["north-east", "northeast"],
@@ -126,13 +135,17 @@
     return FALLBACK_ROUTE[hash % FALLBACK_ROUTE.length];
   }
 
+  function scaleDistance(value) {
+    return clamp(Math.round(Number(value) / 20) || 1, 1, 3);
+  }
+
   function parseMoveCount(question) {
-    const text = getQuestionText(question).toLowerCase();
+    const text = normalizeDirectionText(getQuestionText(question));
     const match = text.match(/\b(\d{1,2})\s*(?:m|meter|meters|km|kilometer|kilometers|step|steps|blocks?)\b/);
     if (!match) {
       return 1;
     }
-    return clamp(Math.round(Number(match[1]) / 20) || 1, 1, 3);
+    return scaleDistance(match[1]);
   }
 
   function turnHeading(current, turn) {
@@ -150,7 +163,7 @@
   }
 
   function deriveHeading(question, game) {
-    const text = getQuestionText(question).toLowerCase();
+    const text = normalizeDirectionText(getQuestionText(question));
     if (/\bleft\b/.test(text) && !/\bright\b/.test(text)) {
       return turnHeading(game.heading, "left");
     }
@@ -160,9 +173,55 @@
     return parseHeading(question);
   }
 
+  function parseMoveCounts(question) {
+    const text = normalizeDirectionText(getQuestionText(question));
+    return Array.from(text.matchAll(/\b(\d{1,3})\s*(?:m|meter|meters|km|kilometer|kilometers|step|steps|blocks?)\b/g))
+      .map((match) => scaleDistance(match[1]));
+  }
+
+  function deriveRouteMoves(question, game) {
+    const text = normalizeDirectionText(getQuestionText(question));
+    const cues = Array.from(text.matchAll(/\b(northeast|northwest|southeast|southwest|north|south|east|west|left|right)\b/g))
+      .map((match) => match[1]);
+    const counts = parseMoveCounts(question);
+    let countIndex = 0;
+    let heading = game.heading;
+    const moves = [];
+
+    cues.forEach((cue) => {
+      if (cue === "left" || cue === "right") {
+        heading = turnHeading(heading, cue);
+      } else {
+        heading = cue;
+      }
+      moves.push({
+        heading,
+        moveCount: counts[countIndex] || 1,
+      });
+      countIndex += 1;
+    });
+
+    if (!moves.length) {
+      moves.push({
+        heading: deriveHeading(question, game),
+        moveCount: parseMoveCount(question),
+      });
+    }
+
+    return moves.slice(0, 4);
+  }
+
+  function normalizeRouteForTrace(route) {
+    return route.map((point, index) => ({
+      ...point,
+      type: index === 0 && point.type === "start" ? "start" : "trace",
+    }));
+  }
+
   function advanceRoute(game, heading, moveCount) {
     const vector = DIRECTIONS[heading] || DIRECTIONS.north;
-    let current = game.route[game.route.length - 1] || { x: CENTER, y: CENTER };
+    const traceRoute = normalizeRouteForTrace(game.route);
+    let current = traceRoute[traceRoute.length - 1] || { x: CENTER, y: CENTER };
     const nextPoints = [];
     for (let index = 0; index < moveCount; index += 1) {
       const next = {
@@ -184,7 +243,7 @@
         type: "trace",
       });
     }
-    game.route = game.route.concat(nextPoints).slice(-18);
+    game.route = traceRoute.concat(nextPoints).slice(-18);
     game.route[game.route.length - 1].type = "current";
   }
 
@@ -352,8 +411,11 @@
     game.active = true;
     game.step += 1;
     game.lastQuestionHash = questionHash;
-    game.heading = deriveHeading(question, game);
-    advanceRoute(game, game.heading, parseMoveCount(question));
+    const moves = deriveRouteMoves(question, game);
+    moves.forEach((move) => {
+      game.heading = move.heading;
+      advanceRoute(game, move.heading, move.moveCount);
+    });
     updateSignals(game, question);
     if (game.step > 1 && game.step % 3 === 1) {
       game.checkpoint = clamp(game.checkpoint + 1, 1, game.totalCheckpoints);
