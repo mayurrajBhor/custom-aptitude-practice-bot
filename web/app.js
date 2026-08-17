@@ -25,6 +25,7 @@ const state = {
   activeCategoryId: null,
   activeTopicId: null,
   selectedPatternIds: new Set(),
+  patternVariantSelection: {},
   selectedMode: "quick",
   session: null,
   activeQuestion: null,
@@ -1348,6 +1349,27 @@ function renderTopics() {
     : `<div class="empty-state">No topics available.</div>`;
 }
 
+function getPatternVariantNames(pattern) {
+  return Array.isArray(pattern?.variant_names) ? pattern.variant_names : [];
+}
+
+function getPatternVariantSelection(patternId) {
+  const key = Number(patternId);
+  return state.patternVariantSelection[key] || null;
+}
+
+function patternEffectiveVariantCount(pattern) {
+  const names = getPatternVariantNames(pattern);
+  const selected = getPatternVariantSelection(pattern.id);
+  if (!names.length || !selected) {
+    return Number(pattern.variant_count || 0);
+  }
+  return Math.min(
+    names.filter((name) => selected.includes(name)).length || 1,
+    names.length
+  );
+}
+
 function renderPatterns() {
   const topic = getActiveTopic();
   $("#topicTitle").textContent = topic?.name || "Select a topic";
@@ -1362,6 +1384,22 @@ function renderPatterns() {
 
   $("#patternList").innerHTML = topicPatterns.map((pattern) => {
     const selected = state.selectedPatternIds.has(pattern.id);
+    const variantNames = getPatternVariantNames(pattern);
+    const selectedVariant = getPatternVariantSelection(pattern.id);
+    const variantPicker = variantNames.length > 1
+      ? `<div class="variant-picker">
+          <label>Variant</label>
+          <select class="variant-select" data-pattern-id="${pattern.id}">
+            <option value="">All variants</option>
+            ${variantNames.map((variant) => `
+              <option value="${escapeHtml(variant)}" ${selectedVariant === variant ? "selected" : ""}>
+                ${escapeHtml(variant.includes("::") ? variant.split("::").pop() : variant)}
+              </option>
+            `).join("")}
+          </select>
+        </div>`
+      : "";
+
     return `
       <button class="pattern-button ${selected ? "is-selected" : ""}" data-pattern-id="${pattern.id}">
         <span class="pattern-check">${selected ? "OK" : ""}</span>
@@ -1369,7 +1407,8 @@ function renderPatterns() {
           <strong>${escapeHtml(pattern.name)}</strong>
           <span>${escapeHtml(pattern.description || "Practice pattern")}</span>
         </span>
-        <span class="variant-pill">${pattern.variant_count} variants</span>
+        <span class="variant-pill">${patternEffectiveVariantCount(pattern)} / ${pattern.variant_count} variants</span>
+        ${variantPicker}
         ${renderPatternProgress(pattern.id)}
       </button>
     `;
@@ -1390,7 +1429,7 @@ function renderPatternProgress(patternId) {
 function renderSelection() {
   const selected = getSelectedPatterns();
   state.lastSelection = selected;
-  const variantCount = selected.reduce((sum, pattern) => sum + pattern.variant_count, 0);
+  const variantCount = selected.reduce((sum, pattern) => sum + patternEffectiveVariantCount(pattern), 0);
   $("#variantCount").textContent = `${variantCount} variants`;
   $("#selectedPatternCount").textContent = selected.length;
   $("#selectedModeLabel").textContent = MODE_CONFIG[state.selectedMode].label;
@@ -1400,7 +1439,7 @@ function renderSelection() {
     ? selected.map((pattern) => `
         <div class="selection-item">
           <strong>${escapeHtml(pattern.name)}</strong>
-          <span>${pattern.variant_count} variants</span>
+          <span>${patternEffectiveVariantCount(pattern)} / ${pattern.variant_count} variants</span>
         </div>
       `).join("")
     : `<div class="selection-empty">Select patterns to begin.</div>`;
@@ -1977,6 +2016,9 @@ async function startPractice(options = {}) {
     const modeKey = options.mode || state.selectedMode;
     const mode = MODE_CONFIG[modeKey] || MODE_CONFIG.quick;
     const targetCount = options.targetCount === undefined ? mode.targetCount : options.targetCount;
+    const variantSelection = Object.fromEntries(
+      Object.entries(state.patternVariantSelection).map(([patternId, variants]) => [String(patternId), variants])
+    );
     state.session = await api("/api/session/start", {
       method: "POST",
       timeoutMs: 120000,
@@ -1985,6 +2027,7 @@ async function startPractice(options = {}) {
         mode: modeKey,
         target_count: targetCount,
         telegram_user: state.telegramUser,
+        variant_selection: variantSelection,
       }),
     });
     updateQuestionHud({ question_number: 1, total_questions: state.session.total_questions });
@@ -2566,6 +2609,20 @@ function bindEvents() {
       state.activeTopicId = Number(topicButton.dataset.topicId);
       renderTopics();
       renderPatterns();
+      return;
+    }
+
+    const variantSelect = event.target.closest(".variant-select");
+    if (variantSelect) {
+      const patternId = Number(variantSelect.dataset.patternId);
+      const selected = variantSelect.value;
+      if (!selected) {
+        delete state.patternVariantSelection[patternId];
+      } else {
+        state.patternVariantSelection[patternId] = [selected];
+      }
+      renderPatterns();
+      renderSelection();
       return;
     }
 

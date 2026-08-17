@@ -120,6 +120,7 @@ def _pattern(pattern_id, topic_id, topic_name, name, description, difficulty=2):
         "difficulty": difficulty,
         "difficulty_level": difficulty,
         "variant_count": len(variants) if variants else 1,
+        "variant_names": variants,
         "source": "local",
     }
 

@@ -76,6 +76,7 @@ class StartSessionRequest(BaseModel):
     retry_mistakes: bool = False
     mistake_ids: list[int] = Field(default_factory=list)
     mistake_pattern_id: Optional[int] = None
+    variant_selection: dict[str, list[str]] = Field(default_factory=dict)
 
 
 class AnswerRequest(BaseModel):
@@ -290,10 +291,12 @@ def start_session(request: StartSessionRequest):
             raise HTTPException(status_code=404, detail="No open mistakes found for retry.")
         target_count = len(prefilled_questions)
     else:
+        variant_selection = _normalize_variant_selection(request.variant_selection)
         session_items, pattern_names = _build_session_items(
             request.pattern_ids,
             user_id=user_id,
             adaptive=request.adaptive,
+            variant_selection=variant_selection,
         )
         if not session_items:
             raise HTTPException(status_code=404, detail="No unlocked patterns found.")
@@ -543,6 +546,29 @@ def _invalidate_profile_cache(user_id: Optional[int]):
         RESPONSE_CACHE.pop((namespace, int(user_id)), None)
 
 
+def _normalize_variant_selection(raw_selection: Optional[dict[str, list[str] | str]]) -> dict[int, list[str]]:
+    if not raw_selection:
+        return {}
+
+    normalized: dict[int, list[str]] = {}
+    for pattern_key, values in raw_selection.items():
+        if values is None:
+            continue
+        if isinstance(values, str):
+            value_list = [values]
+        else:
+            value_list = values
+
+        cleaned = []
+        for value in value_list:
+            item = str(value).strip()
+            if item:
+                cleaned.append(item)
+        if cleaned:
+            normalized[int(pattern_key)] = list(dict.fromkeys(cleaned))
+    return normalized
+
+
 def _build_database_catalog_payload():
     categories = db.get_categories() or []
     payload = []
@@ -567,6 +593,7 @@ def _build_database_catalog_payload():
                         "description": pattern.get("description") or "",
                         "difficulty": pattern.get("difficulty_level") or 1,
                         "variant_count": variant_count,
+                        "variant_names": variants,
                     }
                 )
 
@@ -1237,10 +1264,16 @@ def _question_history_entry(
     }
 
 
-def _build_session_items(pattern_ids: list[int], user_id: Optional[int] = None, adaptive: bool = True):
+def _build_session_items(
+    pattern_ids: list[int],
+    user_id: Optional[int] = None,
+    adaptive: bool = True,
+    variant_selection: Optional[dict[int, list[str]]] = None,
+):
     session_items = []
     pattern_names = []
     ordered_pattern_ids = _order_pattern_ids_for_adaptive_practice(pattern_ids, user_id, adaptive)
+    selected_variants_by_pattern = variant_selection or {}
 
     for pattern_id in ordered_pattern_ids:
         if is_local_pattern_id(pattern_id):
@@ -1275,6 +1308,11 @@ def _build_session_items(pattern_ids: list[int], user_id: Optional[int] = None, 
             "source": pattern.get("source") or "database",
         }
         if variants:
+            allowed_variants = selected_variants_by_pattern.get(int(pattern["id"]))
+            if allowed_variants:
+                filtered = [variant for variant in variants if variant in allowed_variants]
+                if filtered:
+                    variants = filtered
             session_items.extend({**base_item, "hybrid_type": variant} for variant in variants)
         else:
             session_items.append(base_item)
