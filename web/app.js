@@ -26,6 +26,9 @@ const state = {
   activeTopicId: null,
   selectedPatternIds: new Set(),
   patternVariantSelection: {},
+  variantPickerPatternId: null,
+  variantPickerDraft: [],
+  variantPickerAnchor: null,
   selectedMode: "quick",
   session: null,
   activeQuestion: null,
@@ -1358,14 +1361,107 @@ function getPatternVariantSelection(patternId) {
   return state.patternVariantSelection[key] || null;
 }
 
+function getPatternById(patternId) {
+  const id = Number(patternId);
+  return state.catalog
+    .flatMap((category) => category.topics || [])
+    .flatMap((topic) => topic.patterns || [])
+    .find((pattern) => Number(pattern.id) === id) || null;
+}
+
+function getVariantSelectionLabel(pattern, selectedVariant) {
+  const variantNames = getPatternVariantNames(pattern);
+  const variants = Array.isArray(selectedVariant)
+    ? selectedVariant.filter((name) => variantNames.includes(name))
+    : [];
+
+  if (!variants.length) {
+    return "All variants";
+  }
+
+  const labels = variants.map((variant) => (variant.includes("::") ? variant.split("::").pop() : variant));
+  if (labels.length <= 2) {
+    return labels.join(", ");
+  }
+  return `${labels.length} selected`;
+}
+
+function renderVariantPickerModal() {
+  const host = document.getElementById("variantPickerHost");
+  if (!host) {
+    return;
+  }
+
+  const patternId = Number(state.variantPickerPatternId);
+  if (!patternId) {
+    host.hidden = true;
+    host.innerHTML = "";
+    return;
+  }
+
+  const pattern = getPatternById(patternId);
+  const variantNames = getPatternVariantNames(pattern);
+  if (!pattern || variantNames.length <= 1) {
+    host.hidden = true;
+    host.innerHTML = "";
+    return;
+  }
+
+  const draft = Array.isArray(state.variantPickerDraft) ? state.variantPickerDraft : [];
+  const selectedSet = new Set(draft);
+  const summary = draft.length
+    ? (() => {
+        const labels = draft.map((variant) => (variant.includes("::") ? variant.split("::").pop() : variant));
+        if (labels.length <= 2) {
+          return labels.join(", ");
+        }
+        return `${labels.length} selected`;
+      })()
+    : "All variants";
+  const anchor = state.variantPickerAnchor || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  const left = Math.min(Math.max(anchor.x, 120), window.innerWidth - 120);
+  const top = Math.min(Math.max(anchor.y + 4, 80), window.innerHeight - 80);
+
+  host.hidden = false;
+  host.innerHTML = `
+    <div class="variant-picker-backdrop" data-variant-picker-close="true"></div>
+    <div class="variant-picker-modal" role="dialog" aria-modal="true" aria-label="Choose variants for ${escapeHtml(pattern.name)}" style="left: ${left}px; top: ${top}px; transform: translateX(-50%);">
+      <div class="variant-picker-header">
+        <div>
+          <div class="variant-picker-kicker">Variants</div>
+          <strong>${escapeHtml(pattern.name)}</strong>
+        </div>
+        <button type="button" class="variant-picker-close" data-variant-picker-close="true" aria-label="Close variant picker">×</button>
+      </div>
+      <div class="variant-picker-summary">${escapeHtml(summary)}</div>
+      <div class="variant-picker-list">
+        ${variantNames.map((variant) => {
+          const label = variant.includes("::") ? variant.split("::").pop() : variant;
+          const checked = selectedSet.has(variant) ? "checked" : "";
+          return `
+            <label class="variant-option-row">
+              <input type="checkbox" data-variant-option="true" data-pattern-id="${pattern.id}" data-variant-name="${escapeHtml(variant)}" ${checked}>
+              <span>${escapeHtml(label)}</span>
+            </label>
+          `;
+        }).join("")}
+      </div>
+      <div class="variant-picker-actions">
+        <button type="button" class="quiet-button variant-picker-cancel" data-variant-picker-close="true">Cancel</button>
+        <button type="button" class="primary-button variant-picker-done" data-variant-picker-done="true" data-pattern-id="${pattern.id}">Done</button>
+      </div>
+    </div>
+  `;
+}
+
 function patternEffectiveVariantCount(pattern) {
   const names = getPatternVariantNames(pattern);
   const selected = getPatternVariantSelection(pattern.id);
-  if (!names.length || !selected) {
+  if (!names.length || !Array.isArray(selected) || selected.length === 0) {
     return Number(pattern.variant_count || 0);
   }
   return Math.min(
-    names.filter((name) => selected.includes(name)).length || 1,
+    names.filter((name) => selected.includes(name)).length,
     names.length
   );
 }
@@ -1382,37 +1478,43 @@ function renderPatterns() {
     return;
   }
 
-  $("#patternList").innerHTML = topicPatterns.map((pattern) => {
+  const patternList = $("#patternList");
+  patternList.innerHTML = topicPatterns.map((pattern) => {
     const selected = state.selectedPatternIds.has(pattern.id);
     const variantNames = getPatternVariantNames(pattern);
     const selectedVariant = getPatternVariantSelection(pattern.id);
+    const variantSummary = variantNames.length > 1
+      ? getVariantSelectionLabel(pattern, selectedVariant)
+      : "Default";
+
     const variantPicker = variantNames.length > 1
-      ? `<div class="variant-picker">
-          <label>Variant</label>
-          <select class="variant-select" data-pattern-id="${pattern.id}">
-            <option value="">All variants</option>
-            ${variantNames.map((variant) => `
-              <option value="${escapeHtml(variant)}" ${selectedVariant === variant ? "selected" : ""}>
-                ${escapeHtml(variant.includes("::") ? variant.split("::").pop() : variant)}
-              </option>
-            `).join("")}
-          </select>
-        </div>`
+      ? `<div class="variant-action-wrap"><button class="variant-button" type="button" data-variant-button="true" data-pattern-id="${pattern.id}">${escapeHtml(variantSummary)}</button>${Array.isArray(selectedVariant) && selectedVariant.length ? `<div class="selected-variant-inline">${escapeHtml(getVariantSelectionLabel(pattern, selectedVariant))}</div>` : ""}</div>`
       : "";
 
     return `
-      <button class="pattern-button ${selected ? "is-selected" : ""}" data-pattern-id="${pattern.id}">
+      <div class="pattern-button ${selected ? "is-selected" : ""}" data-pattern-id="${pattern.id}" tabindex="0" role="button" aria-pressed="${selected ? "true" : "false"}">
         <span class="pattern-check">${selected ? "OK" : ""}</span>
-        <span>
+        <div class="pattern-copy">
           <strong>${escapeHtml(pattern.name)}</strong>
           <span>${escapeHtml(pattern.description || "Practice pattern")}</span>
-        </span>
-        <span class="variant-pill">${patternEffectiveVariantCount(pattern)} / ${pattern.variant_count} variants</span>
+        </div>
+        <div class="pattern-meta-row">
+          <span class="variant-pill">${patternEffectiveVariantCount(pattern)} / ${pattern.variant_count} variants</span>
+          ${renderPatternProgress(pattern.id)}
+        </div>
         ${variantPicker}
-        ${renderPatternProgress(pattern.id)}
-      </button>
+      </div>
     `;
   }).join("");
+
+  let host = document.getElementById("variantPickerHost");
+  if (!host) {
+    host = document.createElement("div");
+    host.id = "variantPickerHost";
+    host.setAttribute("aria-live", "polite");
+    document.body.appendChild(host);
+  }
+  renderVariantPickerModal();
 }
 
 function renderPatternProgress(patternId) {
@@ -2512,6 +2614,27 @@ function escapeHtml(value) {
 }
 
 function bindEvents() {
+  document.addEventListener("change", (event) => {
+    const variantToggle = event.target.closest("[data-variant-option]");
+    if (!variantToggle) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const patternId = Number(variantToggle.dataset.patternId);
+    const variantName = variantToggle.dataset.variantName;
+    const current = Array.isArray(state.variantPickerDraft) ? state.variantPickerDraft : [];
+    const next = current.includes(variantName)
+      ? current.filter((name) => name !== variantName)
+      : [...current, variantName];
+
+    state.variantPickerDraft = next;
+    renderVariantPickerModal();
+    renderSelection();
+  });
+
   document.addEventListener("click", (event) => {
     const tappedButton = event.target.closest("button");
     if (tappedButton && !tappedButton.disabled) {
@@ -2523,6 +2646,52 @@ function bindEvents() {
       event.preventDefault();
       setSoundEnabled(!state.soundEnabled);
       playTone("tap");
+      return;
+    }
+
+    const variantCloseButton = event.target.closest("[data-variant-picker-close]");
+    if (variantCloseButton) {
+      event.preventDefault();
+      state.variantPickerPatternId = null;
+      state.variantPickerDraft = [];
+      state.variantPickerAnchor = null;
+      renderVariantPickerModal();
+      return;
+    }
+
+    const variantDoneButton = event.target.closest("[data-variant-picker-done]");
+    if (variantDoneButton) {
+      event.preventDefault();
+      const patternId = Number(variantDoneButton.dataset.patternId);
+      const selected = Array.isArray(state.variantPickerDraft) ? state.variantPickerDraft : [];
+      if (!selected.length) {
+        delete state.patternVariantSelection[patternId];
+      } else {
+        state.patternVariantSelection[patternId] = selected;
+      }
+      state.variantPickerPatternId = null;
+      state.variantPickerDraft = [];
+      state.variantPickerAnchor = null;
+      renderPatterns();
+      renderSelection();
+      return;
+    }
+
+    const variantButton = event.target.closest("[data-variant-button]");
+    if (variantButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const patternId = Number(variantButton.dataset.patternId);
+      const pattern = getPatternById(patternId);
+      const variantNames = getPatternVariantNames(pattern);
+      if (!pattern || variantNames.length <= 1) {
+        return;
+      }
+      const rect = variantButton.getBoundingClientRect();
+      state.variantPickerPatternId = patternId;
+      state.variantPickerDraft = Array.isArray(getPatternVariantSelection(patternId)) ? [...getPatternVariantSelection(patternId)] : [];
+      state.variantPickerAnchor = { x: rect.left + rect.width / 2, y: rect.bottom + 8 };
+      renderVariantPickerModal();
       return;
     }
 
@@ -2612,22 +2781,8 @@ function bindEvents() {
       return;
     }
 
-    const variantSelect = event.target.closest(".variant-select");
-    if (variantSelect) {
-      const patternId = Number(variantSelect.dataset.patternId);
-      const selected = variantSelect.value;
-      if (!selected) {
-        delete state.patternVariantSelection[patternId];
-      } else {
-        state.patternVariantSelection[patternId] = [selected];
-      }
-      renderPatterns();
-      renderSelection();
-      return;
-    }
-
     const patternButton = event.target.closest("[data-pattern-id]");
-    if (patternButton) {
+    if (patternButton && !event.target.closest("[data-variant-button]") && !event.target.closest("[data-variant-option]") && !event.target.closest("[data-variant-picker-close]") && !event.target.closest("[data-variant-picker-done]") && !event.target.closest(".variant-picker-modal")) {
       const patternId = Number(patternButton.dataset.patternId);
       if (state.selectedPatternIds.has(patternId)) {
         state.selectedPatternIds.delete(patternId);

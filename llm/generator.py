@@ -159,6 +159,12 @@ class QuestionGenerator:
             "left_to_right",
             "complements",
             "missing_addend",
+            "single_digit",
+            "two_digit_add_single_digit",
+            "two_digit_add_lessthan_100",
+            "two_digit_add_morethan_100",
+            "three_to_four_digit",
+            "three_digit_near_base",
         ],
         "vedic_subtraction": [
             "left_to_right",

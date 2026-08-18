@@ -136,7 +136,7 @@ class WebPracticeSessionTests(unittest.TestCase):
     def test_explicit_variant_filter_restricts_selected_hybrid_types(self):
         variants = web_app.generator.get_hybrid_variants("Speed Addition and Complements")
         self.assertGreater(len(variants), 1)
-        chosen = variants[0]
+        chosen = variants[:2]
 
         response = self.client.post(
             "/api/session/start",
@@ -144,15 +144,15 @@ class WebPracticeSessionTests(unittest.TestCase):
                 "pattern_ids": [LOCAL_VEDIC_PATTERN_ID],
                 "mode": "quick",
                 "target_count": 3,
-                "variant_selection": {str(LOCAL_VEDIC_PATTERN_ID): [chosen]},
+                "variant_selection": {str(LOCAL_VEDIC_PATTERN_ID): chosen},
             },
         )
 
         self.assertEqual(response.status_code, 200, response.text)
         session = web_app.SESSIONS[response.json()["session_id"]]
         hybrid_types = {item.get("hybrid_type") for item in session["items"] if item.get("hybrid_type")}
-        self.assertEqual(hybrid_types, {chosen})
-        self.assertEqual(len(session["items"]), 1)
+        self.assertEqual(hybrid_types, set(chosen))
+        self.assertEqual(len(session["items"]), 2)
 
     def test_adaptive_pattern_order_prefers_weak_patterns(self):
         original_db = web_app.db
