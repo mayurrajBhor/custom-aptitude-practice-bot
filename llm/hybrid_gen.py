@@ -2742,7 +2742,7 @@ class HybridGenerator:
             explanation = f"Add the two digits: {a} + {b} = {correct}."
             return self._mcq(question, correct, explanation, min(level, 3), [correct + 12, correct +2, correct-17, correct-7])
 
-        if sub_type ="three_to_four_digit":
+        if sub_type =="three_to_four_digit":
             a = random.randint(100,999)
             b = random.randint(100,9999)
             correct = a + b
