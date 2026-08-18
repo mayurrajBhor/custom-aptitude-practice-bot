@@ -1,0 +1,1386 @@
+.game-cinema,
+.game-cinema-hud {
+  --game-cinema-accent: #58d6ff;
+  --game-cinema-safe: 70%;
+  --game-cinema-pressure: 40%;
+  color: #f8fbfc;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.game-cinema {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(8, 12, 19, 0.98), rgba(20, 29, 38, 0.96)),
+    #090d13;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.36);
+}
+
+.game-cinema-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  opacity: 0.48;
+}
+
+.game-cinema-bg span {
+  position: absolute;
+  display: block;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--game-cinema-accent) 26%, transparent);
+  box-shadow: 0 0 34px color-mix(in srgb, var(--game-cinema-accent) 38%, transparent);
+}
+
+.game-cinema-bg span:nth-child(1) {
+  left: 10%;
+  bottom: 13%;
+  width: 24%;
+  height: 7px;
+}
+
+.game-cinema-bg span:nth-child(2) {
+  right: 8%;
+  top: 14%;
+  width: 9px;
+  height: 34%;
+}
+
+.game-cinema-bg span:nth-child(3) {
+  left: 52%;
+  top: 22%;
+  width: 74px;
+  height: 74px;
+  border: 2px solid color-mix(in srgb, var(--game-cinema-accent) 60%, transparent);
+  border-radius: 50%;
+  background: transparent;
+}
+
+.game-cinema-bg span:nth-child(4) {
+  right: 18%;
+  bottom: 18%;
+  width: 18%;
+  height: 7px;
+}
+
+.game-cinema > *:not(.game-cinema-bg) {
+  position: relative;
+  z-index: 1;
+}
+
+.game-cinema-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  min-height: 260px;
+  padding: 18px;
+}
+
+.game-cinema-copy {
+  align-self: end;
+  max-width: 760px;
+}
+
+.game-cinema-copy p {
+  margin: 0 0 8px;
+  color: var(--game-cinema-accent);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-cinema-copy h2 {
+  max-width: 720px;
+  margin: 0;
+  color: #ffffff;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.game-cinema-copy span {
+  display: block;
+  max-width: 720px;
+  margin-top: 12px;
+  color: rgba(248, 251, 252, 0.72);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.game-cinema-brief {
+  display: grid;
+  align-content: end;
+  gap: 8px;
+  min-height: 124px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.game-cinema-brief strong {
+  color: #ffffff;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.game-cinema-brief span {
+  color: rgba(248, 251, 252, 0.64);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.game-cinema-scan {
+  height: 78px;
+  border: 1px solid color-mix(in srgb, var(--game-cinema-accent) 34%, rgba(255, 255, 255, 0.1));
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--game-cinema-accent) 22%, transparent), transparent 42%),
+    linear-gradient(color-mix(in srgb, var(--game-cinema-accent) 13%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--game-cinema-accent) 13%, transparent) 1px, transparent 1px);
+  background-size: auto, 100% 18px, 18px 100%;
+}
+
+.game-cinema-hud {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-cinema-hud div {
+  min-height: 70px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02)),
+    #101820;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.game-cinema-hud span {
+  display: block;
+  color: rgba(248, 251, 252, 0.58);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-cinema-hud strong {
+  display: block;
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.game-cinema-scene {
+  display: grid;
+  gap: 12px;
+  min-height: 360px;
+  padding: 14px;
+}
+
+.game-cinema-main,
+.game-cinema-console {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.game-cinema-main {
+  position: relative;
+  display: grid;
+  align-content: end;
+  min-height: 230px;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.game-cinema-main::before {
+  content: "";
+  position: absolute;
+  inset: auto -8% -30% -8%;
+  height: 58%;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08), transparent 30% 70%, rgba(255, 255, 255, 0.08)),
+    linear-gradient(180deg, color-mix(in srgb, var(--game-cinema-accent) 22%, transparent), rgba(0, 0, 0, 0.42));
+  transform: perspective(440px) rotateX(58deg);
+  transform-origin: bottom;
+}
+
+.game-cinema-object {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 150px;
+  height: 92px;
+  transform: translate(-50%, -50%);
+}
+
+.game-cinema-object span {
+  position: absolute;
+  display: block;
+  border: 1px solid color-mix(in srgb, var(--game-cinema-accent) 58%, rgba(255, 255, 255, 0.18));
+  background: color-mix(in srgb, var(--game-cinema-accent) 18%, rgba(8, 12, 19, 0.86));
+  box-shadow: 0 0 26px color-mix(in srgb, var(--game-cinema-accent) 35%, transparent);
+}
+
+.game-cinema-object span:nth-child(1) {
+  inset: 6px 20px 12px;
+  border-radius: 8px;
+}
+
+.game-cinema-object span:nth-child(2) {
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.game-cinema-object span:nth-child(3) {
+  left: 22px;
+  right: 22px;
+  bottom: 0;
+  height: 10px;
+  border-radius: 8px;
+}
+
+.game-cinema-mission {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+}
+
+.game-cinema-mission p {
+  margin: 0;
+  color: rgba(248, 251, 252, 0.62);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-cinema-mission h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.game-cinema-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.game-cinema-route span {
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--game-cinema-accent) 42%, rgba(255, 255, 255, 0.12));
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.game-cinema-console {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.game-cinema-console span {
+  display: block;
+  color: rgba(248, 251, 252, 0.6);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-cinema-console strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.game-cinema-track {
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.game-cinema-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--game-cinema-accent), #ffffff);
+}
+
+.game-cinema-log {
+  display: grid;
+  gap: 6px;
+}
+
+.game-cinema-log span {
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 251, 252, 0.76);
+  font-size: 11px;
+  line-height: 1.2;
+  text-transform: none;
+}
+
+.game-cinema-log .is-good {
+  border-left: 3px solid #6df7bd;
+}
+
+.game-cinema-log .is-bad {
+  border-left: 3px solid #ff6b76;
+}
+
+.game-cinema-vault {
+  background:
+    radial-gradient(circle at 68% 30%, rgba(88, 214, 255, 0.2), transparent 28%),
+    linear-gradient(135deg, #07111d, #151e28 58%, #071018);
+}
+
+.game-cinema-market {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(95, 240, 165, 0.18), transparent 24%),
+    linear-gradient(135deg, #07140f, #14211c 56%, #09110f);
+}
+
+.game-cinema-rail {
+  background:
+    radial-gradient(circle at 72% 24%, rgba(255, 207, 92, 0.16), transparent 25%),
+    linear-gradient(135deg, #171205, #202019 56%, #0e1118);
+}
+
+.game-cinema-escape {
+  background:
+    radial-gradient(circle at 20% 28%, rgba(183, 140, 255, 0.2), transparent 25%),
+    linear-gradient(135deg, #120c1f, #21192c 56%, #0d1118);
+}
+
+.game-cinema-auction {
+  background:
+    radial-gradient(circle at 70% 24%, rgba(255, 143, 95, 0.19), transparent 25%),
+    linear-gradient(135deg, #1d0e0b, #241b1a 58%, #111016);
+}
+
+.game-cinema-market .game-cinema-object span:nth-child(1) {
+  inset: 4px 10px 20px;
+  border-radius: 4px;
+}
+
+.game-cinema-market .game-cinema-object span:nth-child(2) {
+  width: 12px;
+  height: 66px;
+  border-radius: 2px;
+  transform: translate(-50%, -50%) rotate(28deg);
+}
+
+.game-cinema-rail .game-cinema-object {
+  width: 180px;
+}
+
+.game-cinema-rail .game-cinema-object span:nth-child(1) {
+  inset: 24px 8px 22px;
+  border-radius: 6px;
+}
+
+.game-cinema-rail .game-cinema-object span:nth-child(2),
+.game-cinema-rail .game-cinema-object span:nth-child(3) {
+  top: auto;
+  bottom: 4px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+}
+
+.game-cinema-rail .game-cinema-object span:nth-child(2) {
+  left: 48px;
+}
+
+.game-cinema-rail .game-cinema-object span:nth-child(3) {
+  left: auto;
+  right: 48px;
+}
+
+.game-cinema-escape .game-cinema-object span:nth-child(1) {
+  inset: 0 30px 0;
+}
+
+.game-cinema-escape .game-cinema-object span:nth-child(2) {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.game-cinema-auction .game-cinema-object span:nth-child(1) {
+  inset: 38px 12px 20px;
+}
+
+.game-cinema-auction .game-cinema-object span:nth-child(2) {
+  width: 52px;
+  height: 18px;
+  border-radius: 4px;
+  transform: translate(-50%, -80%) rotate(-18deg);
+}
+
+.game-cinema-auction .game-cinema-object span:nth-child(3) {
+  left: 54px;
+  right: 54px;
+  height: 44px;
+  bottom: 0;
+}
+
+.game-heist-intro {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid rgba(88, 214, 255, 0.24);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 70% 20%, rgba(88, 214, 255, 0.2), transparent 34%),
+    linear-gradient(145deg, #030711 0%, #0a1321 46%, #101827 100%);
+  color: #f8fbfc;
+  isolation: isolate;
+}
+
+.game-heist-intro::before,
+.game-heist-intro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.game-heist-intro::before {
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.08), transparent 18% 76%, rgba(88, 214, 255, 0.1)),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 42px);
+  opacity: 0.74;
+}
+
+.game-heist-intro::after {
+  background: linear-gradient(180deg, transparent 0 56%, rgba(0, 0, 0, 0.54) 100%);
+}
+
+.game-heist-intro-city {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  height: 54%;
+  background:
+    linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.84)),
+    linear-gradient(90deg, rgba(88, 214, 255, 0.08), transparent 42%, rgba(255, 95, 115, 0.09));
+}
+
+.game-heist-intro-city span {
+  position: absolute;
+  bottom: 0;
+  width: 14%;
+  border: 1px solid rgba(88, 214, 255, 0.12);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background:
+    repeating-linear-gradient(180deg, rgba(88, 214, 255, 0.24) 0 2px, transparent 2px 18px),
+    linear-gradient(180deg, rgba(11, 21, 33, 0.94), rgba(2, 6, 12, 0.98));
+  box-shadow: 0 0 38px rgba(88, 214, 255, 0.12);
+}
+
+.game-heist-intro-city span:nth-child(1) { left: 3%; height: 46%; }
+.game-heist-intro-city span:nth-child(2) { left: 19%; height: 74%; }
+.game-heist-intro-city span:nth-child(3) { left: 41%; height: 58%; }
+.game-heist-intro-city span:nth-child(4) { right: 21%; height: 82%; }
+.game-heist-intro-city span:nth-child(5) { right: 4%; height: 52%; }
+
+.game-heist-intro-copy {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  gap: 12px;
+  width: min(700px, 100%);
+  padding: 24px;
+}
+
+.game-heist-intro-copy p {
+  margin: 0;
+  color: #58d6ff;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.game-heist-intro-copy h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 42px;
+  line-height: 0.95;
+}
+
+.game-heist-intro-copy > span {
+  max-width: 520px;
+  color: rgba(248, 251, 252, 0.74);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.game-heist-intro-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.game-heist-intro-levels span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 6px 9px;
+  border: 1px solid rgba(88, 214, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.36);
+  color: rgba(248, 251, 252, 0.82);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.game-heist-intro-levels i {
+  color: #58d6ff;
+  font-style: normal;
+}
+
+.game-heist-briefcase {
+  position: absolute;
+  right: 9%;
+  bottom: 20%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 110px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 38%),
+    #101722;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.44), 0 0 34px rgba(88, 214, 255, 0.12);
+  animation: heist-case-float 3.4s ease-in-out infinite alternate;
+}
+
+.game-heist-briefcase span {
+  position: absolute;
+  background: rgba(88, 214, 255, 0.38);
+}
+
+.game-heist-briefcase span:nth-child(1) {
+  top: -18px;
+  width: 64px;
+  height: 24px;
+  border: 6px solid rgba(88, 214, 255, 0.32);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  background: transparent;
+}
+
+.game-heist-briefcase span:nth-child(2) {
+  inset: 48% 0 auto;
+  height: 1px;
+}
+
+.game-heist-briefcase span:nth-child(3) {
+  width: 30px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.game-heist-briefcase strong {
+  color: #ffffff;
+  font-size: 34px;
+  text-shadow: 0 0 18px rgba(88, 214, 255, 0.55);
+}
+
+.game-heist {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+  border: 1px solid rgba(88, 214, 255, 0.2);
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(88, 214, 255, 0.18), transparent 24%),
+    linear-gradient(180deg, #050912, #0a111d 56%, #03070d);
+  color: #f8fbfc;
+  box-shadow: inset 0 0 90px rgba(0, 0, 0, 0.52), 0 24px 70px rgba(0, 0, 0, 0.35);
+}
+
+.game-heist::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, transparent 0 45%, rgba(0, 0, 0, 0.42) 78%);
+  background-size: 54px 54px, 54px 54px, 100% 100%;
+  opacity: 0.72;
+}
+
+.game-heist.is-hit {
+  animation: heist-camera-shake 360ms ease;
+}
+
+.game-heist.is-clean .game-heist-vault {
+  box-shadow:
+    0 0 0 16px rgba(88, 214, 255, 0.06),
+    0 0 70px rgba(109, 247, 189, 0.28);
+}
+
+.game-heist.is-compromised {
+  border-color: rgba(255, 95, 115, 0.5);
+}
+
+.game-heist-alert {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle, transparent 54%, rgba(255, 95, 115, 0.28));
+  opacity: 0;
+}
+
+.game-heist.is-hit .game-heist-alert,
+.game-heist.is-compromised .game-heist-alert {
+  animation: heist-alert-pulse 700ms ease;
+}
+
+.game-heist-sky,
+.game-heist-corridor,
+.game-heist-hud,
+.game-heist-console,
+.game-heist-feed {
+  position: absolute;
+  z-index: 1;
+}
+
+.game-heist-sky {
+  inset: 0;
+  pointer-events: none;
+}
+
+.game-heist-sky span {
+  position: absolute;
+  display: block;
+  background: rgba(88, 214, 255, 0.2);
+  box-shadow: 0 0 28px rgba(88, 214, 255, 0.28);
+}
+
+.game-heist-sky span:nth-child(1) {
+  left: 8%;
+  top: 18%;
+  width: 18%;
+  height: 5px;
+}
+
+.game-heist-sky span:nth-child(2) {
+  right: 9%;
+  top: 22%;
+  width: 5px;
+  height: 28%;
+}
+
+.game-heist-sky span:nth-child(3) {
+  left: 18%;
+  bottom: 16%;
+  width: 24%;
+  height: 5px;
+}
+
+.game-heist-sky span:nth-child(4) {
+  right: 22%;
+  bottom: 24%;
+  width: 17%;
+  height: 5px;
+}
+
+.game-heist-sky span:nth-child(5) {
+  left: 50%;
+  top: 30%;
+  width: 84px;
+  height: 84px;
+  border: 2px solid rgba(88, 214, 255, 0.38);
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+}
+
+.game-heist-corridor {
+  inset: 0;
+  perspective: 700px;
+  overflow: hidden;
+}
+
+.game-heist-floor,
+.game-heist-ceiling {
+  position: absolute;
+  left: -18%;
+  width: 136%;
+  height: 48%;
+  background:
+    linear-gradient(90deg, rgba(88, 214, 255, 0.12) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(88, 214, 255, 0.11) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(88, 214, 255, 0.12), rgba(0, 0, 0, 0.5));
+  background-size: 58px 100%, 100% 42px, 100% 100%;
+}
+
+.game-heist-floor {
+  bottom: -18%;
+  transform: rotateX(68deg);
+  transform-origin: bottom center;
+}
+
+.game-heist-ceiling {
+  top: -23%;
+  transform: rotateX(-68deg);
+  transform-origin: top center;
+  opacity: 0.42;
+}
+
+.game-heist-wall {
+  position: absolute;
+  top: 0;
+  width: 34%;
+  height: 100%;
+  background:
+    linear-gradient(180deg, rgba(88, 214, 255, 0.08), transparent 50%),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0 2px, transparent 2px 58px),
+    rgba(6, 13, 23, 0.58);
+}
+
+.game-heist-wall-left {
+  left: -8%;
+  transform: skewY(8deg);
+}
+
+.game-heist-wall-right {
+  right: -8%;
+  transform: skewY(-8deg);
+}
+
+.game-heist-vault {
+  position: absolute;
+  left: 50%;
+  top: 41%;
+  width: 220px;
+  height: 220px;
+  border: 2px solid rgba(88, 214, 255, 0.48);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(88, 214, 255, 0.12) 0 20%, rgba(5, 10, 18, 0.96) 21% 44%, rgba(88, 214, 255, 0.09) 45% 47%, rgba(6, 12, 20, 0.96) 48%),
+    #050a12;
+  box-shadow:
+    0 0 52px rgba(88, 214, 255, 0.22),
+    inset 0 0 48px rgba(0, 0, 0, 0.68);
+  transform: translate(-50%, -50%);
+}
+
+.game-heist-vault span {
+  position: absolute;
+  display: block;
+  background: rgba(88, 214, 255, 0.55);
+  box-shadow: 0 0 18px rgba(88, 214, 255, 0.42);
+}
+
+.game-heist-vault span:nth-child(1),
+.game-heist-vault span:nth-child(2) {
+  left: 50%;
+  top: 50%;
+  width: 136px;
+  height: 4px;
+  transform-origin: center;
+}
+
+.game-heist-vault span:nth-child(1) {
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+
+.game-heist-vault span:nth-child(2) {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.game-heist-vault span:nth-child(3) {
+  left: 50%;
+  top: 50%;
+  width: 62px;
+  height: 62px;
+  border: 2px solid rgba(248, 251, 252, 0.68);
+  border-radius: 50%;
+  background: rgba(5, 10, 18, 0.96);
+  transform: translate(-50%, -50%);
+}
+
+.game-heist-vault span:nth-child(4) {
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  transform: translate(-50%, -50%);
+}
+
+.game-heist-laser {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  height: 2px;
+  background: #ff5f73;
+  box-shadow: 0 0 18px rgba(255, 95, 115, 0.8);
+  opacity: 0.7;
+  animation: heist-laser-sweep 4.8s ease-in-out infinite alternate;
+}
+
+.game-heist-laser-one {
+  top: 30%;
+  transform: rotate(-10deg);
+}
+
+.game-heist-laser-two {
+  top: 56%;
+  transform: rotate(12deg);
+  animation-delay: -1.7s;
+}
+
+.game-heist-laser-three {
+  top: 42%;
+  left: 24%;
+  right: 24%;
+  background: #58d6ff;
+  box-shadow: 0 0 18px rgba(88, 214, 255, 0.72);
+  transform: rotate(4deg);
+  animation-delay: -2.8s;
+}
+
+.game-heist-camera {
+  position: absolute;
+  right: 16%;
+  top: 16%;
+  width: 56px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.44);
+  box-shadow: 0 0 28px rgba(255, 95, 115, 0.18);
+}
+
+.game-heist-camera::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 9px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ff5f73;
+  box-shadow: 0 0 18px rgba(255, 95, 115, 0.78);
+}
+
+.game-heist-drone {
+  position: absolute;
+  left: 12%;
+  top: 20%;
+  width: 70px;
+  height: 24px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 18% 50%, #58d6ff 0 5px, transparent 6px),
+    radial-gradient(circle at 82% 50%, #58d6ff 0 5px, transparent 6px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22), rgba(0, 0, 0, 0.2)),
+    rgba(2, 8, 15, 0.72);
+  box-shadow: 0 0 24px rgba(88, 214, 255, 0.22);
+  animation: heist-drone-patrol 6.5s ease-in-out infinite alternate;
+}
+
+.game-heist-drone::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 100%;
+  height: 92px;
+  background: linear-gradient(180deg, rgba(88, 214, 255, 0.18), transparent);
+  clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+}
+
+.game-heist-hud {
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-heist-hud div {
+  padding: 9px 10px;
+  border: 1px solid rgba(88, 214, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+.game-heist-hud span,
+.game-heist-console span,
+.game-heist-meter-row span {
+  display: block;
+  color: rgba(248, 251, 252, 0.62);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-heist-hud strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.game-heist-console {
+  left: 14px;
+  right: 14px;
+  bottom: 66px;
+  z-index: 3;
+  padding: 14px;
+  border: 1px solid rgba(88, 214, 255, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(88, 214, 255, 0.12), rgba(0, 0, 0, 0.38)),
+    rgba(2, 8, 15, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.36);
+}
+
+.game-heist-console-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.game-heist-console-head strong {
+  color: #58d6ff;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.game-heist-console h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 24px;
+  line-height: 1.12;
+}
+
+.game-heist-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.game-heist-route span {
+  padding: 5px 8px;
+  border: 1px solid rgba(88, 214, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(88, 214, 255, 0.08);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.game-heist-level-strip {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.game-heist-level-strip .game-cinema-track {
+  grid-column: 1 / -1;
+}
+
+.game-heist-meter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.game-heist-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.game-heist-status-row span {
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: rgba(248, 251, 252, 0.8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-heist-feed {
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.game-heist-feed span {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  color: rgba(248, 251, 252, 0.74);
+  font-size: 11px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-heist-feed .is-good {
+  border-left: 3px solid #6df7bd;
+}
+
+.game-heist-feed .is-bad {
+  border-left: 3px solid #ff5f73;
+}
+
+.game-heist-side-hud {
+  display: grid;
+  gap: 10px;
+  color: #f8fbfc;
+}
+
+.game-heist-side-card,
+.game-heist-side-grid div,
+.game-heist-side-objective {
+  border: 1px solid rgba(88, 214, 255, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(88, 214, 255, 0.1), rgba(255, 255, 255, 0.02)),
+    rgba(3, 7, 13, 0.9);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.game-heist-side-card {
+  padding: 14px;
+}
+
+.game-heist-side-card span,
+.game-heist-side-grid span,
+.game-heist-side-objective span,
+.game-heist-side-card small,
+.game-heist-side-objective p {
+  display: block;
+  color: rgba(248, 251, 252, 0.62);
+  font-size: 10px;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.game-heist-side-card strong {
+  display: block;
+  margin: 6px 0;
+  color: #ffffff;
+  font-size: 34px;
+  line-height: 0.95;
+}
+
+.game-heist-side-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.game-heist-side-grid div {
+  padding: 11px;
+}
+
+.game-heist-side-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.game-heist-side-objective {
+  padding: 12px;
+}
+
+.game-heist-side-objective strong {
+  display: block;
+  margin: 5px 0;
+  color: #58d6ff;
+  font-size: 17px;
+  line-height: 1.15;
+}
+
+.game-heist-side-objective p {
+  margin: 0;
+}
+
+@keyframes heist-case-float {
+  0% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+
+@keyframes heist-drone-patrol {
+  0% {
+    transform: translate3d(0, -4px, 0);
+  }
+  100% {
+    transform: translate3d(210px, 14px, 0);
+  }
+}
+
+@keyframes heist-alert-pulse {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  36% {
+    opacity: 1;
+  }
+}
+
+@keyframes heist-camera-shake {
+  20% {
+    transform: translateX(-4px);
+  }
+  45% {
+    transform: translateX(4px);
+  }
+  70% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes heist-laser-sweep {
+  0% {
+    opacity: 0.35;
+    transform: translateY(-16px) rotate(-10deg);
+  }
+  100% {
+    opacity: 0.82;
+    transform: translateY(18px) rotate(10deg);
+  }
+}
+
+@media (min-width: 760px) {
+  .game-cinema-intro {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    min-height: 290px;
+    padding: 22px;
+  }
+
+  .game-cinema-copy h2 {
+    font-size: 34px;
+  }
+
+  .game-cinema-hud {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .game-cinema-scene {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+    min-height: 420px;
+    padding: 16px;
+  }
+
+  .game-cinema-main {
+    min-height: 360px;
+  }
+
+  .game-heist {
+    min-height: 600px;
+  }
+
+  .game-heist-intro {
+    min-height: 460px;
+  }
+
+  .game-heist-intro-copy {
+    padding: 32px;
+  }
+
+  .game-heist-vault {
+    width: 280px;
+    height: 280px;
+  }
+
+  .game-heist-console {
+    left: 22px;
+    right: auto;
+    width: min(720px, calc(100% - 44px));
+  }
+
+  .game-heist-console h2 {
+    font-size: 30px;
+  }
+
+  .game-heist-feed {
+    left: 22px;
+    right: 22px;
+  }
+}
+
+@media (max-width: 520px) {
+  .game-cinema-copy h2 {
+    font-size: 23px;
+  }
+
+  .game-cinema-copy span {
+    font-size: 13px;
+  }
+
+  .game-cinema-hud strong {
+    font-size: 20px;
+  }
+
+  .game-cinema-scene {
+    min-height: 320px;
+  }
+
+  .game-cinema-object {
+    width: 120px;
+    height: 78px;
+  }
+
+  .game-heist {
+    min-height: 500px;
+  }
+
+  .game-heist-intro {
+    min-height: 430px;
+  }
+
+  .game-heist-intro-copy {
+    padding: 18px;
+  }
+
+  .game-heist-intro-copy h2 {
+    font-size: 34px;
+  }
+
+  .game-heist-intro-copy > span {
+    font-size: 13px;
+  }
+
+  .game-heist-intro-levels {
+    max-width: 78%;
+  }
+
+  .game-heist-intro-levels span {
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 10px;
+  }
+
+  .game-heist-briefcase {
+    right: 14px;
+    bottom: 16%;
+    width: 96px;
+    height: 68px;
+  }
+
+  .game-heist-briefcase strong {
+    font-size: 24px;
+  }
+
+  .game-heist-hud {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .game-heist-hud div {
+    padding: 8px 6px;
+  }
+
+  .game-heist-hud strong {
+    font-size: 17px;
+  }
+
+  .game-heist-vault {
+    top: 36%;
+    width: 174px;
+    height: 174px;
+  }
+
+  .game-heist-console {
+    bottom: 58px;
+    padding: 12px;
+  }
+
+  .game-heist-console h2 {
+    font-size: 19px;
+  }
+
+  .game-heist-meter-row {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .game-heist-status-row {
+    grid-template-columns: 1fr;
+  }
+
+  .game-heist-drone {
+    width: 52px;
+    height: 20px;
+  }
+
+  .game-heist-feed span {
+    font-size: 10px;
+  }
+}

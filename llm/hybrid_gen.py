@@ -17,6 +17,46 @@ class HybridGenerator:
             (5, 6, "83.33%")
         ]
 
+    def _options(self, correct, distractors):
+        correct = str(correct)
+        options = [correct]
+        for value in distractors:
+            option = str(value)
+            if option != correct and option not in options:
+                options.append(option)
+            if len(options) == 4:
+                break
+
+        delta = 1
+        while len(options) < 4:
+            try:
+                option = str(int(float(correct)) + delta)
+            except ValueError:
+                option = f"{correct} + {delta}"
+            if option not in options:
+                options.append(option)
+            delta += 1
+
+        random.shuffle(options)
+        return options, options.index(correct)
+
+    def _mcq(self, question, correct, explanation, difficulty=2, distractors=None):
+        options, index = self._options(correct, distractors or [])
+        return {
+            "question_text": question,
+            "options": options,
+            "correct_option_index": index,
+            "explanation": explanation,
+            "difficulty": difficulty,
+        }
+
+    def _level(self, difficulty):
+        try:
+            level = int(round(float(difficulty)))
+        except (TypeError, ValueError):
+            level = 1
+        return max(1, min(5, level))
+
     def generate_mixed_fraction(self):
         """Pattern 1: Improper Fraction to Mixed Fraction"""
         denom = random.randint(2, 50)
@@ -2635,6 +2675,458 @@ class HybridGenerator:
             "explanation": explanation,
             "difficulty": 3
         }
+
+    def generate_vedic_addition(self, difficulty=1):
+        """Speed addition drills using left-to-right addition and complements."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["left_to_right", "complements", "single_digit","two_digit_add_single_digit","two_digit_add_lessthan_100","two_digit_add_morethan_100","three_to_four_digit","three_digit_near_base", "missing_addend"])
+
+        if sub_type == "left_to_right":
+            if level == 1:
+                a = random.randint(10, 60)
+                b = random.randint(5, 40)
+                correct = a + b
+                question = f"Add mentally: {a} + {b}."
+                explanation = f"Add the tens and ones: {a} + {b} = {correct}."
+                return self._mcq(question, correct, explanation, 1, [correct + 1, correct - 1, correct + 10, correct - 10])
+
+            a = random.randint(60, 180) if level == 2 else random.randint(240, 890)
+            b = random.randint(30, 160) if level == 2 else random.randint(120, 760)
+            c = random.randint(10, 90) if level == 2 else random.randint(80, 490)
+            correct = a + b + c
+            question = f"Add mentally from left to right: {a} + {b} + {c}."
+            explanation = f"Add in chunks: {a} + {b} = {a + b}, then {a + b} + {c} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 10, correct - 10, correct + 100, correct - 1])
+
+        if sub_type == "complements":
+            base = 100 if level <= 2 else random.choice([1000, 10000])
+            gap_limit = 20 if level == 1 else min(87, base // 5)
+            gap_a = random.randint(1, gap_limit)
+            gap_b = random.randint(1, gap_limit)
+            a = base - gap_a
+            b = base - gap_b
+            correct = a + b
+            question = f"Using complements to {base}, find {a} + {b}."
+            explanation = f"{a} is {gap_a} below {base} and {b} is {gap_b} below {base}. So {a} + {b} = 2 x {base} - ({gap_a} + {gap_b}) = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + gap_a, correct + gap_b, correct - 10, correct + 100])
+        
+        if sub_type == "single_digit":
+            a = random.randint(1,9)
+            b = random.randint(1,9)
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"Add the single digits: {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 1, correct +3, correct-2, correct-1])
+
+        if sub_type == "two_digit_add_single_dgit":
+            a = random.randint(10,99)
+            b = random.randint(1,9)
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"Add the two digits: {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 9, correct +4, correct-10, correct-5])
+
+        if sub_type == "two_digit_add_lessthan_100":
+            a = random.randint(10,49)
+            b = random.randint(10,99 - a)
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"Add the two digits: {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 9, correct +4, correct-10, correct-5])
+
+        if sub_type == "two_digit_add_morethan_100":
+            a = random.randint(50,99)
+            b = random.randint(50,99)
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"Add the two digits: {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 12, correct +2, correct-17, correct-7])
+
+        if sub_type ="three_to_four_digit":
+            a = random.randint(100,999)
+            b = random.randint(100,9999)
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"Add the two numbers: {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 100, correct +20, correct-150, correct-50])
+
+        if sub_type == "three_digit_near_base":
+            # One number near a base (like 399, 495, 651, 745, 854, 990)
+            base = random.choice([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+            deviation = random.randint(-50, 50)
+            while deviation == 0:
+                deviation = random.randint(-50, 50)
+            
+            a = base + deviation
+            b = random.randint(100, 999)
+            
+            # Ensure both are 3-digit or above 99
+            while a < 100 or b < 100:
+                a = base + random.randint(-50, 50)
+                b = random.randint(100, 999)
+            
+            correct = a + b
+            question = f"Add mentally: {a} + {b}"
+            explanation = f"{a} is near base {base} (deviation {deviation:+d}). So {a} + {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 10, correct - 10, correct + 50, correct - 50])
+            
+        if sub_type == "missing_addend":
+            a = random.randint(10, 80) if level == 1 else random.randint(180, 760)
+            b = random.randint(10, 70) if level == 1 else random.randint(140, 620)
+            missing = random.randint(5, 60) if level == 1 else random.randint(90, 540)
+            total = a + b + missing
+            question = f"What number should replace x if {a} + x + {b} = {total}?"
+            explanation = f"Combine known terms: {a} + {b} = {a + b}. Then x = {total} - {a + b} = {missing}."
+            return self._mcq(question, missing, explanation, min(level, 3), [missing + 10, missing - 10, total - a, total - b])
+
+    def generate_vedic_subtraction(self, difficulty=1):
+        """Speed subtraction drills using borrowing, complements, and near-base differences."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["left_to_right", "base_complement", "near_base_difference", "missing_minuend"])
+
+        if sub_type == "left_to_right":
+            b = random.randint(5, 40) if level == 1 else random.randint(180, 790)
+            correct = random.randint(10, 70) if level == 1 else random.randint(140, 860)
+            a = b + correct
+            question = f"Subtract mentally: {a} - {b}."
+            explanation = f"Break {b} into easy parts and subtract left to right. {a} - {b} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 10, correct - 10, correct + 100, abs(correct - 100)])
+
+        if sub_type == "base_complement":
+            base = 100 if level <= 2 else random.choice([1000, 10000])
+            n = random.randint(base // 5, base - (3 if level == 1 else 17))
+            correct = base - n
+            question = f"Using the all-from-9-and-last-from-10 idea, find {base} - {n}."
+            explanation = f"Subtract each leading digit from 9 and the last non-zero digit from 10. Directly, {base} - {n} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 1, correct - 1, correct + 10, correct + 100])
+
+        if sub_type == "near_base_difference":
+            base = 100 if level <= 3 else 1000
+            above = random.randint(1, 15) if level == 1 else random.randint(3, 48)
+            below = random.randint(1, 15) if level == 1 else random.randint(4, 57)
+            a = base + above
+            b = base - below
+            correct = above + below
+            question = f"Find the difference quickly: {a} - {b}."
+            explanation = f"{a} is {above} above {base}, while {b} is {below} below {base}. The difference is {above} + {below} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [abs(above - below), correct + 10, correct - 1, correct + 1])
+
+        subtrahend = random.randint(10, 80) if level == 1 else random.randint(260, 880)
+        difference = random.randint(10, 70) if level == 1 else random.randint(120, 760)
+        minuend = subtrahend + difference
+        question = f"If x - {subtrahend} = {difference}, what is x?"
+        explanation = f"Add the subtrahend back to the difference: x = {difference} + {subtrahend} = {minuend}."
+        return self._mcq(question, minuend, explanation, min(level, 3), [minuend + 10, minuend - 10, abs(subtrahend - difference), minuend + 100])
+
+    def generate_vedic_multiplication(self, difficulty=1):
+        """Mental multiplication drills: near-base, by 11, split products, and 25/125 shortcuts."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["vertical_crosswise", "near_base_100", "multiply_by_11", "split_multiplier", "multiply_by_25_125"])
+
+        if sub_type == "vertical_crosswise":
+            a = random.randint(11, 19) if level == 1 else random.randint(12, 98)
+            b = random.randint(2, 9) if level == 1 else random.randint(12, 98)
+            correct = a * b
+            question = f"Use vertical-and-crosswise multiplication to calculate {a} x {b}."
+            explanation = f"For two-digit multiplication, combine units, cross-products, and tens. Directly, {a} x {b} = {correct}."
+            return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + a, correct - b, correct + 10, correct - 10])
+
+        if sub_type == "near_base_100":
+            base = 10 if level == 1 else 100
+            span = 4 if level == 1 else 18
+            gap_a = random.choice([x for x in range(-span, span + 1) if x != 0])
+            gap_b = random.choice([x for x in range(-span, span + 1) if x != 0])
+            a = base + gap_a
+            b = base + gap_b
+            correct = a * b
+            left = base + gap_a + gap_b
+            question = f"Using the base-{base} method, calculate {a} x {b}."
+            explanation = f"Cross-adjust around {base}: left part is {base} + ({gap_a}) + ({gap_b}) = {left}. The deviation product is {gap_a} x {gap_b} = {gap_a * gap_b}. Therefore {a} x {b} = {correct}."
+            return self._mcq(question, correct, explanation, max(1, min(level, 3)), [left * base + abs(gap_a * gap_b), correct + base, correct - base, correct + gap_a * gap_b])
+
+        if sub_type == "multiply_by_11":
+            tens = random.randint(2, 8)
+            ones = random.randint(1, 8 - tens)
+            n = 10 * tens + ones
+            correct = n * 11
+            question = f"Find {n} x 11 using the insert-the-sum shortcut."
+            explanation = f"For {n} x 11, keep the outer digits {tens} and {ones}, and insert their sum {tens + ones}. So {n} x 11 = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 2), [n * 10, correct + 11, correct - 11, int(f"{tens}{ones}{tens + ones}")])
+
+        if sub_type == "split_multiplier":
+            a = random.randint(11, 25) if level == 1 else random.randint(24, 89)
+            tens = random.choice([10, 20]) if level == 1 else random.choice([20, 30, 40, 50, 60, 70, 80])
+            ones = random.randint(1, 5) if level == 1 else random.randint(2, 9)
+            b = tens + ones
+            correct = a * b
+            question = f"Use splitting to calculate {a} x {b}."
+            explanation = f"Split {b} as {tens} + {ones}. Then {a} x {b} = {a} x {tens} + {a} x {ones} = {a * tens} + {a * ones} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [a * tens, a * ones, correct + a, correct - a])
+
+        multiplier = 25 if level <= 2 else random.choice([25, 125])
+        n = random.choice([4, 8, 12, 16, 20, 24, 28, 32]) if level == 1 else random.randint(12, 96)
+        correct = n * multiplier
+        question = f"Calculate {n} x {multiplier} using the shortcut."
+        if multiplier == 25:
+            explanation = f"Multiplying by 25 is the same as multiplying by 100 and dividing by 4: {n} x 25 = {n * 100} / 4 = {correct}."
+        else:
+            explanation = f"Multiplying by 125 is the same as multiplying by 1000 and dividing by 8: {n} x 125 = {n * 1000} / 8 = {correct}."
+        return self._mcq(question, correct, explanation, min(level, 3), [correct + multiplier, correct - multiplier, n * 100, n * 10])
+
+    def generate_vedic_division(self, difficulty=1):
+        """Fast division drills with exact division, remainders, and special divisors."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["short_division", "remainder", "divide_by_25_125", "missing_dividend"])
+
+        if sub_type == "short_division":
+            divisor = random.randint(2, 9) if level == 1 else random.randint(6, 19)
+            quotient = random.randint(2, 12) if level == 1 else random.randint(24, 140)
+            dividend = divisor * quotient
+            question = f"Divide quickly: {dividend} / {divisor}."
+            explanation = f"Since {divisor} x {quotient} = {dividend}, the quotient is {quotient}."
+            return self._mcq(question, quotient, explanation, min(level, 3), [quotient + 1, quotient - 1, quotient + divisor, quotient - divisor])
+
+        if sub_type == "remainder":
+            divisor = random.randint(3, 9) if level == 1 else random.randint(7, 23)
+            quotient = random.randint(2, 12) if level == 1 else random.randint(20, 120)
+            remainder = random.randint(1, divisor - 1)
+            dividend = divisor * quotient + remainder
+            question = f"What is the remainder when {dividend} is divided by {divisor}?"
+            explanation = f"{dividend} = {divisor} x {quotient} + {remainder}. Therefore the remainder is {remainder}."
+            return self._mcq(question, remainder, explanation, min(level, 3), [divisor - remainder, remainder + 1, quotient, divisor])
+
+        if sub_type == "divide_by_25_125":
+            divisor = 25 if level <= 2 else random.choice([25, 125])
+            quotient = random.randint(2, 20) if level == 1 else random.randint(12, 160)
+            dividend = divisor * quotient
+            question = f"Calculate {dividend} / {divisor} using a speed division shortcut."
+            if divisor == 25:
+                explanation = f"Dividing by 25 is the same as multiplying by 4 and dividing by 100: {dividend} x 4 / 100 = {quotient}."
+            else:
+                explanation = f"Dividing by 125 is the same as multiplying by 8 and dividing by 1000: {dividend} x 8 / 1000 = {quotient}."
+            return self._mcq(question, quotient, explanation, min(level, 3), [quotient + 4, quotient - 4, quotient * 2, max(1, quotient // 2)])
+
+        divisor = random.randint(2, 9) if level == 1 else random.randint(6, 19)
+        quotient = random.randint(2, 12) if level == 1 else random.randint(14, 90)
+        remainder = random.randint(0, divisor - 1)
+        dividend = divisor * quotient + remainder
+        question = f"A number divided by {divisor} gives quotient {quotient} and remainder {remainder}. Find the number."
+        explanation = f"Dividend = divisor x quotient + remainder = {divisor} x {quotient} + {remainder} = {dividend}."
+        return self._mcq(question, dividend, explanation, min(level, 3), [divisor + quotient + remainder, dividend + divisor, dividend - divisor, quotient * max(1, remainder)])
+
+    def generate_vedic_tables_multiples(self, difficulty=1):
+        """Tables, missing factors, and multiple recognition drills."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["table_product", "missing_factor", "next_multiple", "factor_split"])
+        table_max = 10 if level == 1 else 12 if level == 2 else 25
+
+        if sub_type == "table_product":
+            a = random.randint(2, table_max)
+            b = random.randint(2, 10 if level == 1 else 20)
+            correct = a * b
+            question = f"Recall the table value: {a} x {b} = ?"
+            explanation = f"{a} x {b} = {correct}. Table fluency reduces load in longer aptitude calculations."
+            return self._mcq(question, correct, explanation, 1, [correct + a, correct - a, correct + b, correct - b])
+
+        if sub_type == "missing_factor":
+            factor = random.randint(2, table_max)
+            missing = random.randint(2, 10 if level == 1 else 20)
+            product = factor * missing
+            question = f"If {factor} x x = {product}, what is x?"
+            explanation = f"Use the table of {factor}: {factor} x {missing} = {product}, so x = {missing}."
+            return self._mcq(question, missing, explanation, 1, [missing + 1, missing - 1, factor, product // 10])
+
+        if sub_type == "next_multiple":
+            base = random.randint(2, table_max)
+            k = random.randint(3, 12 if level == 1 else 30)
+            target = base * k + random.randint(1, base - 1)
+            correct = base * (k + 1)
+            question = f"What is the smallest multiple of {base} greater than {target}?"
+            explanation = f"{base} x {k} = {base * k}, which is below {target}. The next multiple is {base} x {k + 1} = {correct}."
+            return self._mcq(question, correct, explanation, 2, [base * k, correct + base, correct - 1, target + base])
+
+        a = random.randint(2, table_max)
+        b = random.randint(2, 5 if level == 1 else 9)
+        c = random.randint(2, 5 if level == 1 else 9)
+        correct = a * (b + c)
+        question = f"Use table splitting to calculate {a} x {b} + {a} x {c}."
+        explanation = f"Factor out {a}: {a} x {b} + {a} x {c} = {a} x ({b} + {c}) = {a} x {b + c} = {correct}."
+        return self._mcq(question, correct, explanation, 2, [a * b, a * c, correct + a, correct - a])
+
+    def generate_vedic_squares_roots(self, difficulty=1):
+        """Squares and square-root recognition drills."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["square_ending_5", "near_base_square", "two_digit_square", "perfect_square_root", "integer_square_root"])
+
+        if sub_type == "square_ending_5":
+            tens = random.randint(1, 3) if level == 1 else random.randint(2, 12)
+            n = tens * 10 + 5
+            correct = n * n
+            question = f"Find {n}^2 using the ending-in-5 shortcut."
+            explanation = f"For a number ending in 5, multiply {tens} by {tens + 1} and append 25: {tens} x {tens + 1} = {tens * (tens + 1)}, so {n}^2 = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 100, correct - 100, int(f"{tens * tens}25"), correct + 25])
+
+        if sub_type == "near_base_square":
+            base = 10 if level == 1 else random.choice([50, 100])
+            span = 4 if level == 1 else 15
+            gap = random.choice([x for x in range(-span, span + 1) if x != 0])
+            n = base + gap
+            correct = n * n
+            question = f"Estimate and calculate exactly using near-base squaring: {n}^2."
+            explanation = f"Use (base + gap)^2. Here {n}^2 = {base}^2 + 2 x {base} x ({gap}) + ({gap})^2 = {correct}."
+            return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + abs(gap) * 10, correct - abs(gap) * 10, base * base + gap * gap, correct + 100])
+
+        if sub_type == "two_digit_square":
+            n = random.randint(2, 12) if level == 1 else random.randint(21, 99)
+            correct = n * n
+            question = f"Calculate {n}^2 mentally."
+            explanation = f"Use (a + b)^2 or a nearby base. Directly, {n} x {n} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + n, correct - n, correct + 100, correct - 100])
+
+        if sub_type == "perfect_square_root":
+            root = random.randint(2, 12) if level == 1 else random.randint(12, 45)
+            square = root * root
+            question = f"Find the square root of {square}."
+            explanation = f"{root} x {root} = {square}, so sqrt({square}) = {root}."
+            return self._mcq(question, root, explanation, min(level, 3), [root + 1, root - 1, root + 2, max(1, root - 2)])
+
+        root = random.randint(2, 12) if level == 1 else random.randint(15, 50)
+        n = root * root + random.randint(1, 2 * root)
+        correct = math.isqrt(n)
+        question = f"What is the greatest integer less than or equal to sqrt({n})?"
+        explanation = f"{correct}^2 = {correct * correct} and {correct + 1}^2 = {(correct + 1) * (correct + 1)}. Since {n} lies between them, the integer square root is {correct}."
+        return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + 1, correct - 1, correct + 2, max(1, correct - 2)])
+
+    def generate_vedic_cubes_roots(self, difficulty=1):
+        """Cubes, cube roots, and unit digit drills."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["cube_value", "perfect_cube_root", "nearest_cube", "cube_unit_digit"])
+
+        if sub_type == "cube_value":
+            n = random.randint(2, 10) if level == 1 else random.randint(3, 20)
+            correct = n ** 3
+            question = f"Recall or calculate quickly: {n}^3 = ?"
+            explanation = f"{n}^3 means {n} x {n} x {n} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [n * n, correct + n, correct - n, (n + 1) ** 3])
+
+        if sub_type == "perfect_cube_root":
+            root = random.randint(2, 10) if level == 1 else random.randint(3, 20)
+            cube = root ** 3
+            question = f"Find the cube root of {cube}."
+            explanation = f"{root}^3 = {cube}, so the cube root of {cube} is {root}."
+            return self._mcq(question, root, explanation, min(level, 3), [root + 1, root - 1, root + 2, max(1, root - 2)])
+
+        if sub_type == "nearest_cube":
+            root = random.randint(2, 10) if level == 1 else random.randint(5, 20)
+            n = root ** 3 + random.randint(1, 3 * root * root)
+            correct = round(n ** (1 / 3))
+            while (correct + 1) ** 3 <= n:
+                correct += 1
+            while correct ** 3 > n:
+                correct -= 1
+            question = f"What is the greatest integer less than or equal to the cube root of {n}?"
+            explanation = f"{correct}^3 = {correct ** 3} and {correct + 1}^3 = {(correct + 1) ** 3}. So the integer cube root is {correct}."
+            return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + 1, correct - 1, correct + 2, max(1, correct - 2)])
+
+        n = random.randint(2, 20) if level == 1 else random.randint(12, 99)
+        correct = (n ** 3) % 10
+        question = f"What is the units digit of {n}^3?"
+        explanation = f"Only the units digit matters. The units digit of {n} is {n % 10}, and {(n % 10)}^3 has units digit {correct}."
+        return self._mcq(question, correct, explanation, min(level, 3), [(correct + 1) % 10, (correct + 2) % 10, (10 - correct) % 10, n % 10])
+
+    def generate_vedic_divisibility(self, difficulty=1):
+        """Divisibility-rule drills across common aptitude divisors."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["rules_3_9", "rules_4_8", "rule_11", "combined_rules"])
+
+        if sub_type == "rules_3_9":
+            n = random.randint(100, 999) if level == 1 else random.randint(1000, 99999)
+            digit_sum = sum(int(d) for d in str(n))
+            divisible_by_3 = digit_sum % 3 == 0
+            divisible_by_9 = digit_sum % 9 == 0
+            if divisible_by_9:
+                correct = "3 and 9"
+            elif divisible_by_3:
+                correct = "3 only"
+            else:
+                correct = "neither 3 nor 9"
+            question = f"The digit sum of {n} is {digit_sum}. By divisibility rules, {n} is divisible by which option?"
+            explanation = f"A number is divisible by 3 or 9 when its digit sum is divisible by 3 or 9. Here the digit sum is {digit_sum}, so the answer is {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), ["3 only", "9 only", "3 and 9", "neither 3 nor 9"])
+
+        if sub_type == "rules_4_8":
+            n = random.randint(100, 999) if level == 1 else random.randint(1000, 99999)
+            last_two = n % 100
+            last_three = n % 1000
+            div4 = last_two % 4 == 0
+            div8 = last_three % 8 == 0
+            if div8:
+                correct = "4 and 8"
+            elif div4:
+                correct = "4 only"
+            else:
+                correct = "neither 4 nor 8"
+            question = f"Using the last digits, decide whether {n} is divisible by 4, 8, both, or neither."
+            explanation = f"For 4, check the last two digits: {last_two}. For 8, check the last three digits: {last_three}. Therefore the answer is {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), ["4 only", "8 only", "4 and 8", "neither 4 nor 8"])
+
+        if sub_type == "rule_11":
+            n = random.randint(100, 999) if level == 1 else random.randint(10000, 999999)
+            digits = [int(d) for d in str(n)]
+            alternating = abs(sum(digits[::2]) - sum(digits[1::2]))
+            correct = alternating % 11
+            question = f"For the divisibility-by-11 test on {n}, what is the remainder when the alternating digit-sum difference is divided by 11?"
+            explanation = f"Alternating digit sums give |{sum(digits[::2])} - {sum(digits[1::2])}| = {alternating}. {alternating} mod 11 = {correct}."
+            return self._mcq(question, correct, explanation, max(1, min(level, 3)), [(correct + 1) % 11, (correct + 2) % 11, alternating, 11 - correct if correct else 11])
+
+        divisors = [2, 3, 5, 10] if level == 1 else [3, 4, 5, 6, 8, 9, 10, 11, 12, 15]
+        n = random.randint(100, 999) if level == 1 else random.randint(1000, 99999)
+        correct = sum(1 for divisor in divisors if n % divisor == 0)
+        question = f"How many numbers in this list divide {n}: {', '.join(map(str, divisors))}?"
+        explanation = f"Test each divisor using its rule. The count of divisors from the list that divide {n} exactly is {correct}."
+        return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + 1, max(0, correct - 1), correct + 2, max(0, correct - 2)])
+
+    def generate_vedic_approximation(self, difficulty=1):
+        """Approximation, compatible numbers, and quick percent drills."""
+        level = self._level(difficulty)
+        sub_type = random.choice(["compatible_sum", "estimate_product", "estimate_division", "quick_percent"])
+
+        if sub_type == "compatible_sum":
+            values = [random.randint(12, 98) for _ in range(2 if level == 1 else 3)]
+            rounded = [round(v, -1 if level == 1 else -2) for v in values]
+            correct = sum(rounded)
+            question = f"Estimate {' + '.join(map(str, values))} by rounding each number to the nearest {'ten' if level == 1 else 'hundred'}."
+            explanation = f"The rounded values are {', '.join(map(str, rounded))}. Their sum is {correct}."
+            return self._mcq(question, correct, explanation, 1, [sum(values), correct + 100, correct - 100, correct + 200])
+
+        if sub_type == "estimate_product":
+            a = random.randint(11, 29) if level == 1 else random.randint(24, 96)
+            b = random.randint(2, 9) if level == 1 else random.randint(24, 96)
+            ra = round(a, -1)
+            rb = round(b, -1)
+            correct = ra * rb
+            question = f"Estimate {a} x {b} by rounding both numbers to the nearest ten."
+            explanation = f"{a} rounds to {ra} and {b} rounds to {rb}. Estimated product = {ra} x {rb} = {correct}."
+            return self._mcq(question, correct, explanation, 1, [a * b, correct + 100, correct - 100, ra + rb])
+
+        if sub_type == "estimate_division":
+            divisor = random.choice([2, 5, 10]) if level == 1 else random.choice([12, 15, 20, 25, 30, 40, 50])
+            quotient = random.randint(2, 12) if level == 1 else random.randint(8, 40)
+            compatible_dividend = divisor * quotient
+            dividend = compatible_dividend + random.randint(-divisor // 2, divisor // 2)
+            question = f"Estimate {dividend} / {divisor} using compatible numbers."
+            explanation = f"{dividend} is close to {compatible_dividend}, and {compatible_dividend} / {divisor} = {quotient}. So the estimate is {quotient}."
+            return self._mcq(question, quotient, explanation, 1, [quotient + 1, quotient - 1, quotient + 2, max(1, quotient - 2)])
+
+        percent = random.choice([10, 20, 25, 50]) if level == 1 else random.choice([5, 10, 12.5, 15, 20, 25, 50, 75])
+        base = random.randint(2, 20) * 10 if level == 1 else random.randint(8, 80) * 20
+        correct_value = base * percent / 100
+        correct = int(correct_value) if correct_value.is_integer() else correct_value
+        question = f"Find {percent}% of {base} quickly."
+        explanation = f"Use benchmark percentages: {percent}% of {base} = ({percent}/100) x {base} = {correct}."
+        distractors = [correct_value + 10, max(0, correct_value - 10), correct_value * 2, correct_value / 2]
+        distractors = [int(x) if float(x).is_integer() else x for x in distractors]
+        return self._mcq(question, correct, explanation, 1, distractors)
 
     def generate_clockwise_anticlockwise(self):
         """Pattern: Clockwise and anti clockwise"""

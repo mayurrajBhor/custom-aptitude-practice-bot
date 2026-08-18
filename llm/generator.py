@@ -155,6 +155,67 @@ class QuestionGenerator:
             "marked_price",
             "equivalent_discount",
         ],
+        "vedic_addition": [
+            "left_to_right",
+            "complements",
+            "missing_addend",
+            "single_digit",
+            "two_digit_add_single_digit",
+            "two_digit_add_lessthan_100",
+            "two_digit_add_morethan_100",
+            "three_to_four_digit",
+            "three_digit_near_base",
+        ],
+        "vedic_subtraction": [
+            "left_to_right",
+            "base_complement",
+            "near_base_difference",
+            "missing_minuend",
+        ],
+        "vedic_multiplication": [
+            "vertical_crosswise",
+            "near_base_100",
+            "multiply_by_11",
+            "split_multiplier",
+            "multiply_by_25_125",
+        ],
+        "vedic_division": [
+            "short_division",
+            "remainder",
+            "divide_by_25_125",
+            "missing_dividend",
+        ],
+        "vedic_tables_multiples": [
+            "table_product",
+            "missing_factor",
+            "next_multiple",
+            "factor_split",
+        ],
+        "vedic_squares_roots": [
+            "square_ending_5",
+            "near_base_square",
+            "two_digit_square",
+            "perfect_square_root",
+            "integer_square_root",
+        ],
+        "vedic_cubes_roots": [
+            "cube_value",
+            "perfect_cube_root",
+            "nearest_cube",
+            "cube_unit_digit",
+        ],
+        "vedic_divisibility": [
+            "rules_3_9",
+            "rules_4_8",
+            "rule_11",
+            "combined_rules",
+        ],
+        "vedic_approximation": [
+            "compatible_sum",
+            "estimate_product",
+            "estimate_division",
+            "quick_percent",
+        ],
     }
 
     HYBRID_RANDOM_VALUES = {
@@ -194,9 +255,20 @@ class QuestionGenerator:
         base_type, separator, forced_variant = hybrid_type.partition("::")
         return base_type, forced_variant if separator else None
 
-    def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None):
+    @staticmethod
+    def _is_difficulty_aware_hybrid(base_type):
+        return str(base_type or "").startswith("vedic_")
+
+    def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None, difficulty=None):
+        def call_generator():
+            if not generator_fn:
+                return None
+            if self._is_difficulty_aware_hybrid(base_type):
+                return generator_fn(difficulty=difficulty)
+            return generator_fn()
+
         if not generator_fn or not forced_variant:
-            return generator_fn() if generator_fn else None
+            return call_generator()
 
         subtype_list = self.HYBRID_SUBTYPES.get(base_type, [])
         forced_random_values = list(self.HYBRID_RANDOM_VALUES.get((base_type, forced_variant), []))
@@ -206,7 +278,7 @@ class QuestionGenerator:
 
         def choice_with_forced_subtype(seq):
             values = list(seq)
-            if values == subtype_list and forced_variant in values:
+            if forced_variant in values:
                 return forced_variant
             return real_choice(seq)
 
@@ -219,7 +291,7 @@ class QuestionGenerator:
         should_patch_random = bool(forced_random_values)
 
         if not should_patch_choice and not should_patch_random:
-            return generator_fn()
+            return call_generator()
 
         with self._forced_variant_lock:
             try:
@@ -227,12 +299,12 @@ class QuestionGenerator:
                     random.choice = choice_with_forced_subtype
                 if should_patch_random:
                     random.random = random_with_forced_values
-                return generator_fn()
+                return call_generator()
             finally:
                 random.choice = real_choice
                 random.random = real_random
 
-    def _generate_hybrid(self, hybrid_type):
+    def _generate_hybrid(self, hybrid_type, difficulty=None):
         dispatch = {
             "mixed_fraction": hybrid_generator.generate_mixed_fraction,
             "fraction_subtraction": hybrid_generator.generate_fraction_subtraction,
@@ -253,6 +325,15 @@ class QuestionGenerator:
             "exam_scoring": hybrid_generator.generate_exam_scoring,
             "successive_changes": hybrid_generator.generate_successive_net_change,
             "successive_discount": hybrid_generator.generate_successive_discount,
+            "vedic_addition": hybrid_generator.generate_vedic_addition,
+            "vedic_subtraction": hybrid_generator.generate_vedic_subtraction,
+            "vedic_multiplication": hybrid_generator.generate_vedic_multiplication,
+            "vedic_division": hybrid_generator.generate_vedic_division,
+            "vedic_tables_multiples": hybrid_generator.generate_vedic_tables_multiples,
+            "vedic_squares_roots": hybrid_generator.generate_vedic_squares_roots,
+            "vedic_cubes_roots": hybrid_generator.generate_vedic_cubes_roots,
+            "vedic_divisibility": hybrid_generator.generate_vedic_divisibility,
+            "vedic_approximation": hybrid_generator.generate_vedic_approximation,
             "clockwise_anticlockwise": hybrid_generator.generate_clockwise_anticlockwise,
             "pythagoras_theorem": hybrid_generator.generate_pythagoras_theorem,
             "starting_without_direction": hybrid_generator.generate_starting_without_direction,
@@ -273,7 +354,7 @@ class QuestionGenerator:
         selected_type = self._select_hybrid_type(hybrid_type)
         base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
-        return self._call_hybrid_generator(generator_fn, base_type, forced_variant)
+        return self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
 
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""
@@ -330,6 +411,24 @@ class QuestionGenerator:
             return "successive_changes"
         if pn == "successive discounts":
             return "successive_discount"
+        if pn == "speed addition and complements":
+            return "vedic_addition"
+        if pn == "speed subtraction and complements":
+            return "vedic_subtraction"
+        if pn == "mental multiplication":
+            return "vedic_multiplication"
+        if pn == "fast division and remainders":
+            return "vedic_division"
+        if pn == "tables and multiples mastery":
+            return "vedic_tables_multiples"
+        if pn == "squares and square roots":
+            return "vedic_squares_roots"
+        if pn == "cubes and cube roots":
+            return "vedic_cubes_roots"
+        if pn == "divisibility rules":
+            return "vedic_divisibility"
+        if pn == "approximation and number sense":
+            return "vedic_approximation"
         if pn == "clockwise and anti clockwise":
             return "clockwise_anticlockwise"
         if pn == "pythagoras theorem":
@@ -370,7 +469,7 @@ class QuestionGenerator:
         # Check for Hybrid Patterns first
         hybrid_type = self._get_hybrid_type(pattern_name)
         if hybrid_type:
-            hybrid_result = self._generate_hybrid(hybrid_type)
+            hybrid_result = self._generate_hybrid(hybrid_type, difficulty=difficulty)
 
             if hybrid_result:
                 # Intercept the hybrid math and pass through LLM for rephrasing
@@ -455,7 +554,7 @@ class QuestionGenerator:
         for p in patterns_info:
             ht = p.get('hybrid_type') or self._get_hybrid_type(p['name'])
             if ht:
-                hybrid_result = self._generate_hybrid(ht)
+                hybrid_result = self._generate_hybrid(ht, difficulty=p.get('difficulty'))
                 
                 if hybrid_result:
                     hybrid_results.append({**hybrid_result, "pattern_id": p['id']})

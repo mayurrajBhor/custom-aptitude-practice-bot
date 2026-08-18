@@ -4,7 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aptitude Practice</title>
-    <link rel="stylesheet" href="/static/styles.css?v=10">
+    <link rel="stylesheet" href="/static/styles.css?v=28">
+    <link rel="stylesheet" href="/static/games/vedic_sprint.css?v=2">
+    <link rel="stylesheet" href="/static/games/cricket_chase.css?v=2">
+    <link rel="stylesheet" href="/static/games/mistake_revenge.css?v=2">
+    <link rel="stylesheet" href="/static/games/direction_maze.css?v=2">
+    <link rel="stylesheet" href="/static/games/discount_shop.css?v=2">
+    <link rel="stylesheet" href="/static/games/cinematic_modes.css?v=3">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
   <body>
@@ -25,6 +31,10 @@
           <span>Practice</span>
           <small>Topics and tests</small>
         </button>
+        <button class="tab" data-screen-target="arcade">
+          <span>Arcade</span>
+          <small>Game modes</small>
+        </button>
         <button class="tab" data-screen-target="progress">
           <span>Progress</span>
           <small>Stats and weak areas</small>
@@ -32,9 +42,23 @@
       </nav>
 
       <div class="status-banner" id="statusBanner" hidden></div>
+      <div class="confetti-layer" id="confettiLayer" hidden></div>
 
       <main>
         <section class="screen is-active" id="practiceScreen">
+          <section class="smart-coach" id="smartCoachCard" aria-label="Smart revision and daily missions">
+            <div class="smart-coach-head">
+              <div>
+                <p class="panel-kicker">Today Coach</p>
+                <h2>Smart Revision Queue</h2>
+              </div>
+              <div class="coach-wallet" id="coachWallet"></div>
+            </div>
+            <p class="coach-line" id="coachLine">Loading today plan.</p>
+            <div class="revision-rail" id="revisionQueue"></div>
+            <div class="daily-missions" id="dailyMissions"></div>
+          </section>
+
           <section class="mode-dock" aria-label="Practice mode">
             <div class="mode-dock-copy">
               <p class="panel-kicker">Challenge</p>
@@ -102,9 +126,47 @@
           </section>
         </section>
 
+        <section class="screen" id="arcadeScreen">
+          <section class="arcade-hero">
+            <div>
+              <p class="panel-kicker">Arcade</p>
+              <h2>Serious practice, game pressure.</h2>
+              <p>Launch cinematic aptitude modes built around speed, recovery, navigation, pricing, and match pressure.</p>
+            </div>
+            <div class="arcade-hero-console" aria-hidden="true">
+              <span></span>
+              <strong>5</strong>
+              <em>live modes</em>
+            </div>
+            <button class="sound-toggle" id="soundToggleButton" type="button" aria-pressed="true">Sound On</button>
+          </section>
+          <section class="game-mode-grid" id="gameModeGrid"></section>
+        </section>
+
         <section class="screen" id="questionScreen">
           <div class="question-layout">
             <section class="question-panel">
+              <div class="game-stage" id="gameStage" hidden>
+                <div id="gameScene"></div>
+              </div>
+              <div class="question-hud" aria-label="Practice status">
+                <div class="question-hud-card">
+                  <span>Score</span>
+                  <strong id="questionScore">0</strong>
+                </div>
+                <div class="question-hud-card">
+                  <span>Streak</span>
+                  <strong id="questionStreak">0x</strong>
+                </div>
+                <div class="question-hud-card">
+                  <span>Combo</span>
+                  <strong id="questionCombo">Ready</strong>
+                </div>
+                <div class="question-hud-card">
+                  <span>Progress</span>
+                  <strong id="questionProgressText">0/0</strong>
+                </div>
+              </div>
               <div class="question-meta">
                 <span id="questionCounter">Question 1</span>
                 <span id="questionTimer">0s</span>
@@ -114,12 +176,13 @@
               <div class="options-grid" id="optionsGrid"></div>
             </section>
             <aside class="feedback-panel" id="feedbackPanel">
+              <div class="game-hud-slot" id="gameHud" hidden></div>
               <h2 id="feedbackTitle">Answer</h2>
               <div class="answer-burst" id="answerBurst" hidden></div>
               <p id="feedbackText">Choose an option to see the explanation.</p>
               <div class="auto-advance" id="autoAdvanceText" hidden></div>
               <button class="primary-button" id="nextButton" type="button" disabled>Next question</button>
-              <button class="quiet-button full-width" id="backToPracticeButton" type="button">Back to setup</button>
+              <button class="quiet-button full-width" id="stopPracticeButton" type="button">Stop practice</button>
             </aside>
           </div>
         </section>
@@ -138,34 +201,86 @@
                 </div>
               </div>
               <div class="profile-note" id="profileNote"></div>
-              <div class="stats-grid compact">
-                <div class="stat">
+              <div class="progress-stat-strip">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Today</span>
                   <strong id="todaySolved">0</strong>
                 </div>
-                <div class="stat">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Accuracy</span>
                   <strong id="accuracyStat">0%</strong>
                 </div>
-                <div class="stat">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Mastery</span>
                   <strong id="masteryStat">0%</strong>
                 </div>
-              </div>
-              <div class="stats-grid compact">
-                <div class="stat">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Solved</span>
                   <strong id="totalSolved">0</strong>
                 </div>
-                <div class="stat">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Correct</span>
                   <strong id="totalCorrect">0</strong>
                 </div>
-                <div class="stat">
+                <div class="progress-stat-tile">
                   <span class="stat-label">Avg Time</span>
                   <strong id="avgTime">0s</strong>
                 </div>
               </div>
+              <section class="progress-visual-grid" aria-label="Progress visuals">
+                <article class="progress-visual-card mastery-card">
+                  <div class="visual-ring" id="masteryRingSummary" style="--ring:0%">
+                    <strong>0%</strong>
+                    <span>mastery</span>
+                  </div>
+                  <div>
+                    <p class="panel-kicker">Mastery</p>
+                    <h3>Overall Skill</h3>
+                    <span id="masteryVisualText">Start practicing to build mastery.</span>
+                  </div>
+                </article>
+                <article class="progress-visual-card">
+                  <p class="panel-kicker">Week</p>
+                  <h3>Practice Heat</h3>
+                  <div class="weekly-heatmap" id="weeklyHeatmap"></div>
+                </article>
+                <article class="progress-visual-card">
+                  <p class="panel-kicker">Weak Radar</p>
+                  <h3>Top Risk Patterns</h3>
+                  <div class="weak-radar" id="weakRadar"></div>
+                </article>
+                <article class="progress-visual-card">
+                  <p class="panel-kicker">Recovery</p>
+                  <h3>Mistake Recovery</h3>
+                  <div class="recovery-stats" id="recoveryStats"></div>
+                </article>
+              </section>
+              <section class="progress-card progress-tracker-card">
+                <div class="section-heading">
+                  <div>
+                    <p class="panel-kicker">Pattern Tracker</p>
+                    <h2>Practice Map</h2>
+                  </div>
+                </div>
+                <div class="progress-snapshot" id="progressSnapshot"></div>
+                <div class="progress-step-grid">
+                  <section>
+                    <p class="tracker-label">Category</p>
+                    <div class="progress-category-tabs" id="progressCategoryTabs"></div>
+                  </section>
+                  <section>
+                    <p class="tracker-label">Topic</p>
+                    <div class="progress-topic-list" id="progressTopicList"></div>
+                  </section>
+                </div>
+                <div class="progress-pattern-stage">
+                  <section>
+                    <p class="tracker-label">Patterns</p>
+                    <div class="progress-pattern-list" id="progressPatternList"></div>
+                  </section>
+                  <aside class="progress-pattern-detail" id="progressPatternDetail"></aside>
+                </div>
+              </section>
               <section class="progress-card reminder-card">
                 <div class="section-heading">
                   <div>
@@ -215,6 +330,7 @@
             <p class="eyebrow">Session complete</p>
             <h2 id="resultScore">0 / 0</h2>
             <p id="resultAccuracy">Accuracy 0%</p>
+            <div class="game-result-lines" id="gameResultLines" hidden></div>
             <div class="result-actions">
               <button class="primary-button" id="reviewAnswersButton" type="button">Review answers</button>
               <button class="primary-button" id="practiceAgainButton" type="button">Practice again</button>
@@ -236,6 +352,12 @@
       </main>
     </div>
 
-    <script src="/static/app.js?v=10"></script>
+    <script src="/static/games/vedic_sprint.js?v=2"></script>
+    <script src="/static/games/cricket_chase.js?v=2"></script>
+    <script src="/static/games/mistake_revenge.js?v=2"></script>
+    <script src="/static/games/direction_maze.js?v=2"></script>
+    <script src="/static/games/discount_shop.js?v=2"></script>
+    <script src="/static/games/cinematic_modes.js?v=4"></script>
+    <script src="/static/app.js?v=27"></script>
   </body>
 </html>
