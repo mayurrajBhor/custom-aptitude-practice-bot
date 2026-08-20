@@ -100,8 +100,8 @@ CACHE_TTL_SECONDS = {
     "progress": 20,
 }
 MODE_TARGETS = {
-    "quick": 5,
-    "focused": 15,
+    "quick": 10,
+    "focused": 20,
     "full": None,
 }
 
@@ -344,8 +344,13 @@ def start_session(request: StartSessionRequest):
     if generated_count <= 0:
         raise HTTPException(status_code=500, detail="Could not generate questions for this practice set.")
     if generated_count < target_count:
-        logging.warning("Generated only %s of %s requested questions. Starting a shorter session.", generated_count, target_count)
-        session["total_questions"] = generated_count
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Could only generate {generated_count} of {target_count} requested questions. "
+                "Please retry this selection."
+            ),
+        )
     session["prefilled"] = True
     _start_persistent_session(session)
 
@@ -943,10 +948,10 @@ def _build_smart_daily_plan(
             "reward": {"xp": 120, "coins": 40, "streak_shields": 0},
             "action": {
                 "type": "practice",
-                "label": "Start 15Q",
+                "label": "Start 20Q",
                 "pattern_ids": revision_ids,
                 "mode": "focused",
-                "target_count": 15,
+                "target_count": 20,
             },
         },
         {
@@ -965,7 +970,7 @@ def _build_smart_daily_plan(
                 "label": "Drill weak",
                 "pattern_ids": [best_weak.get("pattern_id") or revision_ids[0]] if revision_ids else [],
                 "mode": "quick",
-                "target_count": 5,
+                "target_count": 10,
             },
         },
         {
@@ -1092,7 +1097,7 @@ def _empty_smart_daily_plan():
                 "completed": False,
                 "reward": {"xp": 120, "coins": 40, "streak_shields": 0},
                 "reward_claimed": False,
-                "action": {"type": "practice", "label": "Start", "pattern_ids": [], "mode": "focused", "target_count": 15},
+                "action": {"type": "practice", "label": "Start", "pattern_ids": [], "mode": "focused", "target_count": 20},
             },
             {
                 "key": "improve_weak",
@@ -1105,7 +1110,7 @@ def _empty_smart_daily_plan():
                 "completed": False,
                 "reward": {"xp": 180, "coins": 55, "streak_shields": 0},
                 "reward_claimed": False,
-                "action": {"type": "practice", "label": "Drill", "pattern_ids": [], "mode": "quick", "target_count": 5},
+                "action": {"type": "practice", "label": "Drill", "pattern_ids": [], "mode": "quick", "target_count": 10},
             },
             {
                 "key": "retry_5_mistakes",
@@ -1311,8 +1316,16 @@ def _build_session_items(
             allowed_variants = selected_variants_by_pattern.get(int(pattern["id"]))
             if allowed_variants:
                 filtered = [variant for variant in variants if variant in allowed_variants]
-                if filtered:
-                    variants = filtered
+                invalid_variants = [variant for variant in allowed_variants if variant not in variants]
+                if invalid_variants:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"Variant selection is out of date for '{pattern['name']}'. "
+                            "Reload the catalog and select the variants again."
+                        ),
+                    )
+                variants = filtered
             session_items.extend({**base_item, "hybrid_type": variant} for variant in variants)
         else:
             session_items.append(base_item)

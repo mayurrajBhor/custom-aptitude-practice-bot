@@ -1,6 +1,6 @@
 const MODE_CONFIG = {
-  quick: { label: "Quick 5", targetCount: 5 },
-  focused: { label: "Focused 15", targetCount: 15 },
+  quick: { label: "Quick 10", targetCount: 10 },
+  focused: { label: "Focused 20", targetCount: 20 },
   full: { label: "All Variants", targetCount: null },
 };
 
@@ -754,7 +754,7 @@ function defaultSmartPlan() {
         percent: 0,
         completed: false,
         reward: { xp: 120, coins: 40, streak_shields: 0 },
-        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 15 },
+        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 20 },
       },
       {
         key: "improve_weak",
@@ -766,7 +766,7 @@ function defaultSmartPlan() {
         percent: 0,
         completed: false,
         reward: { xp: 180, coins: 55, streak_shields: 0 },
-        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 5 },
+        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 10 },
       },
       {
         key: "retry_5_mistakes",

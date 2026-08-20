@@ -2711,8 +2711,8 @@ class HybridGenerator:
             return self._mcq(question, correct, explanation, min(level, 3), [correct + gap_a, correct + gap_b, correct - 10, correct + 100])
         
         if sub_type == "single_digit":
-            a = random.randint(1,9)
-            b = random.randint(1,9)
+            a = random.randint(3,9)
+            b = random.randint(3,9)
             correct = a + b
             question = f"Add mentally: {a} + {b}"
             explanation = f"Add the single digits: {a} + {b} = {correct}."
@@ -2720,7 +2720,7 @@ class HybridGenerator:
 
         if sub_type == "two_digit_add_single_dgit":
             a = random.randint(10,99)
-            b = random.randint(1,9)
+            b = random.randint(3,9)
             correct = a + b
             question = f"Add mentally: {a} + {b}"
             explanation = f"Add the two digits: {a} + {b} = {correct}."
@@ -2921,8 +2921,10 @@ class HybridGenerator:
         table_max = 10 if level == 1 else 12 if level == 2 else 25
 
         if sub_type == "table_product":
-            a = random.randint(2, table_max)
-            b = random.randint(2, 10 if level == 1 else 20)
+            # a = random.randint(2, table_max)
+            a = random.randint(2, 10)
+            b = random.randint(2, 10)
+            # b = random.randint(2, 10 if level == 1 else 20)
             correct = a * b
             question = f"Recall the table value: {a} x {b} = ?"
             explanation = f"{a} x {b} = {correct}. Table fluency reduces load in longer aptitude calculations."
@@ -2956,7 +2958,14 @@ class HybridGenerator:
     def generate_vedic_squares_roots(self, difficulty=1):
         """Squares and square-root recognition drills."""
         level = self._level(difficulty)
-        sub_type = random.choice(["square_ending_5", "near_base_square", "two_digit_square", "perfect_square_root", "integer_square_root"])
+        sub_type = random.choice(["squares","square_ending_5", "near_base_square", "two_digit_square", "perfect_square_root", "integer_square_root"])
+
+        if sub_type == "squares":
+            n = random.randint(2, 20)
+            correct = n * n
+            question = f"Calculate {n}^2."
+            explanation = f"{n} x {n} = {correct}."
+            return self._mcq(question, correct, explanation, min(level, 3), [correct + 10, correct - 10, correct + 100, correct - 100]) 
 
         if sub_type == "square_ending_5":
             tens = random.randint(1, 3) if level == 1 else random.randint(2, 12)
@@ -3003,7 +3012,8 @@ class HybridGenerator:
         sub_type = random.choice(["cube_value", "perfect_cube_root", "nearest_cube", "cube_unit_digit"])
 
         if sub_type == "cube_value":
-            n = random.randint(2, 10) if level == 1 else random.randint(3, 20)
+            # n = random.randint(2, 10) if level == 1 else random.randint(3, 20)
+            n = random.randint(2, 10)
             correct = n ** 3
             question = f"Recall or calculate quickly: {n}^3 = ?"
             explanation = f"{n}^3 means {n} x {n} x {n} = {correct}."

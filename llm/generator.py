@@ -192,6 +192,7 @@ class QuestionGenerator:
             "factor_split",
         ],
         "vedic_squares_roots": [
+            "squares",
             "square_ending_5",
             "near_base_square",
             "two_digit_square",
