@@ -596,6 +596,7 @@ h2 {
   position: fixed;
   width: min(92vw, 310px);
   max-width: calc(100vw - 20px);
+  height: min(82dvh, 620px);
   max-height: calc(100dvh - 24px);
   border: 1px solid var(--line);
   border-radius: 18px;

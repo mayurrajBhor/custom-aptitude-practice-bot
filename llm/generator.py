@@ -352,7 +352,7 @@ class QuestionGenerator:
             "based_on_turns": hybrid_generator.generate_based_on_turns,
             "one_direction_only": hybrid_generator.generate_one_direction_only,
         }
-        selected_type = self._select_hybrid_type(hybrid_type)
+        selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
         base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
         return self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)

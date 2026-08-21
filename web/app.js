@@ -1418,14 +1418,13 @@ function renderVariantPickerModal() {
         return `${labels.length} selected`;
       })()
     : "All variants";
-  const anchor = state.variantPickerAnchor || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  const left = Math.min(Math.max(anchor.x, 120), window.innerWidth - 120);
-  const top = Math.min(Math.max(anchor.y + 4, 80), window.innerHeight - 80);
+  const left = window.innerWidth / 2;
+  const top = window.innerHeight / 2;
 
   host.hidden = false;
   host.innerHTML = `
     <div class="variant-picker-backdrop" data-variant-picker-close="true"></div>
-    <div class="variant-picker-modal" role="dialog" aria-modal="true" aria-label="Choose variants for ${escapeHtml(pattern.name)}" style="left: ${left}px; top: ${top}px; transform: translateX(-50%);">
+    <div class="variant-picker-modal" role="dialog" aria-modal="true" aria-label="Choose variants for ${escapeHtml(pattern.name)}" style="left: ${left}px; top: ${top}px; transform: translate(-50%, -50%);">
       <div class="variant-picker-header">
         <div>
           <div class="variant-picker-kicker">Variants</div>

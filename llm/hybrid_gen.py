@@ -2718,7 +2718,7 @@ class HybridGenerator:
             explanation = f"Add the single digits: {a} + {b} = {correct}."
             return self._mcq(question, correct, explanation, min(level, 3), [correct + 1, correct +3, correct-2, correct-1])
 
-        if sub_type == "two_digit_add_single_dgit":
+        if sub_type == "two_digit_add_single_digit":
             a = random.randint(10,99)
             b = random.randint(3,9)
             correct = a + b
@@ -2846,7 +2846,7 @@ class HybridGenerator:
 
         if sub_type == "multiply_by_11":
             tens = random.randint(2, 8)
-            ones = random.randint(1, 8 - tens)
+            ones = random.randint(1, max(1, 8 - tens))
             n = 10 * tens + ones
             correct = n * 11
             question = f"Find {n} x 11 using the insert-the-sum shortcut."
