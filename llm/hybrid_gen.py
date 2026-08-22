@@ -2922,8 +2922,8 @@ class HybridGenerator:
 
         if sub_type == "table_product":
             # a = random.randint(2, table_max)
-            a = random.randint(2, 10)
-            b = random.randint(2, 10)
+            a = random.randint(4, 9)
+            b = random.randint(3, 9)
             # b = random.randint(2, 10 if level == 1 else 20)
             correct = a * b
             question = f"Recall the table value: {a} x {b} = ?"
@@ -2961,7 +2961,7 @@ class HybridGenerator:
         sub_type = random.choice(["squares","square_ending_5", "near_base_square", "two_digit_square", "perfect_square_root", "integer_square_root"])
 
         if sub_type == "squares":
-            n = random.randint(2, 20)
+            n = random.randint(7, 25)
             correct = n * n
             question = f"Calculate {n}^2."
             explanation = f"{n} x {n} = {correct}."
