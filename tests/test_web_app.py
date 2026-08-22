@@ -328,69 +328,6 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("Skipped", app_js)
         self.assertIn(".review-card.is-skipped", styles_css)
 
-    def test_arcade_assets_are_registered(self):
-        root = Path(__file__).resolve().parents[1]
-        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
-        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
-
-        expected_assets = [
-            "vedic_sprint",
-            "cricket_chase",
-            "mistake_revenge",
-            "direction_maze",
-            "discount_shop",
-            "cinematic_modes",
-        ]
-        for asset in expected_assets:
-            self.assertIn(f"/static/games/{asset}.css", index_html)
-            self.assertIn(f"/static/games/{asset}.js", index_html)
-
-        self.assertIn('data-screen-target="arcade"', index_html)
-        self.assertIn('id="gameModeGrid"', index_html)
-        self.assertIn('id="gameStage"', index_html)
-        self.assertIn('id="gameHud"', index_html)
-        self.assertIn('id="gameResultLines"', index_html)
-        self.assertIn("GAME_MODE_KEYS", app_js)
-        self.assertIn("GAME_TARGET_CAP = 30", app_js)
-        self.assertIn("getGameTargetCount", app_js)
-        self.assertIn("launchGameMode", app_js)
-        self.assertIn("finishGameSessionEarly", app_js)
-        self.assertIn("renderGameResult", app_js)
-        self.assertIn("Preparing game questions", app_js)
-        self.assertIn('$("#gameModeGrid")?.addEventListener("click"', app_js)
-
-    def test_cinematic_games_and_adaptive_engine_are_registered(self):
-        root = Path(__file__).resolve().parents[1]
-        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
-        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
-        cinematic_js = (root / "web" / "games" / "cinematic_modes.js").read_text(encoding="utf-8")
-        cinematic_css = (root / "web" / "games" / "cinematic_modes.css").read_text(encoding="utf-8")
-
-        for key in ["aptitudeHeist", "marketTrader", "trainControl", "escapeGrid", "auctionBattle"]:
-            self.assertIn(f'"{key}"', app_js)
-            self.assertIn(f'id: "{key}"', cinematic_js)
-
-        self.assertIn("adaptivePatternTerms", cinematic_js)
-        self.assertIn("adaptivePatternLimit", cinematic_js)
-        self.assertIn("difficultyRange", cinematic_js)
-        self.assertIn("adaptivePatternLimit(game)", app_js)
-        self.assertIn("patternWeaknessScore", app_js)
-        self.assertIn("gameDifficultyScore", app_js)
-        self.assertNotIn("LOCAL_GAME_PATTERN_IDS", app_js)
-        self.assertIn("cinematic_modes.css", index_html)
-        self.assertIn("cinematic_modes.js", index_html)
-        self.assertIn(".game-cinema-vault", cinematic_css)
-        self.assertIn(".game-cinema-market", cinematic_css)
-        self.assertIn(".game-cinema-rail", cinematic_css)
-        self.assertIn(".game-cinema-escape", cinematic_css)
-        self.assertIn(".game-cinema-auction", cinematic_css)
-        self.assertIn("is-heist-immersive", app_js)
-        self.assertIn("option-label", app_js)
-        self.assertIn("game-heist", cinematic_js)
-        self.assertIn("question?.question_text", cinematic_js)
-        self.assertIn(".game-heist-vault", cinematic_css)
-        self.assertIn(".is-heist-immersive .option-button", (root / "web" / "styles.css").read_text(encoding="utf-8"))
-
     def test_adaptive_progress_and_mistake_actions_are_wired(self):
         root = Path(__file__).resolve().parents[1]
         index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
@@ -411,7 +348,6 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("renderSmartPlan", app_js)
         self.assertIn("data-smart-revision-all", app_js)
         self.assertIn("data-mission-key", app_js)
-        self.assertIn("soundToggleButton", app_js)
         self.assertIn("questionScore", index_html)
         self.assertIn("questionStreak", index_html)
         self.assertIn("questionCombo", index_html)
@@ -419,15 +355,12 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("progress-visual-grid", index_html)
         self.assertIn("weeklyHeatmap", index_html)
         self.assertIn("weakRadar", index_html)
-        self.assertIn("game-mode-badges", app_js)
-        self.assertIn("is-flagship", app_js)
         self.assertIn("triggerHaptic", app_js)
         self.assertIn("triggerConfetti", app_js)
         self.assertIn("is-rippling", app_js)
         self.assertIn("const AUTO_ADVANCE_MS = 600", app_js)
         self.assertIn("markAnswerPending", app_js)
         self.assertIn("is-pending", app_js)
-        self.assertIn("is-game-active", app_js)
         self.assertIn("/api/catalog/fast", app_js)
         self.assertIn("/summary", app_js)
         self.assertIn("/smart-plan", app_js)
@@ -437,23 +370,15 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn(".mission-row", styles_css)
         self.assertIn(".question-hud", styles_css)
         self.assertIn(".progress-visual-card", styles_css)
-        self.assertIn(".game-mode-thumb", styles_css)
         self.assertIn("@keyframes control-ripple", styles_css)
         self.assertIn("@keyframes answer-lock", styles_css)
         self.assertIn(".feedback-panel.is-checking", styles_css)
-        self.assertIn(".is-game-active #questionText", styles_css)
-        self.assertIn(".is-game-active .options-grid", styles_css)
-        self.assertIn(".is-game-active .game-stage", styles_css)
         self.assertIn("@keyframes answer-correct-glow", styles_css)
         self.assertIn(".progress-pattern-card.is-mastered", styles_css)
         self.assertIn(".mistake-answer-grid", styles_css)
         self.assertIn(".mistake-why", styles_css)
         self.assertIn("/static/styles.css?v=28", index_html)
-        self.assertIn("/static/games/discount_shop.js?v=2", index_html)
         self.assertIn("/static/app.js?v=27", index_html)
-
-        discount_js = (root / "web" / "games" / "discount_shop.js").read_text(encoding="utf-8")
-        self.assertIn("question?.question_text", discount_js)
 
     def test_smart_daily_plan_prioritizes_weak_patterns_and_missions(self):
         plan = web_app._build_smart_daily_plan(
@@ -497,31 +422,6 @@ class FrontendContractTests(unittest.TestCase):
         self.assertEqual(mission_by_key["retry_5_mistakes"]["progress"], 1)
         self.assertFalse(mission_by_key["solve_20"]["completed"])
         self.assertEqual(mission_by_key["retry_5_mistakes"]["reward"]["streak_shields"], 1)
-
-    def test_flagship_heist_mode_has_game_systems(self):
-        root = Path(__file__).resolve().parents[1]
-        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
-        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
-        cinematic_js = (root / "web" / "games" / "cinematic_modes.js").read_text(encoding="utf-8")
-        cinematic_css = (root / "web" / "games" / "cinematic_modes.css").read_text(encoding="utf-8")
-
-        self.assertIn("onLaunch?.(state.gameState)", app_js)
-        self.assertIn("flagship: true", cinematic_js)
-        self.assertIn("gameOverRisk", cinematic_js)
-        self.assertIn("getHeistAudio", cinematic_js)
-        self.assertIn("heistSound", cinematic_js)
-        self.assertIn("heistLevelForIndex", cinematic_js)
-        self.assertIn("comboMultiplier", cinematic_js)
-        self.assertIn("integrity", cinematic_js)
-        self.assertIn("isComplete", cinematic_js)
-        self.assertIn("game-heist-intro", cinematic_js)
-        self.assertIn("game-heist-drone", cinematic_js)
-        self.assertIn(".game-heist-intro", cinematic_css)
-        self.assertIn(".game-heist-drone", cinematic_css)
-        self.assertIn(".game-heist-side-hud", cinematic_css)
-        self.assertIn("heist-alert-pulse", cinematic_css)
-        self.assertIn("/static/games/cinematic_modes.css?v=3", index_html)
-        self.assertIn("/static/games/cinematic_modes.js?v=4", index_html)
 
 
 if __name__ == "__main__":

@@ -516,7 +516,6 @@ class PlaywrightUiTests(unittest.TestCase):
         self.open_app()
 
         expect(self.page.locator('[data-screen-target="practice"]')).to_be_visible()
-        expect(self.page.locator('[data-screen-target="arcade"]')).to_be_visible()
         expect(self.page.locator('[data-screen-target="progress"]')).to_be_visible()
         expect(self.page.locator("#smartCoachCard")).to_be_visible()
         expect(self.page.locator("#coachLine")).to_contain_text("Today revise these 2 weak patterns")
@@ -575,23 +574,6 @@ class PlaywrightUiTests(unittest.TestCase):
         expect(self.page.locator("#reviewScreen")).to_be_visible()
         expect(self.page.locator("#reviewList")).to_contain_text("What is 25% of 160?")
         expect(self.page.locator("#reviewList")).to_contain_text("Correct answer")
-
-    def test_arcade_launch_heist_game_scene(self):
-        self.open_app()
-        self.page.locator('[data-screen-target="arcade"]').click()
-        expect(self.page.locator("#arcadeScreen")).to_be_visible()
-        expect(self.page.locator('[data-game-id="aptitudeHeist"]')).to_be_visible()
-        expect(self.page.locator("#soundToggleButton")).to_be_visible()
-        expect(self.page.locator(".game-mode-badges").first).to_be_visible()
-        self.assertIn("is-flagship", self.page.locator('[data-game-id="aptitudeHeist"]').get_attribute("class") or "")
-
-        self.page.locator('[data-game-id="aptitudeHeist"]').click()
-        expect(self.page.locator("#questionScreen")).to_be_visible()
-        expect(self.page.locator(".game-heist")).to_be_visible()
-        expect(self.page.locator(".game-heist-drone")).to_have_count(1)
-        expect(self.page.locator(".game-heist-side-hud")).to_be_visible()
-        expect(self.page.locator(".game-heist-console")).to_contain_text("What is 25% of 160?")
-        expect(self.page.locator("#optionsGrid [data-answer-index]")).to_have_count(4)
 
     def test_progress_loading_skill_tree_mistake_book_and_retry(self):
         self.open_app()

@@ -37,7 +37,8 @@ WEB_SINGLE_USER_ID = _parse_positive_int(
     os.getenv("WEB_SINGLE_USER_ID")
     or os.getenv("WEB_USER_ID")
     or os.getenv("APP_USER_ID")
-)
+) or 1
+INTERNAL_USER_ID = WEB_SINGLE_USER_ID
 
 app = FastAPI(title="Aptitude Practice Mini App", version="0.1.0")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -60,18 +61,10 @@ async def web_access_guard(request: Request, call_next):
     return await call_next(request)
 
 
-class TelegramUser(BaseModel):
-    id: int
-    username: Optional[str] = None
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-
-
 class StartSessionRequest(BaseModel):
     pattern_ids: list[int] = Field(default_factory=list)
     mode: str = "quick"
     target_count: Optional[int] = None
-    telegram_user: Optional[TelegramUser] = None
     adaptive: bool = True
     retry_mistakes: bool = False
     mistake_ids: list[int] = Field(default_factory=list)
@@ -256,18 +249,12 @@ def start_session(request: StartSessionRequest):
     if not request.pattern_ids and not request.retry_mistakes:
         raise HTTPException(status_code=400, detail="Select at least one pattern.")
 
-    user_id = request.telegram_user.id if request.telegram_user else None
-    if request.telegram_user:
-        try:
-            db.register_user(
-                request.telegram_user.id,
-                request.telegram_user.username,
-                request.telegram_user.first_name,
-                request.telegram_user.last_name,
-            )
-        except Exception as exc:
-            logging.warning("Continuing without user persistence because registration failed: %s", exc)
-            user_id = None
+    user_id = INTERNAL_USER_ID
+    try:
+        _ensure_user_row(user_id)
+    except Exception as exc:
+        logging.warning("Continuing without user persistence because registration failed: %s", exc)
+        user_id = None
 
     mode_target = MODE_TARGETS.get(request.mode, MODE_TARGETS["quick"])
     if request.target_count:

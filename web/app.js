@@ -5,20 +5,6 @@ const MODE_CONFIG = {
 };
 
 const AUTO_ADVANCE_MS = 600;
-const GAME_MODE_KEYS = [
-  "vedicSprint",
-  "cricketChase",
-  "mistakeRevenge",
-  "directionMaze",
-  "discountShop",
-  "aptitudeHeist",
-  "marketTrader",
-  "trainControl",
-  "escapeGrid",
-  "auctionBattle",
-];
-const GAME_TARGET_CAP = 30;
-
 const state = {
   telegramUser: null,
   catalog: [],
@@ -51,11 +37,6 @@ const state = {
   progressCategoryId: null,
   progressTopicId: null,
   progressPatternId: null,
-  activeGameId: null,
-  activeGameMode: null,
-  gameState: null,
-  launchingGameId: null,
-  finishingGameEarly: false,
   currentStreak: 0,
   bestStreak: 0,
   soundEnabled: true,
@@ -287,85 +268,16 @@ function setCatalogLoading() {
   $("#selectionList").innerHTML = `<div class="selection-empty">Select patterns to begin.</div>`;
 }
 
-function initTelegram() {
-  const tg = window.Telegram?.WebApp;
-  if (!tg) {
-    initBrowserProfile();
-    return;
-  }
-  tg.ready();
-  tg.expand();
-  const user = tg.initDataUnsafe?.user;
-  if (user?.id) {
-    state.telegramUser = {
-      id: user.id,
-      username: user.username || null,
-      first_name: user.first_name || null,
-      last_name: user.last_name || null,
-    };
-    $("#userChip").textContent = user.first_name || user.username || "Telegram";
-    $("#profileTools").hidden = true;
-  } else {
-    initBrowserProfile();
-  }
-}
-
-function initBrowserProfile() {
-  if (state.webAccessDenied) {
-    $("#profileTools").hidden = true;
-    updateProfileNote("Open your private app link to sync progress on this device.");
-    return;
-  }
-
-  const params = new URLSearchParams(window.location.search);
-  const urlUserId = params.get("user_id") || params.get("tg_user_id");
-  const configuredUserId = parseUserId(state.webConfig?.single_user_id);
-  const storedUserId = readStoredProfileUserId();
-  const userId = configuredUserId || parseUserId(urlUserId || storedUserId);
-  if (!userId) {
-    $("#profileTools").hidden = false;
-    updateProfileNote("Set WEB_SINGLE_USER_ID on the server to sync this web app across devices without login.");
-    return;
-  }
-  setBrowserProfileUser(userId);
+function initInternalProfile() {
+  const userId = parseUserId(state.webConfig?.single_user_id) || 1;
+  state.telegramUser = { id: userId };
+  $("#userChip").textContent = "Personal";
+  updateProfileNote("Personal profile synced automatically.");
 }
 
 function parseUserId(value) {
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
-}
-
-function setBrowserProfileUser(userId) {
-  state.telegramUser = {
-    id: userId,
-    username: null,
-    first_name: null,
-    last_name: null,
-  };
-  writeStoredProfileUserId(userId);
-  $("#userChip").textContent = "Personal";
-  const input = $("#devUserIdInput");
-  if (input) {
-    input.value = String(userId);
-  }
-  $("#profileTools").hidden = true;
-  updateProfileNote("Personal profile synced across devices.");
-}
-
-function readStoredProfileUserId() {
-  try {
-    return window.localStorage?.getItem("aptitudePracticeUserId") || null;
-  } catch {
-    return null;
-  }
-}
-
-function writeStoredProfileUserId(userId) {
-  try {
-    window.localStorage?.setItem("aptitudePracticeUserId", String(userId));
-  } catch {
-    // Some embedded browser surfaces disable localStorage.
-  }
 }
 
 function readStoredWebAccessKey() {
@@ -453,7 +365,7 @@ function setScreen(name) {
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("is-active"));
 
   $(`#${name}Screen`)?.classList.add("is-active");
-  const navTarget = name === "progress" || name === "arcade" ? name : "practice";
+  const navTarget = name === "progress" ? name : "practice";
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
 }
 
@@ -579,7 +491,6 @@ function applyCatalogPayload(data) {
     showStatus(data.warning, "info");
   }
   renderCatalog();
-  renderGameModes();
   renderProgressTracker();
 }
 
@@ -614,7 +525,7 @@ async function loadProfile() {
     renderUnlockProgress({ topics: [], patterns: [] });
     renderMistakes([], []);
     renderReminder(null);
-    updateProfileNote("Set WEB_SINGLE_USER_ID on the server to sync progress across devices without login.");
+    updateProfileNote("Personal profile is temporarily unavailable. Practice still works locally.");
     return;
   }
 
@@ -723,7 +634,6 @@ function applySmartPlanPayload(profile) {
         </div>
       `).join("")
     : `<div class="empty-state">No weak patterns yet.</div>`;
-  renderGameModes();
   renderProgressVisuals();
 }
 
@@ -1267,7 +1177,6 @@ function preparePatternPracticeFromProgress(patternId) {
     return;
   }
 
-  clearGameMode();
   state.activeCategoryId = context.category.id;
   state.activeTopicId = context.topic.id;
   state.selectedPatternIds = new Set([Number(context.pattern.id)]);
@@ -1946,7 +1855,6 @@ async function launchGameMode(gameId) {
     }
   } finally {
     state.launchingGameId = null;
-    renderGameModes();
   }
 }
 
@@ -2096,9 +2004,6 @@ function renderGameResult(summary) {
 
 async function startPractice(options = {}) {
   const gameMode = options.gameMode || null;
-  if (!gameMode) {
-    clearGameMode();
-  }
   state.currentStreak = 0;
   state.bestStreak = Math.max(state.bestStreak || 0, 0);
   updateQuestionHud(null);
@@ -2127,7 +2032,6 @@ async function startPractice(options = {}) {
         pattern_ids: patternIds,
         mode: modeKey,
         target_count: targetCount,
-        telegram_user: state.telegramUser,
         variant_selection: variantSelection,
       }),
     });
@@ -2225,7 +2129,6 @@ async function startMistakeRetry(mistakeId) {
     return;
   }
 
-  clearGameMode();
   clearStatus();
   state.currentStreak = 0;
   updateQuestionHud(null);
@@ -2248,7 +2151,6 @@ async function startMistakeRetry(mistakeId) {
         pattern_ids: [patternId],
         mode: "quick",
         target_count: 1,
-        telegram_user: state.telegramUser,
         retry_mistakes: true,
         mistake_ids: [Number(mistakeId)],
       }),
@@ -2267,7 +2169,6 @@ async function startMistakePatternRetry(patternId) {
     return;
   }
 
-  clearGameMode();
   clearStatus();
   state.currentStreak = 0;
   updateQuestionHud(null);
@@ -2287,7 +2188,6 @@ async function startMistakePatternRetry(patternId) {
         pattern_ids: [id],
         mode: "quick",
         target_count: 5,
-        telegram_user: state.telegramUser,
         retry_mistakes: true,
         mistake_pattern_id: id,
       }),
@@ -2309,7 +2209,6 @@ async function startAllMistakeRetry() {
     return;
   }
 
-  clearGameMode();
   clearStatus();
   state.currentStreak = 0;
   updateQuestionHud(null);
@@ -2329,7 +2228,6 @@ async function startAllMistakeRetry() {
         pattern_ids: state.mistakePatternIds,
         mode: "quick",
         target_count: 5,
-        telegram_user: state.telegramUser,
         retry_mistakes: true,
       }),
     });
@@ -2640,14 +2538,6 @@ function bindEvents() {
       tapFeedback(tappedButton, event);
     }
 
-    const soundToggleButton = event.target.closest("#soundToggleButton");
-    if (soundToggleButton) {
-      event.preventDefault();
-      setSoundEnabled(!state.soundEnabled);
-      playTone("tap");
-      return;
-    }
-
     const variantCloseButton = event.target.closest("[data-variant-picker-close]");
     if (variantCloseButton) {
       event.preventDefault();
@@ -2757,13 +2647,6 @@ function bindEvents() {
       return;
     }
 
-    const gameButton = event.target.closest("[data-game-id]");
-    if (gameButton) {
-      event.preventDefault();
-      launchGameMode(gameButton.dataset.gameId);
-      return;
-    }
-
     const categoryButton = event.target.closest("[data-category-id]");
     if (categoryButton) {
       state.activeCategoryId = Number(categoryButton.dataset.categoryId);
@@ -2843,25 +2726,11 @@ function bindEvents() {
   });
 
   $("#selectTopicButton").addEventListener("click", selectWholeTopic);
-  $("#gameModeGrid")?.addEventListener("click", (event) => {
-    const gameButton = event.target.closest("[data-game-id]");
-    if (!gameButton) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    launchGameMode(gameButton.dataset.gameId);
-  });
   $("#startButton").addEventListener("click", startPractice);
   $("#practiceAgainButton").addEventListener("click", () => {
-    if (state.activeGameId) {
-      launchGameMode(state.activeGameId);
-    } else {
-      startPractice();
-    }
+    startPractice();
   });
   $("#backToSetupButton").addEventListener("click", () => {
-    clearGameMode();
     setScreen("practice");
   });
   $("#reviewAnswersButton").addEventListener("click", showReview);
@@ -2869,20 +2738,6 @@ function bindEvents() {
   $("#saveReminderButton").addEventListener("click", saveReminder);
   $("#reminderEnabled").addEventListener("change", saveReminder);
   $("#practiceMistakesButton").addEventListener("click", startAllMistakeRetry);
-  $("#loadProfileButton").addEventListener("click", () => {
-    const userId = parseUserId($("#devUserIdInput").value);
-    if (!userId) {
-      updateProfileNote("Enter a valid numeric users.user_id.");
-      return;
-    }
-    setBrowserProfileUser(userId);
-    loadProfile();
-  });
-  $("#devUserIdInput").addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      $("#loadProfileButton").click();
-    }
-  });
   $("#stopPracticeButton").addEventListener("click", stopPractice);
 }
 
@@ -2900,14 +2755,13 @@ async function markMistakeReviewed(mistakeId) {
 
 async function boot() {
   await initWebConfig();
-  initTelegram();
+  initInternalProfile();
   setSoundEnabled(readSoundPreference());
   bindEvents();
   renderSmartPlan(null);
   renderProgressVisuals();
   void loadCatalog();
   void loadProfile();
-  renderGameModes();
 }
 
 boot();
