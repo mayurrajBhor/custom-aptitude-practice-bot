@@ -154,6 +154,15 @@ class WebPracticeSessionTests(unittest.TestCase):
         self.assertEqual(hybrid_types, set(chosen))
         self.assertEqual(len(session["items"]), 2)
 
+    def test_explicit_variant_dispatch_does_not_randomize_subtype(self):
+        single_digit = web_app.generator._generate_hybrid("vedic_addition::single_digit", difficulty=1)
+        two_digit = web_app.generator._generate_hybrid("vedic_addition::two_digit_add_single_digit", difficulty=1)
+
+        self.assertIsNotNone(single_digit)
+        self.assertIsNotNone(two_digit)
+        self.assertRegex(single_digit["question_text"], r"Add mentally: [3-9] \+ [3-9]")
+        self.assertRegex(two_digit["question_text"], r"Add mentally: \d{2} \+ \d")
+
     def test_adaptive_pattern_order_prefers_weak_patterns(self):
         original_db = web_app.db
 

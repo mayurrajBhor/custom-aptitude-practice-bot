@@ -1,6 +1,6 @@
 const MODE_CONFIG = {
-  quick: { label: "Quick 5", targetCount: 5 },
-  focused: { label: "Focused 15", targetCount: 15 },
+  quick: { label: "Quick 10", targetCount: 10 },
+  focused: { label: "Focused 20", targetCount: 20 },
   full: { label: "All Variants", targetCount: null },
 };
 
@@ -754,7 +754,7 @@ function defaultSmartPlan() {
         percent: 0,
         completed: false,
         reward: { xp: 120, coins: 40, streak_shields: 0 },
-        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 15 },
+        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 20 },
       },
       {
         key: "improve_weak",
@@ -766,7 +766,7 @@ function defaultSmartPlan() {
         percent: 0,
         completed: false,
         reward: { xp: 180, coins: 55, streak_shields: 0 },
-        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 5 },
+        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 10 },
       },
       {
         key: "retry_5_mistakes",
@@ -1418,14 +1418,13 @@ function renderVariantPickerModal() {
         return `${labels.length} selected`;
       })()
     : "All variants";
-  const anchor = state.variantPickerAnchor || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-  const left = Math.min(Math.max(anchor.x, 120), window.innerWidth - 120);
-  const top = Math.min(Math.max(anchor.y + 4, 80), window.innerHeight - 80);
+  const left = window.innerWidth / 2;
+  const top = window.innerHeight / 2;
 
   host.hidden = false;
   host.innerHTML = `
     <div class="variant-picker-backdrop" data-variant-picker-close="true"></div>
-    <div class="variant-picker-modal" role="dialog" aria-modal="true" aria-label="Choose variants for ${escapeHtml(pattern.name)}" style="left: ${left}px; top: ${top}px; transform: translateX(-50%);">
+    <div class="variant-picker-modal" role="dialog" aria-modal="true" aria-label="Choose variants for ${escapeHtml(pattern.name)}" style="left: ${left}px; top: ${top}px; transform: translate(-50%, -50%);">
       <div class="variant-picker-header">
         <div>
           <div class="variant-picker-kicker">Variants</div>

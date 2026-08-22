@@ -318,7 +318,7 @@ class MockApi:
                         "completed": False,
                         "reward": {"xp": 120, "coins": 40, "streak_shields": 0},
                         "reward_claimed": False,
-                        "action": {"type": "practice", "label": "Start 15Q", "pattern_ids": [101, 102], "mode": "focused", "target_count": 15},
+                        "action": {"type": "practice", "label": "Start 20Q", "pattern_ids": [101, 102], "mode": "focused", "target_count": 20},
                     },
                     {
                         "key": "improve_weak",
@@ -527,7 +527,7 @@ class PlaywrightUiTests(unittest.TestCase):
         self.assertIn("is-active", self.page.locator('[data-mode="quick"]').get_attribute("class") or "")
 
         self.page.locator('[data-mode="focused"]').click()
-        expect(self.page.locator("#selectedModeLabel")).to_have_text("Focused 15")
+        expect(self.page.locator("#selectedModeLabel")).to_have_text("Focused 20")
         self.page.locator('[data-mode="full"]').click()
         expect(self.page.locator("#selectedModeLabel")).to_have_text("All Variants")
 
@@ -544,7 +544,7 @@ class PlaywrightUiTests(unittest.TestCase):
         expect(self.page.locator("#questionText")).to_have_text("What is 25% of 160?")
         self.assertEqual(self.api.last_start_body["pattern_ids"], [101, 102])
         self.assertEqual(self.api.last_start_body["mode"], "focused")
-        self.assertEqual(self.api.last_start_body["target_count"], 15)
+        self.assertEqual(self.api.last_start_body["target_count"], 20)
 
     def test_practice_flow_answer_submit_result_and_review(self):
         self.open_app()

@@ -596,13 +596,17 @@ h2 {
   position: fixed;
   width: min(92vw, 310px);
   max-width: calc(100vw - 20px);
+  height: min(82dvh, 620px);
+  max-height: calc(100dvh - 24px);
   border: 1px solid var(--line);
   border-radius: 18px;
   background: var(--surface);
   box-shadow: 0 22px 44px rgba(17, 24, 39, 0.18);
   padding: 14px;
   display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 12px;
+  overflow: hidden;
   z-index: 1001;
   transform-origin: top center;
   color: var(--text);
@@ -656,9 +660,11 @@ h2 {
 .variant-picker-list {
   display: grid;
   gap: 8px;
-  max-height: min(48vh, 280px);
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .variant-option-row {
