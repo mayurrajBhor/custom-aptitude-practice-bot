@@ -38,6 +38,7 @@ WEB_SINGLE_USER_ID = _parse_positive_int(
     or os.getenv("WEB_USER_ID")
     or os.getenv("APP_USER_ID")
 ) or 1
+
 INTERNAL_USER_ID = WEB_SINGLE_USER_ID
 
 app = FastAPI(title="Aptitude Practice Mini App", version="0.1.0")
@@ -54,10 +55,7 @@ async def web_access_guard(request: Request, call_next):
             or ""
         )
         if not secrets.compare_digest(supplied, WEB_ACCESS_KEY):
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Open the private app link to use this web app."},
-            )
+            return JSONResponse(status_code=401, content={"detail": "Open the private app link to use this web app."})
     return await call_next(request)
 
 
@@ -89,14 +87,10 @@ CACHE_TTL_SECONDS = {
     "catalog": 600,
     "pattern_details": 20,
     "profile_summary": 10,
-    "smart_plan": 15,
+    "recommendations": 15,
     "progress": 20,
 }
-MODE_TARGETS = {
-    "quick": 10,
-    "focused": 20,
-    "full": None,
-}
+MODE_TARGETS = {"quick": 10, "focused": 20, "full": None}
 
 
 @app.get("/", include_in_schema=False)
@@ -134,22 +128,12 @@ def db_status():
             "patterns": int(row.get("patterns") or 0),
         }
     except Exception as exc:
-        return JSONResponse(
-            status_code=503,
-            content={
-                "ok": False,
-                "error": _public_exception_message(exc),
-                "database_url_set": bool(os.getenv("DATABASE_URL")),
-            },
-        )
+        return JSONResponse(status_code=503, content={"ok": False, "error": _public_exception_message(exc), "database_url_set": bool(os.getenv("DATABASE_URL"))})
 
 
 @app.get("/api/web-config")
 def web_config():
-    return {
-        "single_user_id": WEB_SINGLE_USER_ID,
-        "access_required": bool(WEB_ACCESS_KEY),
-    }
+    return {"single_user_id": WEB_SINGLE_USER_ID, "access_required": bool(WEB_ACCESS_KEY)}
 
 
 def _ensure_engagement_schema():
@@ -165,18 +149,13 @@ def catalog():
     cached = _cache_get("catalog", "database")
     if cached:
         return {**cached, "cached": True}
-
     try:
         payload = _build_database_catalog_payload()
         _cache_set("catalog", "database", payload)
         return payload
     except Exception as exc:
         logging.warning("Using local catalog fallback because database catalog is unavailable: %s", exc)
-        return {
-            "categories": get_local_catalog_payload(),
-            "source": "local",
-            "warning": f"Using the local practice catalog because the database is unavailable. {_public_exception_message(exc)}",
-        }
+        return {"categories": get_local_catalog_payload(), "source": "local", "warning": f"Using the local practice catalog because the database is unavailable. {_public_exception_message(exc)}"}
 
 
 @app.get("/api/catalog/fast")
@@ -184,25 +163,13 @@ def catalog_fast():
     cached = _cache_get("catalog", "database")
     if cached:
         return {**cached, "cached": True, "fast": True}
-    return {
-        "categories": get_local_catalog_payload(),
-        "source": "local",
-        "fast": True,
-        "warning": "Showing instant local catalog while database catalog sync continues in the background.",
-    }
+    return {"categories": get_local_catalog_payload(), "source": "local", "fast": True, "warning": "Showing instant local catalog while database catalog sync continues in the background."}
 
 
 @app.get("/api/profile/{user_id}")
 def profile(user_id: int):
     try:
-        summary = _profile_summary(user_id)
-        smart = _profile_smart_plan(user_id)
-        progress_payload = _profile_progress(user_id)
-        return {
-            **summary,
-            **smart,
-            **progress_payload,
-        }
+        return {**_profile_summary(user_id), **_profile_progress(user_id)}
     except Exception as exc:
         logging.warning("Returning offline profile because database profile is unavailable: %s", exc)
         return _empty_profile(offline=True)
@@ -217,19 +184,13 @@ def profile_summary(user_id: int):
         return _empty_profile(offline=True)
 
 
-@app.get("/api/profile/{user_id}/smart-plan")
-def profile_smart_plan(user_id: int):
+@app.get("/api/profile/{user_id}/recommendations")
+def profile_recommendations(user_id: int):
     try:
-        return _profile_smart_plan(user_id)
+        return _profile_recommendations(user_id)
     except Exception as exc:
-        logging.warning("Returning empty smart plan because database is unavailable: %s", exc)
-        return {
-            "weak_patterns": [],
-            "recommended_pattern_ids": [],
-            "mistake_count": 0,
-            "smart_plan": _empty_smart_daily_plan(),
-            "offline": True,
-        }
+        logging.warning("Returning empty recommendations because database is unavailable: %s", exc)
+        return {"weak_patterns": [], "recommended_pattern_ids": [], "mistake_count": 0, "offline": True}
 
 
 @app.get("/api/profile/{user_id}/progress")
@@ -238,10 +199,7 @@ def profile_progress(user_id: int):
         return _profile_progress(user_id)
     except Exception as exc:
         logging.warning("Returning empty progress because database is unavailable: %s", exc)
-        return {
-            "unlock_progress": {"topics": [], "patterns": []},
-            "offline": True,
-        }
+        return {"unlock_progress": {"topics": [], "patterns": []}, "offline": True}
 
 
 @app.post("/api/session/start")
@@ -534,7 +492,7 @@ def _cache_set(namespace: str, key: Any, payload: Any, ttl: Optional[int] = None
 def _invalidate_profile_cache(user_id: Optional[int]):
     if not user_id:
         return
-    for namespace in ("profile_summary", "smart_plan", "progress", "pattern_details"):
+    for namespace in ("profile_summary", "recommendations", "progress", "pattern_details"):
         RESPONSE_CACHE.pop((namespace, int(user_id)), None)
 
 
@@ -669,8 +627,8 @@ def _profile_summary(user_id: int):
     return payload
 
 
-def _profile_smart_plan(user_id: int):
-    cached = _cache_get("smart_plan", int(user_id))
+def _profile_recommendations(user_id: int):
+    cached = _cache_get("recommendations", int(user_id))
     if cached:
         return {**cached, "cached": True}
 
@@ -682,30 +640,14 @@ def _profile_smart_plan(user_id: int):
     )
     weak_rows = all_ranked_patterns[:5]
     mistakes = db.get_mistake_book(user_id, limit=6)
-    today_summary = db.get_today_attempt_summary(user_id)
     revision_ids = [int(row["id"]) for row in all_ranked_patterns[:8] if row.get("id")]
-    today_pattern_attempts = db.get_today_pattern_attempts(user_id, revision_ids) if revision_ids else []
-    mistake_retry_count = max(
-        db.get_today_mistake_retry_count(user_id),
-        db.get_today_reviewed_mistake_count(user_id),
-    )
-    smart_plan = _build_smart_daily_plan(
-        weak_patterns=all_ranked_patterns,
-        mistakes=mistakes,
-        today_summary=today_summary,
-        today_pattern_attempts=today_pattern_attempts,
-        mistake_retry_count=mistake_retry_count,
-    )
-    earned_keys = db.grant_daily_mission_rewards(user_id, smart_plan["missions"])
-    smart_plan = _attach_daily_rewards(smart_plan, earned_keys, db.get_reward_wallet(user_id))
     payload = {
         "weak_patterns": weak_rows or [],
         "recommended_pattern_ids": [row["id"] for row in weak_rows or []],
         "mistake_count": len(mistakes),
-        "smart_plan": smart_plan,
-        "profile_sync": "smart_plan",
+        "profile_sync": "recommendations",
     }
-    _cache_set("smart_plan", int(user_id), payload)
+    _cache_set("recommendations", int(user_id), payload)
     return payload
 
 
@@ -1129,7 +1071,6 @@ def _empty_profile(offline: bool = False):
         "recommended_pattern_ids": [],
         "mistake_count": 0,
         "unlock_progress": {"topics": [], "patterns": []},
-        "smart_plan": _empty_smart_daily_plan(),
         "offline": offline,
     }
 

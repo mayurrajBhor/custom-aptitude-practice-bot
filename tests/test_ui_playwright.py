@@ -84,7 +84,7 @@ class MockApi:
                     "profile_sync": "summary",
                 },
             )
-        if path == f"/api/profile/{USER_ID}/smart-plan":
+        if path == f"/api/profile/{USER_ID}/recommendations":
             profile = self.profile_payload()
             return self.fulfill(
                 route,
@@ -92,8 +92,7 @@ class MockApi:
                     "recommended_pattern_ids": profile["recommended_pattern_ids"],
                     "weak_patterns": profile["weak_patterns"],
                     "mistake_count": profile["mistake_count"],
-                    "smart_plan": profile["smart_plan"],
-                    "profile_sync": "smart_plan",
+                    "profile_sync": "recommendations",
                 },
             )
         if path == f"/api/profile/{USER_ID}/progress":
@@ -517,12 +516,7 @@ class PlaywrightUiTests(unittest.TestCase):
 
         expect(self.page.locator('[data-screen-target="practice"]')).to_be_visible()
         expect(self.page.locator('[data-screen-target="progress"]')).to_be_visible()
-        expect(self.page.locator("#smartCoachCard")).to_be_visible()
-        expect(self.page.locator("#coachLine")).to_contain_text("Today revise these 2 weak patterns")
-        expect(self.page.locator('[data-smart-revision-all]')).to_be_visible()
-        expect(self.page.locator('[data-mission-key="solve_20"]')).to_be_visible()
-        expect(self.page.locator("#dailyMissions")).to_contain_text("Solve 20 questions")
-        expect(self.page.locator("#coachWallet")).to_contain_text("420 XP")
+        expect(self.page.locator("#smartCoachCard")).to_have_count(0)
         self.assertIn("is-active", self.page.locator('[data-mode="quick"]').get_attribute("class") or "")
 
         self.page.locator('[data-mode="focused"]').click()
@@ -533,17 +527,6 @@ class PlaywrightUiTests(unittest.TestCase):
         self.select_percentage_pattern()
         expect(self.page.locator("#selectionList")).to_contain_text("Percentage Basics")
         expect(self.page.locator("#variantCount")).to_contain_text("variants")
-
-    def test_smart_coach_starts_revision_queue(self):
-        self.open_app()
-
-        expect(self.page.locator('[data-smart-revision-all]')).to_be_visible()
-        self.page.locator('[data-smart-revision-all]').click()
-        expect(self.page.locator("#questionScreen")).to_be_visible()
-        expect(self.page.locator("#questionText")).to_have_text("What is 25% of 160?")
-        self.assertEqual(self.api.last_start_body["pattern_ids"], [101, 102])
-        self.assertEqual(self.api.last_start_body["mode"], "focused")
-        self.assertEqual(self.api.last_start_body["target_count"], 20)
 
     def test_practice_flow_answer_submit_result_and_review(self):
         self.open_app()

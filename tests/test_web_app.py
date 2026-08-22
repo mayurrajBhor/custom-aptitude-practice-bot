@@ -344,10 +344,7 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("startMistakeRetry", app_js)
         self.assertIn("startAllMistakeRetry", app_js)
         self.assertIn("startAdaptivePractice", app_js)
-        self.assertIn("smart_plan", app_js)
-        self.assertIn("renderSmartPlan", app_js)
-        self.assertIn("data-smart-revision-all", app_js)
-        self.assertIn("data-mission-key", app_js)
+        self.assertIn("applyRecommendationsPayload", app_js)
         self.assertIn("questionScore", index_html)
         self.assertIn("questionStreak", index_html)
         self.assertIn("questionCombo", index_html)
@@ -363,11 +360,10 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("is-pending", app_js)
         self.assertIn("/api/catalog/fast", app_js)
         self.assertIn("/summary", app_js)
-        self.assertIn("/smart-plan", app_js)
+        self.assertIn("/recommendations", app_js)
         self.assertIn("/progress", app_js)
-        self.assertIn("smartCoachCard", index_html)
-        self.assertIn(".smart-coach", styles_css)
-        self.assertIn(".mission-row", styles_css)
+        self.assertNotIn("Today Coach", index_html)
+        self.assertNotIn("smartCoachCard", index_html)
         self.assertIn(".question-hud", styles_css)
         self.assertIn(".progress-visual-card", styles_css)
         self.assertIn("@keyframes control-ripple", styles_css)
@@ -379,50 +375,6 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn(".mistake-why", styles_css)
         self.assertIn("/static/styles.css?v=28", index_html)
         self.assertIn("/static/app.js?v=27", index_html)
-
-    def test_smart_daily_plan_prioritizes_weak_patterns_and_missions(self):
-        plan = web_app._build_smart_daily_plan(
-            weak_patterns=[
-                {
-                    "id": 101,
-                    "name": "Percentage Basics",
-                    "topic_name": "Percentage",
-                    "mastery_score": 0.35,
-                    "total_attempts": 6,
-                    "accuracy": 50,
-                    "avg_time_seconds": 12,
-                    "weakness_score": 74,
-                    "open_mistakes": 1,
-                },
-                {
-                    "id": 102,
-                    "name": "Successive Discounts",
-                    "topic_name": "Percentage",
-                    "mastery_score": 0.1,
-                    "total_attempts": 0,
-                    "accuracy": 0,
-                    "avg_time_seconds": 0,
-                    "weakness_score": 68,
-                    "open_mistakes": 0,
-                },
-            ],
-            mistakes=[{"id": 501}],
-            today_summary={"total_attempts": 8, "correct_attempts": 5},
-            today_pattern_attempts=[
-                {"pattern_id": 101, "pattern_name": "Percentage Basics", "attempts": 3, "correct": 2},
-            ],
-            mistake_retry_count=1,
-        )
-
-        self.assertIn("Today revise these 2 weak patterns", plan["coach_line"])
-        self.assertEqual([item["id"] for item in plan["revision_queue"]], [101, 102])
-        mission_by_key = {mission["key"]: mission for mission in plan["missions"]}
-        self.assertEqual(mission_by_key["solve_20"]["progress"], 8)
-        self.assertEqual(mission_by_key["improve_weak"]["progress"], 2)
-        self.assertEqual(mission_by_key["retry_5_mistakes"]["progress"], 1)
-        self.assertFalse(mission_by_key["solve_20"]["completed"])
-        self.assertEqual(mission_by_key["retry_5_mistakes"]["reward"]["streak_shields"], 1)
-
 
 if __name__ == "__main__":
     unittest.main()

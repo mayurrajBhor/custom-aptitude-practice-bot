@@ -27,7 +27,6 @@ const state = {
   patternProgress: new Map(),
   unlockProgress: { topics: [], patterns: [] },
   recommendedPatternIds: [],
-  smartPlan: null,
   mistakes: [],
   mistakePatternIds: [],
   reminderSettings: null,
@@ -40,8 +39,6 @@ const state = {
   currentStreak: 0,
   bestStreak: 0,
   soundEnabled: true,
-  renderedSmartPlanOnce: false,
-  celebratedMissionKeys: new Set(),
   profileStats: {
     total_attempts: 0,
     total_correct: 0,
@@ -186,16 +183,16 @@ function playTone(type = "tap") {
     const context = new AudioContext();
     const oscillator = context.createOscillator();
     const gain = context.createGain();
-    const frequency = type === "correct" ? 620 : type === "wrong" ? 190 : type === "mission" ? 760 : 360;
+    const frequency = type === "correct" ? 620 : type === "wrong" ? 190 : 360;
     oscillator.type = type === "wrong" ? "sawtooth" : "sine";
     oscillator.frequency.setValueAtTime(frequency, context.currentTime);
     gain.gain.setValueAtTime(0.0001, context.currentTime);
     gain.gain.exponentialRampToValueAtTime(type === "tap" ? 0.018 : 0.045, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (type === "mission" ? 0.28 : 0.16));
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.16);
     oscillator.connect(gain);
     gain.connect(context.destination);
     oscillator.start();
-    oscillator.stop(context.currentTime + (type === "mission" ? 0.32 : 0.18));
+    oscillator.stop(context.currentTime + 0.18);
     window.setTimeout(() => context.close?.(), 420);
   } catch {
     // Audio is best-effort only.
@@ -223,9 +220,7 @@ function triggerConfetti(tone = "success") {
   if (!layer) {
     return;
   }
-  const colors = tone === "mission"
-    ? ["#f7c66a", "#088475", "#126fb4", "#ffffff"]
-    : ["#088475", "#126fb4", "#dff5f0", "#f7c66a"];
+  const colors = ["#088475", "#126fb4", "#dff5f0", "#f7c66a"];
   layer.innerHTML = Array.from({ length: 26 }, (_, index) => {
     const left = 5 + Math.random() * 90;
     const delay = Math.random() * 160;
@@ -520,7 +515,6 @@ async function loadProfile() {
       avg_time: 0,
       today_solved: 0,
       weak_patterns: [],
-      smart_plan: null,
     });
     renderUnlockProgress({ topics: [], patterns: [] });
     renderMistakes([], []);
@@ -529,7 +523,6 @@ async function loadProfile() {
     return;
   }
 
-  renderSmartPlan(null);
   updateProfileNote("Loading fast profile summary.");
   try {
     const profile = await api(`/api/profile/${state.telegramUser.id}/summary`, { timeoutMs: 12000 });
@@ -538,7 +531,6 @@ async function loadProfile() {
       ? "Database is unavailable from this server, so live progress cannot be loaded here."
       : "Stats loaded. Syncing coach, mistakes, and progress map in the background.");
     if (profile.offline) {
-      applySmartPlanPayload(profile);
       applyProgressPayload(profile);
       renderMistakes([], []);
       renderReminder(null);
@@ -556,7 +548,6 @@ async function loadProfile() {
       avg_time: 0,
       today_solved: 0,
       weak_patterns: [],
-      smart_plan: null,
     });
     renderUnlockProgress({ topics: [], patterns: [] });
     renderMistakes([], []);
@@ -571,11 +562,11 @@ async function loadProfileChunks() {
   }
 
   try {
-    const smart = await api(`/api/profile/${state.telegramUser.id}/smart-plan`, { timeoutMs: 24000 });
-    applySmartPlanPayload(smart);
-    updateProfileNote(smart.offline ? "Coach is offline. Practice still works with local data." : "Coach loaded. Progress map is syncing.");
+    const recommendations = await api(`/api/profile/${state.telegramUser.id}/recommendations`, { timeoutMs: 24000 });
+    applyRecommendationsPayload(recommendations);
+    updateProfileNote(recommendations.offline ? "Recommendations are offline. Practice still works with local data." : "Recommendations loaded. Progress map is syncing.");
   } catch (error) {
-    updateProfileNote(`Coach sync is delayed: ${error.message}`);
+    updateProfileNote(`Recommendations sync is delayed: ${error.message}`);
   }
 
   try {
@@ -591,7 +582,7 @@ async function loadProfileChunks() {
 
 function renderProfile(profile) {
   renderProfileSummary(profile);
-  applySmartPlanPayload(profile);
+  applyRecommendationsPayload(profile);
   applyProgressPayload(profile);
 }
 
@@ -605,7 +596,6 @@ function renderProfileSummary(profile) {
     today_solved: Number(profile.today_solved || 0),
     mistake_count: Number(profile.mistake_count || state.profileStats.mistake_count || 0),
   };
-  renderSmartPlan(profile.smart_plan);
   $("#todaySolved").textContent = profile.today_solved || 0;
   $("#accuracyStat").textContent = `${profile.accuracy || 0}%`;
   $("#masteryStat").textContent = `${profile.mastery || 0}%`;
@@ -618,12 +608,11 @@ function renderProfileSummary(profile) {
   renderProgressVisuals();
 }
 
-function applySmartPlanPayload(profile) {
+function applyRecommendationsPayload(profile) {
   state.recommendedPatternIds = (profile.recommended_pattern_ids || state.recommendedPatternIds || []).map(Number).filter(Boolean);
   if (typeof profile.mistake_count !== "undefined") {
     state.profileStats.mistake_count = Number(profile.mistake_count || 0);
   }
-  renderSmartPlan(profile.smart_plan || state.smartPlan);
   const weak = profile.weak_patterns || [];
   $("#weakList").innerHTML = weak.length
     ? weak.map((item) => `
@@ -645,138 +634,6 @@ function applyProgressPayload(profile) {
   renderProgressTracker();
   renderPatterns();
   renderProgressVisuals();
-}
-
-function defaultSmartPlan() {
-  return {
-    coach_line: state.telegramUser?.id
-      ? "Solve a few questions today so the coach can rank your weak patterns."
-      : "Connect your profile to unlock smart revision and daily missions.",
-    revision_queue: [],
-    missions: [
-      {
-        key: "solve_20",
-        title: "Solve 20 questions",
-        description: "Daily volume mission.",
-        progress: 0,
-        target: 20,
-        unit: "questions",
-        percent: 0,
-        completed: false,
-        reward: { xp: 120, coins: 40, streak_shields: 0 },
-        action: { type: "practice", label: "Start", pattern_ids: [], mode: "focused", target_count: 20 },
-      },
-      {
-        key: "improve_weak",
-        title: "Improve one weak pattern",
-        description: "Win 3 answers from one weak pattern.",
-        progress: 0,
-        target: 3,
-        unit: "wins",
-        percent: 0,
-        completed: false,
-        reward: { xp: 180, coins: 55, streak_shields: 0 },
-        action: { type: "practice", label: "Drill", pattern_ids: [], mode: "quick", target_count: 10 },
-      },
-      {
-        key: "retry_5_mistakes",
-        title: "Retry 5 mistakes",
-        description: "Clear saved mistakes.",
-        progress: 0,
-        target: 5,
-        unit: "mistakes",
-        percent: 0,
-        completed: false,
-        reward: { xp: 150, coins: 45, streak_shields: 1 },
-        action: { type: "mistakes", label: "Open mistakes", pattern_ids: [], mode: "quick", target_count: 5 },
-      },
-    ],
-    wallet: { xp: 0, coins: 0, streak_shields: 0, level: 1, next_level_xp: 500, today_xp: 0, today_coins: 0 },
-  };
-}
-
-function renderSmartPlan(plan) {
-  const coachLine = $("#coachLine");
-  const revisionQueue = $("#revisionQueue");
-  const dailyMissions = $("#dailyMissions");
-  const coachWallet = $("#coachWallet");
-  if (!coachLine || !revisionQueue || !dailyMissions || !coachWallet) {
-    return;
-  }
-
-  state.smartPlan = plan || defaultSmartPlan();
-  const activePlan = state.smartPlan;
-  const wallet = activePlan.wallet || {};
-  coachLine.textContent = activePlan.coach_line || defaultSmartPlan().coach_line;
-  coachWallet.innerHTML = `
-    <span>Lv ${Number(wallet.level || 1)}</span>
-    <strong>${Number(wallet.xp || 0)} XP</strong>
-    <span>${Number(wallet.coins || 0)} coins</span>
-  `;
-
-  const queue = activePlan.revision_queue || [];
-  revisionQueue.innerHTML = queue.length
-    ? `
-      <button class="revision-start" type="button" data-smart-revision-all>
-        <span>Start Queue</span>
-        <strong>${queue.length} patterns</strong>
-      </button>
-      ${queue.map((item, index) => `
-        <button class="revision-chip" type="button" data-smart-revision="${Number(item.id)}">
-          <span>${index + 1}</span>
-          <strong>${escapeHtml(item.name)}</strong>
-          <em>${escapeHtml(item.reason || `${Number(item.mastery || 0)}% mastery`)}</em>
-        </button>
-      `).join("")}
-    `
-    : `<div class="smart-empty">No weak queue yet. Start a quick set to create your first signal.</div>`;
-
-  const missions = activePlan.missions?.length ? activePlan.missions : defaultSmartPlan().missions;
-  dailyMissions.innerHTML = missions.map((mission) => {
-    const reward = mission.reward || {};
-    const percent = clampProgressPercent(mission.percent ?? ((Number(mission.progress || 0) / Number(mission.target || 1)) * 100));
-    const rewardText = [
-      reward.xp ? `${reward.xp} XP` : "",
-      reward.coins ? `${reward.coins} coins` : "",
-      reward.streak_shields ? `${reward.streak_shields} shield` : "",
-    ].filter(Boolean).join(" + ");
-    return `
-      <article class="mission-row ${mission.completed ? "is-complete" : ""}">
-        <div class="mission-main">
-          <div class="mission-title-line">
-            <strong>${escapeHtml(mission.title)}</strong>
-            <span>${Number(mission.progress || 0)}/${Number(mission.target || 0)} ${escapeHtml(mission.unit || "")}</span>
-          </div>
-          <p>${escapeHtml(mission.description || "")}</p>
-          <div class="mission-track"><div style="width: ${percent}%"></div></div>
-          <span class="mission-reward">${mission.reward_claimed ? "Reward earned" : escapeHtml(rewardText || "Reward")}</span>
-        </div>
-        <button class="mission-action" type="button" data-mission-key="${escapeHtml(mission.key)}">
-          ${mission.completed ? "Review" : escapeHtml(mission.action?.label || "Start")}
-        </button>
-      </article>
-    `;
-  }).join("");
-
-  if (state.renderedSmartPlanOnce) {
-    const newlyCompleted = missions.find((mission) =>
-      mission.completed
-      && mission.reward_claimed
-      && !state.celebratedMissionKeys.has(mission.key)
-    );
-    if (newlyCompleted) {
-      state.celebratedMissionKeys.add(newlyCompleted.key);
-      triggerConfetti("mission");
-      triggerHaptic("success");
-      playTone("mission");
-    }
-  }
-  missions.forEach((mission) => {
-    if (mission.completed && mission.reward_claimed) {
-      state.celebratedMissionKeys.add(mission.key);
-    }
-  });
-  state.renderedSmartPlanOnce = true;
 }
 
 async function loadMistakes() {
@@ -2086,37 +1943,6 @@ async function startAdaptivePractice(patternIds = []) {
   await startPracticeWithPatternIds(ids);
 }
 
-async function startSmartRevision(patternIds = [], options = {}) {
-  const queueIds = (state.smartPlan?.revision_queue || []).map((item) => Number(item.id)).filter(Boolean);
-  const ids = patternIds.length ? patternIds : queueIds.length ? queueIds : state.recommendedPatternIds;
-  if (!ids.length) {
-    showStatus("Start one quick practice set first so the coach can build your revision queue.", "info");
-    return;
-  }
-  await startPracticeWithPatternIds(ids, {
-    mode: options.mode || (ids.length > 1 ? "focused" : "quick"),
-    targetCount: options.targetCount ?? (ids.length > 1 ? 15 : 5),
-  });
-}
-
-async function startMission(missionKey) {
-  const mission = (state.smartPlan?.missions || []).find((item) => item.key === missionKey);
-  if (!mission) {
-    showStatus("Mission is not available yet.", "info");
-    return;
-  }
-  const action = mission.action || {};
-  if (action.type === "mistakes") {
-    await startAllMistakeRetry();
-    return;
-  }
-  const ids = (action.pattern_ids || []).map(Number).filter(Boolean);
-  await startSmartRevision(ids, {
-    mode: action.mode || "quick",
-    targetCount: action.target_count ?? action.targetCount,
-  });
-}
-
 async function startMistakeRetry(mistakeId) {
   if (!state.telegramUser?.id) {
     showStatus("Connect your personal profile before retrying saved mistakes.");
@@ -2584,27 +2410,6 @@ function bindEvents() {
       return;
     }
 
-    const smartRevisionAllButton = event.target.closest("[data-smart-revision-all]");
-    if (smartRevisionAllButton) {
-      event.preventDefault();
-      startSmartRevision();
-      return;
-    }
-
-    const smartRevisionButton = event.target.closest("[data-smart-revision]");
-    if (smartRevisionButton) {
-      event.preventDefault();
-      startSmartRevision([Number(smartRevisionButton.dataset.smartRevision)]);
-      return;
-    }
-
-    const missionButton = event.target.closest("[data-mission-key]");
-    if (missionButton) {
-      event.preventDefault();
-      startMission(missionButton.dataset.missionKey);
-      return;
-    }
-
     const progressPracticeButton = event.target.closest("[data-progress-practice-pattern]");
     if (progressPracticeButton) {
       event.preventDefault();
@@ -2758,7 +2563,6 @@ async function boot() {
   initInternalProfile();
   setSoundEnabled(readSoundPreference());
   bindEvents();
-  renderSmartPlan(null);
   renderProgressVisuals();
   void loadCatalog();
   void loadProfile();

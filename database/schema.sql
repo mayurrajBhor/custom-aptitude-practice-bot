@@ -152,17 +152,5 @@ CREATE TABLE IF NOT EXISTS user_reminder_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Daily mission reward ledger for XP, coins, and streak shields.
-CREATE TABLE IF NOT EXISTS user_daily_rewards (
-    user_id BIGINT REFERENCES users(user_id),
-    reward_date DATE DEFAULT CURRENT_DATE,
-    mission_key TEXT NOT NULL,
-    xp INT DEFAULT 0,
-    coins INT DEFAULT 0,
-    streak_shields INT DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id, reward_date, mission_key)
-);
-
 -- Insert Initial Categories
 INSERT INTO categories (name) VALUES ('Quant'), ('Reasoning'), ('Data Insights') ON CONFLICT (name) DO NOTHING;
