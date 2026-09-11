@@ -2958,10 +2958,10 @@ class HybridGenerator:
     def generate_vedic_squares_roots(self, difficulty=1):
         """Squares and square-root recognition drills."""
         level = self._level(difficulty)
-        sub_type = random.choice(["squares","square_ending_5", "near_base_square", "two_digit_square", "perfect_square_root", "integer_square_root"])
+        sub_type = random.choice(["squares","square_ending_5", "near_base_square", "perfect_square_root", "integer_square_root"])
 
         if sub_type == "squares":
-            n = random.randint(7, 25)
+            n = random.randint(7, 30)
             correct = n * n
             question = f"Calculate {n}^2."
             explanation = f"{n} x {n} = {correct}."
@@ -2984,13 +2984,6 @@ class HybridGenerator:
             question = f"Estimate and calculate exactly using near-base squaring: {n}^2."
             explanation = f"Use (base + gap)^2. Here {n}^2 = {base}^2 + 2 x {base} x ({gap}) + ({gap})^2 = {correct}."
             return self._mcq(question, correct, explanation, max(1, min(level, 3)), [correct + abs(gap) * 10, correct - abs(gap) * 10, base * base + gap * gap, correct + 100])
-
-        if sub_type == "two_digit_square":
-            n = random.randint(2, 12) if level == 1 else random.randint(21, 99)
-            correct = n * n
-            question = f"Calculate {n}^2 mentally."
-            explanation = f"Use (a + b)^2 or a nearby base. Directly, {n} x {n} = {correct}."
-            return self._mcq(question, correct, explanation, min(level, 3), [correct + n, correct - n, correct + 100, correct - 100])
 
         if sub_type == "perfect_square_root":
             root = random.randint(2, 12) if level == 1 else random.randint(12, 45)

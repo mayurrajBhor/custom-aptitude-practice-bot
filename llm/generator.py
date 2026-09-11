@@ -195,7 +195,6 @@ class QuestionGenerator:
             "squares",
             "square_ending_5",
             "near_base_square",
-            "two_digit_square",
             "perfect_square_root",
             "integer_square_root",
         ],
