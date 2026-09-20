@@ -2641,6 +2641,7 @@ function finalizeAnswerResponse(result, effectiveIndex) {
       topic_name,
       pattern_id: patternId,
       pattern_name,
+      hybrid_type: q.hybrid_type || "",
       question_text: q.question_text || "",
       options: Array.isArray(q.options) ? q.options : [],
       selected_answer: effectiveIndex !== null && effectiveIndex !== undefined ? (q.options?.[effectiveIndex] ?? null) : null,
@@ -3553,6 +3554,13 @@ function bindEvents() {
       renderPerformanceTrendSvg();
     });
   }
+  const chartVariantFilter = $("#chartVariantFilter");
+  if (chartVariantFilter) {
+    chartVariantFilter.addEventListener("change", (event) => {
+      currentChartVariant = event.target.value || "";
+      renderPerformanceTrendSvg();
+    });
+  }
 
   document.querySelectorAll(".journal-tab-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -3900,6 +3908,9 @@ let currentTrendMode = "day";
 let currentChartTimeScale = 15;
 let cachedTrendDays = [];
 let cachedSessions = [];
+let cachedVariantTrends = {};
+let cachedVariantSessions = {};
+let currentChartVariant = "";
 
 function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cachedSessions) {
   if (trendDays && Array.isArray(trendDays)) cachedTrendDays = trendDays;
@@ -3914,25 +3925,28 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
 
   if (!svgAccLine) return;
 
+  const activeTrendDays = currentChartVariant ? (cachedVariantTrends[currentChartVariant] || []) : cachedTrendDays;
+  const activeSessions = currentChartVariant ? (cachedVariantSessions[currentChartVariant] || []) : cachedSessions;
+
   let points = [];
-  if (currentTrendMode === "session" && cachedSessions.length > 0) {
-    points = cachedSessions.slice(0, 15).reverse().map((s, idx) => ({
+  if (currentTrendMode === "session" && activeSessions.length > 0) {
+    points = activeSessions.slice(0, 15).reverse().map((s, idx) => ({
       label: `S${idx + 1}`,
       tooltip: `Session #${idx + 1} (${s.date || ""}): ${s.accuracy || 0}% Acc • ${s.avg_time || 0}s (${s.total_questions || 0} Qs)`,
       accuracy: Number(s.accuracy || 0),
       avg_time: Number(s.avg_time || 0),
       total: Number(s.total_questions || 0),
     }));
-  } else if (cachedTrendDays && cachedTrendDays.length > 0) {
-    points = cachedTrendDays.map((d) => ({
+  } else if (activeTrendDays && activeTrendDays.length > 0) {
+    points = activeTrendDays.slice(-14).map((d) => ({
       label: d.display_date || d.date?.slice(5) || "Day",
       tooltip: `${d.date}: ${d.accuracy}% Acc • ${d.avg_time}s (${d.total} Qs)`,
       accuracy: Number(d.accuracy || 0),
       avg_time: Number(d.avg_time || 0),
       total: Number(d.total || 0),
     }));
-  } else if (cachedSessions.length > 0) {
-    points = cachedSessions.slice(0, 15).reverse().map((s, idx) => ({
+  } else if (activeSessions.length > 0) {
+    points = activeSessions.slice(0, 15).reverse().map((s, idx) => ({
       label: `S${idx + 1}`,
       tooltip: `Session #${idx + 1}: ${s.accuracy || 0}% Acc • ${s.avg_time || 0}s`,
       accuracy: Number(s.accuracy || 0),
@@ -3948,7 +3962,7 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
     if (svgSpeedLine) svgSpeedLine.setAttribute("d", "");
     if (svgPoints) svgPoints.innerHTML = "";
     if (summaryBadge) summaryBadge.textContent = "No data yet";
-    renderSessionProgressInsight(cachedSessions);
+    renderSessionProgressInsight(activeSessions);
     return;
   }
 
@@ -4031,6 +4045,32 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
   if (summaryBadge) {
     const latest = points[points.length - 1];
     summaryBadge.textContent = `${latest.accuracy}% Accuracy • ${latest.avg_time}s Avg`;
+  }
+}
+
+function syncChartVariantFilter(variants) {
+  const select = $("#chartVariantFilter");
+  if (!select) return;
+  const available = Array.isArray(variants) ? variants : Object.keys(cachedVariantTrends);
+  if (!available.length) {
+    select.innerHTML = `<option value="">All attempts</option>`;
+    currentChartVariant = "";
+    return;
+  }
+  if (!currentChartVariant || !available.includes(currentChartVariant)) currentChartVariant = available[0];
+  select.innerHTML = available.map((variant) => `<option value="${escapeHtml(variant)}">${escapeHtml(variant)}</option>`).join("");
+  select.value = currentChartVariant;
+}
+
+async function syncServerHistory() {
+  if (!state.telegramUser?.id || !window.AptitudeLocalDB?.syncRemoteHistory) return;
+  try {
+    const history = await api(`/api/history/${state.telegramUser.id}`, { timeoutMs: 3000 });
+    if (!history.offline) {
+      await window.AptitudeLocalDB.syncRemoteHistory(history);
+    }
+  } catch (error) {
+    console.warn("Historical data sync unavailable:", error);
   }
 }
 
@@ -4332,6 +4372,9 @@ async function renderAdvancedProgressDashboard() {
   if (sLateCount) sLateCount.textContent = String(adv.stamina.late.count);
 
   // Performance Trend SVG Chart
+  cachedVariantTrends = adv.variant_trends || {};
+  cachedVariantSessions = adv.variant_sessions || {};
+  syncChartVariantFilter(adv.variants || Object.keys(cachedVariantTrends));
   renderPerformanceTrendSvg(adv.trend_days, adv.sessions || cachedSessions);
 
   // 5. Root Cause Mistake Book
@@ -4816,6 +4859,9 @@ async function boot() {
   void loadCatalog();
   void loadProfile();
   void renderLocalJournal();
+  // Local IndexedDB is the primary history source. Server history, when
+  // available, is only a background enhancement and never blocks the journal.
+  void syncServerHistory().then(() => renderLocalJournal());
 }
 
 boot();

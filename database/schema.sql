@@ -114,6 +114,7 @@ CREATE TABLE IF NOT EXISTS question_attempts (
     is_correct BOOLEAN NOT NULL,
     is_skipped BOOLEAN DEFAULT FALSE,
     time_taken_seconds FLOAT DEFAULT 0.0,
+    hybrid_type TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -358,7 +358,10 @@ class QuestionGenerator:
         selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
         base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
-        return self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
+        result = self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
+        if result:
+            result["hybrid_type"] = selected_type
+        return result
 
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""

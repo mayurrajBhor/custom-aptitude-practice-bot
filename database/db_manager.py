@@ -152,6 +152,7 @@ class DatabaseManager:
             "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS selected_option_index INT",
             "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS explanation TEXT",
             "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS difficulty INT",
+            "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS hybrid_type TEXT",
             "ALTER TABLE question_attempts ADD COLUMN IF NOT EXISTS is_skipped BOOLEAN DEFAULT FALSE",
             "CREATE INDEX IF NOT EXISTS question_attempts_user_created_idx ON question_attempts(user_id, created_at DESC)",
             "CREATE INDEX IF NOT EXISTS question_attempts_session_idx ON question_attempts(session_uuid, question_number)",
@@ -417,14 +418,15 @@ class DatabaseManager:
         explanation=None,
         difficulty=None,
         is_skipped=False,
+        hybrid_type=None,
     ):
         query = """
         INSERT INTO question_attempts (
             user_id, pattern_id, session_uuid, question_number, question_text, question_hash,
             options, correct_option_index, selected_option_index, explanation, difficulty,
-            is_correct, is_skipped, time_taken_seconds
+            is_correct, is_skipped, time_taken_seconds, hybrid_type
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """
         options_json = json.dumps(options) if options is not None else None
         q_hash = self.question_hash(question_text) if question_text else None
@@ -445,8 +447,36 @@ class DatabaseManager:
                 is_correct,
                 is_skipped,
                 time_taken_seconds,
+                hybrid_type,
             ),
         )
+
+    def get_user_history(self, user_id, limit=5000):
+        attempts = self.execute_query(
+            """
+            SELECT id, pattern_id, session_uuid, question_number, question_text,
+                   options, correct_option_index, selected_option_index, explanation,
+                   difficulty, is_correct, is_skipped, time_taken_seconds, hybrid_type,
+                   created_at
+            FROM question_attempts
+            WHERE user_id = %s
+            ORDER BY created_at DESC, id DESC
+            LIMIT %s
+            """,
+            (user_id, limit),
+        ) or []
+        sessions = self.execute_query(
+            """
+            SELECT session_uuid, session_type, started_at, completed_at, stopped_at,
+                   status, score, total_questions, planned_total_questions
+            FROM practice_sessions
+            WHERE user_id = %s
+            ORDER BY started_at DESC
+            LIMIT %s
+            """,
+            (user_id, limit),
+        ) or []
+        return {"attempts": attempts, "sessions": sessions}
 
     def record_mistake(self, user_id, pattern_id, question_text, options, correct_index, selected_index, explanation, difficulty=3):
         query = """

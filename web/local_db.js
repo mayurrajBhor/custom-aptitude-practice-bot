@@ -107,6 +107,7 @@ async function recordLocalAttempt(attempt) {
   const timestamp = typeof attempt.timestamp === "number" ? attempt.timestamp : now.getTime();
 
   const record = {
+    remote_id: attempt.remote_id !== undefined ? Number(attempt.remote_id) : null,
     date: dateStr,
     timestamp: timestamp,
     session_id: String(attempt.session_id || ""),
@@ -114,6 +115,7 @@ async function recordLocalAttempt(attempt) {
     topic_name: String(attempt.topic_name || "General"),
     pattern_id: Number(attempt.pattern_id || 0),
     pattern_name: String(attempt.pattern_name || ""),
+    hybrid_type: String(attempt.hybrid_type || ""),
     question_text: String(attempt.question_text || ""),
     options: Array.isArray(attempt.options) ? attempt.options : [],
     selected_answer: attempt.selected_answer !== undefined ? attempt.selected_answer : null,
@@ -205,6 +207,24 @@ async function getAllLocalSessions() {
 
     req.onerror = (e) => reject(e.target.error);
   });
+}
+
+async function syncRemoteHistory(history) {
+  const remoteAttempts = Array.isArray(history?.attempts) ? history.attempts : [];
+  const remoteSessions = Array.isArray(history?.sessions) ? history.sessions : [];
+  const existingAttempts = await getAllLocalAttempts();
+  const existingRemoteIds = new Set(existingAttempts.map((item) => item.remote_id).filter((id) => id !== null && id !== undefined));
+  for (const attempt of remoteAttempts) {
+    if (attempt.remote_id !== null && attempt.remote_id !== undefined && existingRemoteIds.has(Number(attempt.remote_id))) continue;
+    await recordLocalAttempt(attempt);
+  }
+  const existingSessions = await getAllLocalSessions();
+  const existingSessionIds = new Set(existingSessions.map((item) => String(item.session_id || "")));
+  for (const session of remoteSessions) {
+    if (existingSessionIds.has(String(session.session_id || ""))) continue;
+    await recordLocalSession(session);
+  }
+  return { attempts: remoteAttempts.length, sessions: remoteSessions.length };
 }
 
 async function getLocalAnalytics() {
@@ -477,6 +497,62 @@ async function getAdvancedLocalAnalytics() {
   const total_correct = basic.totals.total_correct;
   const overallAccuracy = basic.totals.accuracy;
   const overallAvgTime = basic.totals.avg_time;
+
+  // Keep speed comparisons fair: single-digit and double-digit variants have
+  // different natural solve times and must never share one trajectory point.
+  const variantLabel = (attempt) => {
+    const raw = String(attempt.hybrid_type || "").trim();
+    if (raw) return raw.includes("::") ? raw.split("::").pop() : raw;
+    return "General / non-variant";
+  };
+  const variantBuckets = {};
+  const variantSessionBuckets = {};
+  attempts.forEach((attempt) => {
+    const variant = variantLabel(attempt);
+    const date = attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : getTodayString());
+    const dayKey = `${variant}::${date}`;
+    if (!variantBuckets[dayKey]) variantBuckets[dayKey] = { variant, date, total: 0, correct: 0, total_time: 0 };
+    const day = variantBuckets[dayKey];
+    day.total++;
+    if (attempt.is_correct) day.correct++;
+    day.total_time += Number(attempt.time_taken || 0);
+
+    const sessionId = String(attempt.session_id || `single_${date}`);
+    const sessionKey = `${variant}::${sessionId}`;
+    if (!variantSessionBuckets[sessionKey]) variantSessionBuckets[sessionKey] = { variant, session_id: sessionId, date, total: 0, correct: 0, total_time: 0, timestamp: 0 };
+    const session = variantSessionBuckets[sessionKey];
+    session.total++;
+    if (attempt.is_correct) session.correct++;
+    session.total_time += Number(attempt.time_taken || 0);
+    session.timestamp = Math.max(session.timestamp, Number(attempt.timestamp || 0));
+    if (String(date) < String(session.date)) session.date = date;
+  });
+  const variantTrends = {};
+  Object.values(variantBuckets).forEach((item) => {
+    if (!variantTrends[item.variant]) variantTrends[item.variant] = [];
+    variantTrends[item.variant].push({
+      date: item.date,
+      display_date: item.date.slice(5),
+      total: item.total,
+      correct: item.correct,
+      accuracy: Math.round((item.correct / item.total) * 100),
+      avg_time: Number((item.total_time / item.total).toFixed(1)),
+    });
+  });
+  Object.values(variantTrends).forEach((items) => items.sort((a, b) => a.date.localeCompare(b.date)));
+  const variantSessions = {};
+  Object.values(variantSessionBuckets).forEach((item) => {
+    if (!variantSessions[item.variant]) variantSessions[item.variant] = [];
+    variantSessions[item.variant].push({
+      session_id: item.session_id,
+      date: item.date,
+      timestamp: item.timestamp,
+      total_questions: item.total,
+      accuracy: Math.round((item.correct / item.total) * 100),
+      avg_time: Number((item.total_time / item.total).toFixed(1)),
+    });
+  });
+  Object.values(variantSessions).forEach((items) => items.sort((a, b) => b.timestamp - a.timestamp));
 
   // 1. Pacing Time Spectrum
   let lightning = 0;
@@ -821,6 +897,9 @@ async function getAdvancedLocalAnalytics() {
     stamina,
     quadrants,
     trend_days: trendDays,
+    variant_trends: variantTrends,
+    variant_sessions: variantSessions,
+    variants: Object.keys(variantTrends).sort(),
     streak: currentStreak,
     prescriptions,
     mistakes: mistakeDiagnostics,
@@ -1033,6 +1112,7 @@ const AptitudeLocalDB = {
   recordLocalSession,
   getAllLocalAttempts,
   getAllLocalSessions,
+  syncRemoteHistory,
   getLocalAnalytics,
   getAdvancedLocalAnalytics,
   exportLocalDataJSON,
@@ -1048,6 +1128,7 @@ if (typeof window !== "undefined") {
   window.recordLocalSession = recordLocalSession;
   window.getAllLocalAttempts = getAllLocalAttempts;
   window.getAllLocalSessions = getAllLocalSessions;
+  window.syncRemoteHistory = syncRemoteHistory;
   window.getLocalAnalytics = getLocalAnalytics;
   window.getAdvancedLocalAnalytics = getAdvancedLocalAnalytics;
   window.exportLocalDataJSON = exportLocalDataJSON;

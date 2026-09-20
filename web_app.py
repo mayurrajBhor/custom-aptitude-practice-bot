@@ -1136,6 +1136,7 @@ def _persist_question_result(
             explanation=question.get("explanation") or "",
             difficulty=question.get("difficulty", 3),
             is_skipped=is_skipped,
+            hybrid_type=question.get("hybrid_type"),
         )
 
         if not is_correct and not is_skipped and not is_local_pattern_id(pattern_id):
@@ -1154,6 +1155,60 @@ def _persist_question_result(
         _invalidate_profile_cache(user_id)
     except Exception as exc:
         logging.warning("Skipping question result persistence because database is unavailable: %s", exc)
+
+
+def _history_iso(value):
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+@app.get("/api/history/{user_id}")
+def user_history(user_id: int):
+    try:
+        _ensure_engagement_schema()
+        history = db.get_user_history(user_id)
+        attempts = []
+        for row in history.get("attempts", []):
+            options = row.get("options") or []
+            created_at = row.get("created_at")
+            correct_index = row.get("correct_option_index")
+            selected_index = row.get("selected_option_index")
+            attempts.append({
+                "remote_id": row.get("id"),
+                "date": _history_iso(created_at)[:10] if created_at else None,
+                "timestamp": int(created_at.timestamp() * 1000) if hasattr(created_at, "timestamp") else 0,
+                "session_id": row.get("session_uuid") or "",
+                "pattern_id": row.get("pattern_id") or 0,
+                "pattern_name": "",
+                "question_text": row.get("question_text") or "",
+                "options": options,
+                "correct_option_index": correct_index,
+                "selected_answer": options[selected_index] if isinstance(selected_index, int) and 0 <= selected_index < len(options) else None,
+                "correct_answer": options[correct_index] if isinstance(correct_index, int) and 0 <= correct_index < len(options) else None,
+                "is_correct": bool(row.get("is_correct")),
+                "is_skipped": bool(row.get("is_skipped")),
+                "is_timeout": False,
+                "time_taken": float(row.get("time_taken_seconds") or 0),
+                "explanation": row.get("explanation") or "",
+                "difficulty": row.get("difficulty") or 3,
+                "hybrid_type": row.get("hybrid_type") or "",
+                "user_id": user_id,
+            })
+        sessions = []
+        for row in history.get("sessions", []):
+            started_at = row.get("started_at")
+            sessions.append({
+                "session_id": row.get("session_uuid") or "",
+                "date": _history_iso(started_at)[:10] if started_at else None,
+                "timestamp": int(started_at.timestamp() * 1000) if hasattr(started_at, "timestamp") else 0,
+                "score": row.get("score") or 0,
+                "total_questions": row.get("total_questions") or row.get("planned_total_questions") or 0,
+                "stopped": row.get("status") == "stopped",
+                "user_id": user_id,
+            })
+        return {"attempts": attempts, "sessions": sessions}
+    except Exception as exc:
+        logging.warning("Returning empty history because database is unavailable: %s", exc)
+        return {"attempts": [], "sessions": [], "offline": True}
 
 
 def _build_smart_daily_plan(
@@ -1469,6 +1524,7 @@ def _question_public(session: dict[str, Any]):
         "options": question["options"],
         "difficulty": question.get("difficulty", 3),
         "pattern_id": question.get("pattern_id"),
+        "hybrid_type": question.get("hybrid_type"),
         "score": session["score"],
         "correct_option_index": question.get("correct_option_index", 0),
         "is_reinforcement": bool(question.get("is_reinforcement")),
@@ -1511,6 +1567,7 @@ def _question_history_entry(
         "difficulty": question.get("difficulty", 3),
         "time_taken": time_taken,
         "pattern_id": question.get("pattern_id"),
+        "hybrid_type": question.get("hybrid_type"),
     }
 
 
