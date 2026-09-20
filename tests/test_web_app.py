@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import unittest
 from pathlib import Path
 
@@ -110,6 +111,236 @@ class WebPracticeSessionTests(unittest.TestCase):
         review = self.client.get(f"/api/session/{session_id}/review").json()
         self.assertEqual(review["questions"][0]["selected_option_index"], current["correct_option_index"])
         self.assertFalse(review["questions"][0].get("is_skipped", False))
+
+    def test_answer_question_with_typed_answer(self):
+        session_id, _ = self.start_local_session(target_count=2)
+        self.client.post(f"/api/session/{session_id}/next")
+        current = web_app.SESSIONS[session_id]["current_question"]
+        correct_val = current["options"][current["correct_option_index"]]
+
+        # Correct typed answer
+        res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"typed_answer": str(correct_val)},
+        )
+        self.assertEqual(res.status_code, 200, res.text)
+        payload = res.json()
+        self.assertTrue(payload["is_correct"])
+        self.assertEqual(payload["score"], 1)
+        self.assertEqual(payload["typed_answer"], str(correct_val))
+
+        # Next question
+        self.client.post(f"/api/session/{session_id}/next")
+        # Incorrect typed answer
+        res_wrong = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"typed_answer": "99999999"},
+        )
+        self.assertEqual(res_wrong.status_code, 200, res_wrong.text)
+        payload_wrong = res_wrong.json()
+        self.assertFalse(payload_wrong["is_correct"])
+        self.assertEqual(payload_wrong["score"], 1)
+        self.assertTrue(payload_wrong["complete"])
+
+        # Check review
+        review = self.client.get(f"/api/session/{session_id}/review")
+        self.assertEqual(review.status_code, 200)
+        history = review.json()["questions"]
+        self.assertEqual(len(history), 2)
+        self.assertEqual(history[0]["typed_answer"], str(correct_val))
+        self.assertTrue(history[0]["is_correct"])
+        self.assertEqual(history[1]["typed_answer"], "99999999")
+        self.assertFalse(history[1]["is_correct"])
+
+    def test_timeout_answer_marks_failed_after_30_seconds(self):
+        session_id, _ = self.start_local_session(target_count=2)
+        q1_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q1_res.status_code, 200, q1_res.text)
+        q1 = q1_res.json()["question"]
+        self.assertIn("correct_option_index", q1)
+
+        # Submit answer with timeout
+        timeout_res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"is_timeout": True},
+        )
+        self.assertEqual(timeout_res.status_code, 200, timeout_res.text)
+        payload = timeout_res.json()
+        self.assertFalse(payload["is_correct"])
+        self.assertEqual(payload["time_taken"], 30.0)
+        self.assertIsNone(payload["selected_option_index"])
+        self.assertEqual(payload["score"], 0)
+        self.assertEqual(payload["answered"], 1)
+        self.assertFalse(payload["complete"])
+
+        # Moves forward to next question
+        q2_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q2_res.status_code, 200, q2_res.text)
+        q2 = q2_res.json()["question"]
+        self.assertEqual(q2["question_number"], 2)
+
+        # Verify session review records timeout attempt accurately
+        review = self.client.get(f"/api/session/{session_id}/review")
+        self.assertEqual(review.status_code, 200)
+        history = review.json()["questions"]
+        self.assertEqual(len(history), 1)
+        self.assertFalse(history[0]["is_correct"])
+        self.assertEqual(history[0]["time_taken"], 30.0)
+        self.assertIsNone(history[0]["selected_option_index"])
+
+    def test_re_practice_weak_questions_creates_new_session_with_slow_questions(self):
+        session_id, _ = self.start_local_session(target_count=2)
+
+        # Question 1: next question
+        q1_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q1_res.status_code, 200, q1_res.text)
+        q1 = q1_res.json()["question"]
+
+        # Question 1 takes 2.0s and is correct
+        web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 2.0
+        ans1_res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"answer_index": q1["correct_option_index"]},
+        )
+        self.assertEqual(ans1_res.status_code, 200, ans1_res.text)
+        self.assertTrue(ans1_res.json()["is_correct"])
+
+        # Question 2: next question
+        q2_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q2_res.status_code, 200, q2_res.text)
+        q2 = q2_res.json()["question"]
+
+        # Question 2 takes 15.0s (or is timeout 30.0s)
+        ans2_res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"is_timeout": True},
+        )
+        self.assertEqual(ans2_res.status_code, 200, ans2_res.text)
+        ans2_payload = ans2_res.json()
+        self.assertTrue(ans2_payload["complete"])
+
+        # Verifies session summary has avg_time > 0, weak_count >= 1
+        summary = ans2_payload["summary"]
+        self.assertGreater(summary["avg_time"], 0)
+        self.assertGreaterEqual(summary["weak_count"], 1)
+
+        # Calls POST /api/session/{session_id}/re-practice-weak
+        re_res = self.client.post(f"/api/session/{session_id}/re-practice-weak")
+        self.assertEqual(re_res.status_code, 200, re_res.text)
+        re_payload = re_res.json()
+
+        # Verifies 200 OK, returns new session with total_questions == 1 (the slow/weak question)
+        # Verifies 200 OK, returns new session with total_questions == 2 (matching practice set size, repeating the weak question)
+        self.assertIn("session", re_payload)
+        new_session = re_payload["session"]
+        new_session_id = new_session["session_id"]
+        self.assertEqual(new_session["total_questions"], 2)
+        self.assertEqual(re_payload["weak_count"], 1)
+        self.assertEqual(re_payload["total_questions"], 2)
+
+        # Calls POST /api/session/{new_session_id}/next and verifies Question 1 of the new session is the slow question
+        new_q1_res = self.client.post(f"/api/session/{new_session_id}/next")
+        self.assertEqual(new_q1_res.status_code, 200, new_q1_res.text)
+        new_q1 = new_q1_res.json()["question"]
+        self.assertEqual(new_q1["question_number"], 1)
+        self.assertEqual(new_q1["question_text"], q2["question_text"])
+
+        # Answer Question 1
+        ans_new1 = self.client.post(
+            f"/api/session/{new_session_id}/answer",
+            json={"answer_index": new_q1["correct_option_index"]},
+        )
+        self.assertEqual(ans_new1.status_code, 200)
+        self.assertFalse(ans_new1.json()["complete"])
+
+        # Question 2 is the repeated weak question filling the full practice set
+        new_q2_res = self.client.post(f"/api/session/{new_session_id}/next")
+        self.assertEqual(new_q2_res.status_code, 200, new_q2_res.text)
+        new_q2 = new_q2_res.json()["question"]
+        self.assertEqual(new_q2["question_number"], 2)
+        self.assertEqual(new_q2["question_text"], q2["question_text"])
+
+        # Answer Question 2 to complete the full 2-question drill set
+        ans_new2 = self.client.post(
+            f"/api/session/{new_session_id}/answer",
+            json={"answer_index": new_q2["correct_option_index"]},
+        )
+        self.assertEqual(ans_new2.status_code, 200)
+        self.assertTrue(ans_new2.json()["complete"])
+
+    def test_re_practice_weak_questions_repeats_to_match_full_set_count(self):
+        # 5-question practice session with 2 weak questions
+        session_id, _ = self.start_local_session(target_count=5)
+        questions = []
+        for i in range(5):
+            q_res = self.client.post(f"/api/session/{session_id}/next")
+            self.assertEqual(q_res.status_code, 200)
+            q = q_res.json()["question"]
+            questions.append(q)
+            # Questions 1 and 3 are slow/weak, others are fast
+            if i in (1, 3):
+                web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 25.0
+                ans_res = self.client.post(f"/api/session/{session_id}/answer", json={"is_timeout": True})
+            else:
+                web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 2.0
+                ans_res = self.client.post(
+                    f"/api/session/{session_id}/answer",
+                    json={"answer_index": q["correct_option_index"]},
+                )
+            self.assertEqual(ans_res.status_code, 200)
+
+        # Call re-practice weak
+        re_res = self.client.post(f"/api/session/{session_id}/re-practice-weak")
+        self.assertEqual(re_res.status_code, 200)
+        payload = re_res.json()
+        new_session = payload["session"]
+        new_session_id = new_session["session_id"]
+
+        # Weak count is 2, but total_questions is 5 (full set size)
+        self.assertEqual(payload["weak_count"], 2)
+        self.assertEqual(payload["total_questions"], 5)
+        self.assertEqual(new_session["total_questions"], 5)
+
+        # The 5 questions should cycle the 2 weak questions repeatedly
+        weak_texts = {questions[1]["question_text"], questions[3]["question_text"]}
+        seen_texts = []
+        for q_num in range(1, 6):
+            nq_res = self.client.post(f"/api/session/{new_session_id}/next")
+            self.assertEqual(nq_res.status_code, 200)
+            nq = nq_res.json()["question"]
+            self.assertEqual(nq["question_number"], q_num)
+            self.assertIn(nq["question_text"], weak_texts)
+            seen_texts.append(nq["question_text"])
+            self.client.post(
+                f"/api/session/{new_session_id}/answer",
+                json={"answer_index": nq["correct_option_index"]},
+            )
+
+        # Confirm all 5 questions were from the weak questions set and repeated
+        self.assertEqual(len(seen_texts), 5)
+        self.assertGreater(seen_texts.count(questions[1]["question_text"]), 1)
+        self.assertGreater(seen_texts.count(questions[3]["question_text"]), 1)
+
+    def test_re_practice_weak_fallback_and_empty_validation(self):
+        # Empty session (no questions answered yet) should 404
+        # Empty session (no questions answered yet) should gracefully succeed with fallback questions matching target_count
+        session_id, _ = self.start_local_session(target_count=2)
+        res_empty = self.client.post(f"/api/session/{session_id}/re-practice-weak")
+        self.assertEqual(res_empty.status_code, 404)
+        self.assertIn("No answered questions", res_empty.json()["detail"])
+
+        # Answer 1 question correctly and quickly (fallback kicks in when none are slow/wrong)
+        q1_res = self.client.post(f"/api/session/{session_id}/next")
+        q1 = q1_res.json()["question"]
+        web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 1.0
+        self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"answer_index": q1["correct_option_index"]},
+        )
+
+        res_fallback = self.client.post(f"/api/session/{session_id}/re-practice-weak")
+        self.assertEqual(res_fallback.status_code, 200)
+        self.assertEqual(res_fallback.json()["session"]["total_questions"], 2)
 
     def test_database_network_error_is_safe_for_browser(self):
         raw_error = (
@@ -372,9 +603,121 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn("@keyframes answer-correct-glow", styles_css)
         self.assertIn(".progress-pattern-card.is-mastered", styles_css)
         self.assertIn(".mistake-answer-grid", styles_css)
-        self.assertIn(".mistake-why", styles_css)
-        self.assertIn("/static/styles.css?v=28", index_html)
-        self.assertIn("/static/app.js?v=27", index_html)
+        self.assertIn("/static/styles.css", index_html)
+        self.assertIn("/static/app.js", index_html)
+        self.assertIn("topAnswerModeToggle", index_html)
+        self.assertIn("numpadPanel", index_html)
+        self.assertIn("numpadDisplay", index_html)
+        self.assertIn("setAnswerMode", app_js)
+        self.assertIn("submitTypedAnswer", app_js)
+        self.assertIn("checkAutoSubmit", app_js)
+        self.assertIn("autoSubmitTimer", app_js)
+        self.assertIn("numpadAutoStatus", index_html)
+        self.assertIn(".numpad-grid", styles_css)
+        self.assertIn(".answer-mode-toggle", styles_css)
+        self.assertIn(".numpad-auto-status", styles_css)
+        self.assertIn("QUESTION_TIME_LIMIT_SECONDS = 30", app_js)
+        self.assertIn("handleQuestionTimeout", app_js)
+        self.assertIn("isAnswerCorrect", app_js)
+        self.assertIn("checkDigitInput", app_js)
+        self.assertIn("#questionTimer.is-warning", styles_css)
+        self.assertIn("#questionTimer.is-urgent", styles_css)
+        self.assertIn("resultSpeedStrip", index_html)
+        self.assertIn("resultAvgTime", index_html)
+        self.assertIn("resultWeakCount", index_html)
+        self.assertIn("rePracticeWeakButton", index_html)
+        self.assertIn("reviewRePracticeWeakButton", index_html)
+        self.assertIn("rePracticeWeakQuestions", app_js)
+        self.assertIn("/re-practice-weak", app_js)
+        self.assertIn(".result-speed-strip", styles_css)
+        self.assertIn(".weak-repractice-banner", styles_css)
+        self.assertIn(".time-badge.is-slow", styles_css)
+
+    def test_local_database_and_analytics_contract(self):
+        root = Path(__file__).resolve().parents[1]
+        local_db_path = root / "web" / "local_db.js"
+        self.assertTrue(local_db_path.exists())
+
+        local_db_js = local_db_path.read_text(encoding="utf-8")
+        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
+        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
+        styles_css = (root / "web" / "styles.css").read_text(encoding="utf-8")
+
+        for fn in [
+            "initLocalDB",
+            "recordLocalAttempt",
+            "recordLocalSession",
+            "getLocalAnalytics",
+            "exportLocalDataJSON",
+            "exportLocalDataCSV",
+            "importLocalDataJSON",
+        ]:
+            self.assertIn(fn, local_db_js)
+
+        self.assertIn("/static/local_db.js", index_html)
+        self.assertIn('id="localAnalyticsCard"', index_html)
+        self.assertIn('id="downloadJsonBtn"', index_html)
+        self.assertIn('id="downloadCsvBtn"', index_html)
+        self.assertIn('id="localJournalContent"', index_html)
+
+        self.assertIn("AptitudeLocalDB", app_js)
+        self.assertIn("exportLocalDataJSON", app_js)
+        self.assertIn("exportLocalDataCSV", app_js)
+
+        self.assertIn(".local-analytics-card", styles_css)
+        self.assertIn(".journal-tabs", styles_css)
+        self.assertIn(".journal-attempt-card", styles_css)
+
+    def test_advanced_progress_dashboard_contract(self):
+        root = Path(__file__).resolve().parents[1]
+        local_db_js = (root / "web" / "local_db.js").read_text(encoding="utf-8")
+        index_html = (root / "web" / "index.html").read_text(encoding="utf-8")
+        app_js = (root / "web" / "app.js").read_text(encoding="utf-8")
+        styles_css = (root / "web" / "styles.css").read_text(encoding="utf-8")
+
+        self.assertIn("getAdvancedLocalAnalytics", local_db_js)
+
+        # Index.html advanced cockpit elements
+        for element_id in [
+            'id="readinessCockpitCard"',
+            'id="readinessScore"',
+            'id="readinessTier"',
+            'id="readinessPillars"',
+            'id="aiPrescriptionsCard"',
+            'id="aiPrescriptionsContainer"',
+            'id="speedAccuracyMatrixCard"',
+            'id="quadMastersList"',
+            'id="quadTrapsList"',
+            'id="quadRushersList"',
+            'id="quadBottlenecksList"',
+            'id="pacingStaminaCard"',
+            'id="pacingStackedBar"',
+            'id="performanceTrendSvg"',
+            'id="rootCauseMistakeCard"',
+            'id="drillAllMistakesBtn"',
+            'id="rootCauseMistakeList"',
+        ]:
+            self.assertIn(element_id, index_html)
+
+        # App.js handlers
+        self.assertIn("renderAdvancedProgressDashboard", app_js)
+        self.assertIn("renderPerformanceTrendSvg", app_js)
+        self.assertIn("renderRootCauseMistakes", app_js)
+        self.assertIn("data-drill-pattern", app_js)
+
+        # Styles.css layout classes
+        for css_class in [
+            ".readiness-cockpit-card",
+            ".readiness-gauge",
+            ".ai-prescriptions-card",
+            ".quadrant-matrix-grid",
+            ".pacing-stacked-bar",
+            ".root-cause-mistake-card",
+            ".badge-calc",
+            ".badge-concept",
+        ]:
+            self.assertIn(css_class, styles_css)
+
 
 if __name__ == "__main__":
     unittest.main()

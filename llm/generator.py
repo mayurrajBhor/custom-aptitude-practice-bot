@@ -228,7 +228,11 @@ class QuestionGenerator:
     _forced_variant_lock = threading.RLock()
 
     def __init__(self):
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        api_key = os.getenv("GROQ_API_KEY")
+        try:
+            self.client = Groq(api_key=api_key) if api_key else None
+        except Exception:
+            self.client = None
         self.model = "openai/gpt-oss-120b" # Latest model
 
     def _select_hybrid_type(self, hybrid_type):

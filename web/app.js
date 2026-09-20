@@ -47,6 +47,8 @@ const state = {
     today_solved: 0,
     mistake_count: 0,
   },
+  answerMode: "numpad",
+  numpadValue: "",
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -168,6 +170,355 @@ function setSoundEnabled(enabled) {
   if (button) {
     button.textContent = state.soundEnabled ? "Sound On" : "Sound Off";
     button.setAttribute("aria-pressed", state.soundEnabled ? "true" : "false");
+  }
+}
+
+function readAnswerModePreference() {
+  try {
+    const stored = window.localStorage?.getItem("aptitudeAnswerMode");
+    return stored === "mcq" ? "mcq" : "numpad";
+  } catch {
+    return "numpad";
+  }
+}
+
+function writeAnswerModePreference(mode) {
+  try {
+    window.localStorage?.setItem("aptitudeAnswerMode", mode === "mcq" ? "mcq" : "numpad");
+  } catch {
+    // Best-effort
+  }
+}
+
+function setAnswerMode(mode) {
+  state.answerMode = mode === "mcq" ? "mcq" : "numpad";
+  writeAnswerModePreference(state.answerMode);
+
+  document.querySelectorAll("[data-answer-mode]").forEach((btn) => {
+    const isActive = btn.dataset.answerMode === state.answerMode;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
+
+  syncQuestionModeDisplay(state.activeQuestion);
+}
+
+let autoSubmitTimer = null;
+
+function clearAutoSubmitTimer() {
+  if (autoSubmitTimer) {
+    window.clearTimeout(autoSubmitTimer);
+    autoSubmitTimer = null;
+  }
+}
+
+function parseAnswerNumber(val) {
+  if (val === null || val === undefined) {
+    return null;
+  }
+  const s = String(val).trim().replace(/,/g, "").replace(/%$/, "");
+  const mixed = s.match(/^(\d+)\s*(?:\(|\s)?(\d+)\/(\d+)\)?$/);
+  if (mixed) {
+    const w = parseInt(mixed[1], 10);
+    const n = parseInt(mixed[2], 10);
+    const d = parseInt(mixed[3], 10);
+    return d ? w + (n / d) : null;
+  }
+  const frac = s.match(/^(-?\d+)\/(\d+)$/);
+  if (frac) {
+    const n = parseInt(frac[1], 10);
+    const d = parseInt(frac[2], 10);
+    return d ? n / d : null;
+  }
+  const f = parseFloat(s);
+  return isNaN(f) ? null : f;
+}
+
+function isAnswerCorrect(typed, question) {
+  if (!typed || !question) {
+    return false;
+  }
+  const rawTyped = String(typed).trim();
+  if (!rawTyped || rawTyped === "-") {
+    return false;
+  }
+  const cleanTyped = rawTyped.toLowerCase().replace(/[%$,\s]/g, "");
+  if (!cleanTyped) {
+    return false;
+  }
+
+  const options = question.options || [];
+  const correctIdx = question.correct_option_index;
+  if (correctIdx === undefined || correctIdx === null || options[correctIdx] === undefined) {
+    return false;
+  }
+
+  const correctOption = String(options[correctIdx]);
+  const cleanCorrect = correctOption.toLowerCase().replace(/[%$,\s]/g, "");
+
+  // 1. Direct string match
+  if (cleanTyped === cleanCorrect) {
+    return true;
+  }
+
+  // 2. Numeric / fraction value equivalence
+  const typedNum = parseAnswerNumber(rawTyped);
+  const correctNum = parseAnswerNumber(correctOption);
+  if (typedNum !== null && correctNum !== null) {
+    if (Math.abs(typedNum - correctNum) < 0.001) {
+      return true;
+    }
+  }
+
+  // 3. Categorical chip index (e.g. user pressed 1..N matching 1-based index)
+  const isNumeric = options.every((opt) => {
+    const s = String(opt).trim().replace(/[%$,\s]/g, "");
+    return !isNaN(Number(s)) || s.includes("/");
+  });
+  if (!isNumeric && cleanTyped.match(/^\d+$/)) {
+    const chosenIdx = parseInt(cleanTyped, 10) - 1;
+    if (chosenIdx === correctIdx) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function checkDigitInput() {
+  if (state.answered || !state.numpadValue.trim() || !state.activeQuestion) {
+    return;
+  }
+
+  // Check on every digit entered:
+  // If the answer is correct, PASS IMMEDIATELY!
+  if (isAnswerCorrect(state.numpadValue, state.activeQuestion)) {
+    submitTypedAnswer();
+  }
+  // If false, DO NOT SUBMIT, DO NOT FAIL!
+  // The user still has the rest of the 30-second timer to enter the correct answer.
+}
+
+function checkAutoSubmit() {
+  checkDigitInput();
+}
+
+function handleManualSubmitAttempt() {
+  if (state.answered || !state.activeQuestion) {
+    return;
+  }
+  const typed = state.numpadValue.trim();
+  if (!typed) {
+    return;
+  }
+
+  if (isAnswerCorrect(typed, state.activeQuestion)) {
+    submitTypedAnswer();
+  } else {
+    // Answer is not correct yet. DO NOT FAIL!
+    // Give feedback that user should keep trying before the 30s timer runs out
+    const display = $("#numpadDisplay");
+    if (display) {
+      replayAnimation(display, "numpad-wrong-shake");
+    }
+    playTone("wrong");
+    triggerHaptic("error");
+    const indicatorSub = $("#autoIndicatorSub");
+    if (indicatorSub) {
+      indicatorSub.textContent = "• Not correct yet! Keep trying";
+    }
+  }
+}
+
+function updateNumpadDisplay() {
+  const displayVal = $("#numpadValue");
+  const placeholder = $("#numpadPlaceholder");
+  const clearBtn = $("#numpadClearBtn");
+  const submitBtn = $("#numpadSubmitBtn");
+  const indicatorTitle = $("#autoIndicatorTitle");
+  const indicatorSub = $("#autoIndicatorSub");
+
+  const val = state.numpadValue;
+  if (displayVal) {
+    displayVal.textContent = val;
+  }
+  if (placeholder) {
+    placeholder.hidden = val.length > 0;
+  }
+  if (clearBtn) {
+    clearBtn.style.display = val.length > 0 ? "grid" : "none";
+  }
+  if (submitBtn) {
+    submitBtn.disabled = state.answered || !val.trim();
+  }
+
+  if (indicatorTitle && indicatorSub) {
+    if (state.answered) {
+      indicatorTitle.textContent = "Answer Locked";
+      indicatorSub.textContent = "• Moving to next question...";
+    } else if (val.trim().length > 0) {
+      indicatorTitle.textContent = "Checking on digit...";
+      indicatorSub.textContent = "• Auto-passes instantly when correct";
+    } else {
+      indicatorTitle.textContent = "30s Timer Active";
+      indicatorSub.textContent = "• Auto-passes on correct answer";
+    }
+  }
+}
+
+function appendNumpadKey(key) {
+  if (state.answered) {
+    return;
+  }
+  if (state.numpadValue.length >= 14) {
+    return;
+  }
+
+  if (key === "." && state.numpadValue.includes(".")) {
+    return;
+  }
+  if (key === "%" && state.numpadValue.includes("%")) {
+    return;
+  }
+  if (key === "/" && state.numpadValue.includes("/")) {
+    return;
+  }
+
+  if (key === "-") {
+    if (state.numpadValue.startsWith("-")) {
+      state.numpadValue = state.numpadValue.slice(1);
+    } else {
+      state.numpadValue = "-" + state.numpadValue;
+    }
+  } else {
+    state.numpadValue += key;
+  }
+
+  playTone("tap");
+  triggerHaptic("light");
+  updateNumpadDisplay();
+  checkAutoSubmit();
+  checkDigitInput();
+}
+
+function backspaceNumpad() {
+  clearAutoSubmitTimer();
+  if (state.answered) {
+    return;
+  }
+  if (!state.numpadValue.length) {
+    return;
+  }
+  state.numpadValue = state.numpadValue.slice(0, -1);
+  playTone("tap");
+  triggerHaptic("light");
+  updateNumpadDisplay();
+  checkDigitInput();
+}
+
+function clearNumpad() {
+  clearAutoSubmitTimer();
+  if (state.answered) {
+    return;
+  }
+  if (!state.numpadValue.length) {
+    return;
+  }
+  state.numpadValue = "";
+  playTone("tap");
+  triggerHaptic("light");
+  updateNumpadDisplay();
+}
+
+function clearTypedAnswer() {
+  clearAutoSubmitTimer();
+  state.numpadValue = "";
+  resetTypedAnswerPending();
+  updateNumpadDisplay();
+}
+
+function highlightKeyElement(key) {
+  const btn = document.querySelector(`[data-numpad-key="${key}"]`);
+  if (btn) {
+    replayAnimation(btn, "is-pressing");
+  }
+}
+
+function markTypedAnswerPending(typed) {
+  const display = $("#numpadDisplay");
+  if (display) {
+    display.classList.remove("is-correct", "is-wrong");
+    display.classList.add("is-pending");
+  }
+  const submitBtn = $("#numpadSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+  document.querySelectorAll(".numpad-key").forEach((key) => {
+    key.disabled = true;
+  });
+
+  const feedbackPanel = $("#feedbackPanel");
+  if (feedbackPanel) {
+    feedbackPanel.classList.remove("is-correct", "is-wrong");
+    feedbackPanel.classList.add("is-checking");
+  }
+  $("#feedbackTitle").textContent = "Locked";
+  $("#feedbackText").textContent = `Checking ${typed}...`;
+  const burst = $("#answerBurst");
+  if (burst) {
+    burst.textContent = "Answer locked";
+    burst.hidden = false;
+    replayAnimation(burst, "answer-burst");
+  }
+}
+
+function resetTypedAnswerPending() {
+  const display = $("#numpadDisplay");
+  if (display) {
+    display.classList.remove("is-pending", "is-correct", "is-wrong");
+  }
+  document.querySelectorAll(".numpad-key").forEach((key) => {
+    key.disabled = false;
+  });
+  updateNumpadDisplay();
+  clearAnswerFeedback();
+}
+
+function syncQuestionModeDisplay(question = state.activeQuestion) {
+  const optionsGrid = $("#optionsGrid");
+  const numpadPanel = $("#numpadPanel");
+  const isNumpad = state.answerMode === "numpad";
+
+  if (optionsGrid) {
+    optionsGrid.hidden = isNumpad;
+  }
+  if (numpadPanel) {
+    numpadPanel.hidden = !isNumpad;
+  }
+
+  if (isNumpad && question) {
+    const catOptions = $("#numpadCategoricalOptions");
+    const options = question.options || [];
+    const isNumeric = options.every((opt) => {
+      const s = String(opt).trim().replace(/[%$,]/g, "");
+      return !isNaN(Number(s)) || s.includes("/");
+    });
+
+    if (!isNumeric && catOptions) {
+      catOptions.hidden = false;
+      catOptions.innerHTML = options.map((opt, idx) => `
+        <div class="numpad-categorical-chip">
+          <strong>${idx + 1}</strong>
+          <span>${escapeHtml(String(opt))}</span>
+        </div>
+      `).join("");
+    } else if (catOptions) {
+      catOptions.hidden = true;
+      catOptions.innerHTML = "";
+    }
+
+    updateNumpadDisplay();
   }
 }
 
@@ -362,6 +713,10 @@ function setScreen(name) {
   $(`#${name}Screen`)?.classList.add("is-active");
   const navTarget = name === "progress" ? name : "practice";
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
+  if (name === "progress") {
+    void renderAdvancedProgressDashboard();
+    void renderLocalJournal();
+  }
 }
 
 function updateQuestionHud(question = state.activeQuestion) {
@@ -596,14 +951,21 @@ function renderProfileSummary(profile) {
     today_solved: Number(profile.today_solved || 0),
     mistake_count: Number(profile.mistake_count || state.profileStats.mistake_count || 0),
   };
-  $("#todaySolved").textContent = profile.today_solved || 0;
-  $("#accuracyStat").textContent = `${profile.accuracy || 0}%`;
-  $("#masteryStat").textContent = `${profile.mastery || 0}%`;
-  $("#totalSolved").textContent = profile.total_attempts || 0;
-  $("#totalCorrect").textContent = profile.total_correct || 0;
-  $("#avgTime").textContent = `${profile.avg_time || 0}s`;
-  if (typeof profile.mistake_count !== "undefined") {
-    $("#practiceMistakesButton").disabled = Number(profile.mistake_count || 0) === 0;
+  const todaySolved = $("#todaySolved");
+  if (todaySolved) todaySolved.textContent = profile.today_solved || 0;
+  const accuracyStat = $("#accuracyStat");
+  if (accuracyStat) accuracyStat.textContent = `${profile.accuracy || 0}%`;
+  const masteryStat = $("#masteryStat");
+  if (masteryStat) masteryStat.textContent = `${profile.mastery || 0}%`;
+  const totalSolved = $("#totalSolved");
+  if (totalSolved) totalSolved.textContent = profile.total_attempts || 0;
+  const totalCorrect = $("#totalCorrect");
+  if (totalCorrect) totalCorrect.textContent = profile.total_correct || 0;
+  const avgTime = $("#avgTime");
+  if (avgTime) avgTime.textContent = `${profile.avg_time || 0}s`;
+  const practiceMistakesButton = $("#practiceMistakesButton");
+  if (practiceMistakesButton && typeof profile.mistake_count !== "undefined") {
+    practiceMistakesButton.disabled = Number(profile.mistake_count || 0) === 0;
   }
   renderProgressVisuals();
 }
@@ -647,9 +1009,11 @@ async function loadMistakes() {
     renderMistakes(data.mistakes || [], data.pattern_ids || []);
     renderGameModes();
   } catch (error) {
-    $("#mistakeList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    const mistakeList = $("#mistakeList");
+    if (mistakeList) mistakeList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
     state.mistakePatternIds = [];
-    $("#practiceMistakesButton").disabled = true;
+    const practiceMistakesButton = $("#practiceMistakesButton");
+    if (practiceMistakesButton) practiceMistakesButton.disabled = true;
   }
 }
 
@@ -662,17 +1026,23 @@ async function loadReminder() {
   try {
     renderReminder(await api(`/api/reminders/${state.telegramUser.id}`));
   } catch (error) {
-    $("#reminderText").textContent = error.message;
+    const reminderText = $("#reminderText");
+    if (reminderText) reminderText.textContent = error.message;
   }
 }
 
 function renderReminder(settings) {
   state.reminderSettings = settings || { enabled: false, reminder_time: "20:00", timezone: "Asia/Kolkata" };
-  $("#reminderEnabled").checked = Boolean(state.reminderSettings.enabled);
-  $("#reminderTime").value = state.reminderSettings.reminder_time || "20:00";
-  $("#reminderText").textContent = state.reminderSettings.enabled
-    ? `Reminder active at ${state.reminderSettings.reminder_time || "20:00"}.`
-    : "Telegram can remind you if you miss practice.";
+  const reminderEnabled = $("#reminderEnabled");
+  if (reminderEnabled) reminderEnabled.checked = Boolean(state.reminderSettings.enabled);
+  const reminderTime = $("#reminderTime");
+  if (reminderTime) reminderTime.value = state.reminderSettings.reminder_time || "20:00";
+  const reminderText = $("#reminderText");
+  if (reminderText) {
+    reminderText.textContent = state.reminderSettings.enabled
+      ? `Reminder active at ${state.reminderSettings.reminder_time || "20:00"}.`
+      : "Telegram can remind you if you miss practice.";
+  }
 }
 
 async function saveReminder() {
@@ -681,34 +1051,42 @@ async function saveReminder() {
     return;
   }
 
-  $("#saveReminderButton").disabled = true;
-  $("#saveReminderButton").textContent = "Saving";
+  const saveReminderButton = $("#saveReminderButton");
+  if (saveReminderButton) {
+    saveReminderButton.disabled = true;
+    saveReminderButton.textContent = "Saving";
+  }
   try {
     const settings = await api(`/api/reminders/${state.telegramUser.id}`, {
       method: "POST",
       body: JSON.stringify({
-        enabled: $("#reminderEnabled").checked,
-        reminder_time: $("#reminderTime").value || "20:00",
+        enabled: Boolean($("#reminderEnabled")?.checked),
+        reminder_time: $("#reminderTime")?.value || "20:00",
         timezone: "Asia/Kolkata",
       }),
     });
     renderReminder(settings);
   } catch (error) {
-    $("#reminderText").textContent = error.message;
+    const reminderText = $("#reminderText");
+    if (reminderText) reminderText.textContent = error.message;
   } finally {
-    $("#saveReminderButton").disabled = false;
-    $("#saveReminderButton").textContent = "Save";
+    if (saveReminderButton) {
+      saveReminderButton.disabled = false;
+      saveReminderButton.textContent = "Save";
+    }
   }
 }
 
 function renderUnlockProgress(progress) {
+  const unlockList = $("#unlockList");
+  if (!unlockList) return;
   const topics = progress?.topics || [];
   if (!topics.length) {
-    $("#unlockList").innerHTML = `<div class="empty-state">Start practicing to unlock progress.</div>`;
+    unlockList.innerHTML = `<div class="empty-state">Start practicing to unlock progress.</div>`;
     return;
   }
 
-  $("#unlockList").innerHTML = topics.slice(0, 6).map((topic) => {
+  unlockList.innerHTML = topics.slice(0, 6).map((topic) => {
     const total = Number(topic.total_patterns || 0);
     const mastered = Number(topic.mastered_patterns || 0);
     const practiced = Number(topic.practiced_patterns || 0);
@@ -980,6 +1358,7 @@ function renderProgressTracker() {
     : `<div class="empty-state">No patterns in this topic.</div>`;
 
   renderProgressPatternDetail();
+  void renderLocalJournal();
 }
 
 function renderProgressPatternDetail() {
@@ -1049,15 +1428,21 @@ function renderMistakes(mistakes, patternIds) {
   state.mistakes = mistakes || [];
   state.mistakePatternIds = patternIds.map(Number).filter(Boolean);
   state.profileStats.mistake_count = state.mistakes.length;
-  $("#practiceMistakesButton").disabled = state.mistakePatternIds.length === 0;
+  const practiceMistakesButton = $("#practiceMistakesButton");
+  if (practiceMistakesButton) {
+    practiceMistakesButton.disabled = state.mistakePatternIds.length === 0;
+  }
   renderProgressVisuals();
 
+  const mistakeList = $("#mistakeList");
+  if (!mistakeList) return;
+
   if (!mistakes.length) {
-    $("#mistakeList").innerHTML = `<div class="empty-state">No mistakes saved yet.</div>`;
+    mistakeList.innerHTML = `<div class="empty-state">No mistakes saved yet.</div>`;
     return;
   }
 
-  $("#mistakeList").innerHTML = mistakes.slice(0, 5).map((item) => `
+  mistakeList.innerHTML = mistakes.slice(0, 5).map((item) => `
     <article class="mistake-item">
       <div class="mistake-item-header">
         <strong>${escapeHtml(item.pattern_name)}</strong>
@@ -2076,10 +2461,12 @@ async function loadNextQuestion() {
   clearQuestionTimer();
   clearAnswerFeedback();
   state.answered = false;
+  state.numpadValue = "";
+  resetTypedAnswerPending();
   $("#nextButton").disabled = true;
   $("#nextButton").textContent = "Next question";
   $("#feedbackTitle").textContent = "Answer";
-  $("#feedbackText").textContent = "Choose an option to see the explanation.";
+  $("#feedbackText").textContent = "Choose an option or type your answer.";
   $("#autoAdvanceText").hidden = true;
   $("#optionsGrid").innerHTML = "";
   $("#questionText").textContent = "Loading question";
@@ -2116,16 +2503,136 @@ function renderQuestion(question) {
       <span class="option-value">${escapeHtml(String(option))}</span>
     </button>
   `).join("");
+  state.numpadValue = "";
+  resetTypedAnswerPending();
+  syncQuestionModeDisplay(question);
   replayAnimation(document.querySelector(".question-panel"), "is-entering");
-  replayAnimation($("#optionsGrid"), "is-entering");
+  if (state.answerMode === "mcq") {
+    replayAnimation($("#optionsGrid"), "is-entering");
+  } else {
+    replayAnimation($("#numpadPanel"), "is-entering");
+  }
   startQuestionTimer();
   syncGameQuestion(question);
+}
+
+function finalizeAnswerResponse(result, effectiveIndex) {
+  if (result.is_correct) {
+    state.currentStreak += 1;
+    state.bestStreak = Math.max(state.bestStreak, state.currentStreak);
+    triggerHaptic("success");
+    playTone("correct");
+  } else {
+    state.currentStreak = 0;
+    triggerHaptic("error");
+    playTone("wrong");
+  }
+  if (state.session) {
+    state.session.score = result.score;
+    state.session.answered = result.answered;
+  }
+  $("#progressBar").style.width = `${(result.answered / result.total_questions) * 100}%`;
+  updateQuestionHud({ ...state.activeQuestion, question_number: result.answered + 1, total_questions: result.total_questions });
+  $("#feedbackTitle").textContent = result.is_correct ? "Correct" : "Review";
+  $("#feedbackText").textContent = result.explanation || `Correct answer: ${result.correct_option}`;
+  playAnswerFeedback(result.is_correct);
+  syncGameAnswer(result, effectiveIndex);
+  const gameComplete = Boolean(state.activeGameMode?.isComplete?.(state.gameState));
+
+  if (result.complete || gameComplete) {
+    const finishEarly = gameComplete && !result.complete;
+    $("#nextButton").textContent = finishEarly ? "View game report" : "View result";
+    $("#nextButton").onclick = finishEarly ? finishGameSessionEarly : () => showResults(result.summary);
+    $("#autoAdvanceText").textContent = finishEarly ? "Showing game report automatically..." : "Showing result automatically...";
+    $("#autoAdvanceText").hidden = false;
+    state.autoAdvanceId = window.setTimeout(finishEarly ? finishGameSessionEarly : () => showResults(result.summary), AUTO_ADVANCE_MS);
+  } else {
+    $("#nextButton").textContent = "Next question";
+    $("#nextButton").onclick = loadNextQuestion;
+    $("#autoAdvanceText").textContent = "Next question loading automatically...";
+    $("#autoAdvanceText").hidden = false;
+    state.autoAdvanceId = window.setTimeout(loadNextQuestion, AUTO_ADVANCE_MS);
+  }
+  $("#nextButton").disabled = false;
+  if (result.complete) {
+    window.setTimeout(() => loadProfile(), 250);
+  }
+
+  if (window.AptitudeLocalDB && state.activeQuestion) {
+    const q = state.activeQuestion;
+    const patternId = Number(q.pattern_id || 0);
+    const ctx = findPatternContext(patternId);
+    const category_name = ctx?.category?.name || "Quantitative Aptitude";
+    const topic_name = ctx?.topic?.name || "General";
+    const pattern_name = ctx?.pattern?.name || (patternId ? `Pattern #${patternId}` : "General Practice");
+
+    let userAnswer = result.typed_answer;
+    if (userAnswer === null || userAnswer === undefined) {
+      if (effectiveIndex !== null && effectiveIndex !== undefined && Array.isArray(q.options)) {
+        userAnswer = q.options[effectiveIndex];
+      }
+    }
+
+    let correctAnswer = result.correct_option;
+    if (correctAnswer === null || correctAnswer === undefined) {
+      const cIdx = result.correct_option_index !== undefined ? result.correct_option_index : q.correct_option_index;
+      if (cIdx !== null && cIdx !== undefined && Array.isArray(q.options)) {
+        correctAnswer = q.options[cIdx];
+      }
+    }
+
+    const attempt = {
+      date: new Date().toISOString().slice(0, 10),
+      timestamp: Date.now(),
+      session_id: state.session?.session_id || "",
+      category_name,
+      topic_name,
+      pattern_id: patternId,
+      pattern_name,
+      question_text: q.question_text || "",
+      options: Array.isArray(q.options) ? q.options : [],
+      selected_answer: effectiveIndex !== null && effectiveIndex !== undefined ? (q.options?.[effectiveIndex] ?? null) : null,
+      typed_answer: result.typed_answer ?? null,
+      correct_answer: correctAnswer ?? null,
+      correct_option_index: result.correct_option_index !== undefined ? result.correct_option_index : (q.correct_option_index ?? null),
+      is_correct: Boolean(result.is_correct),
+      is_timeout: Boolean(result.is_timeout || (result.time_taken >= 30.0 && !result.is_correct)),
+      is_skipped: false,
+      time_taken: typeof result.time_taken === "number" ? result.time_taken : Number(result.time_taken) || 0,
+      explanation: result.explanation || "",
+      difficulty: q.difficulty !== undefined ? q.difficulty : 3,
+      user_id: state.telegramUser?.id || null,
+    };
+
+    window.AptitudeLocalDB.recordLocalAttempt(attempt).catch((err) => {
+      console.warn("Failed to record local attempt:", err);
+    });
+  }
 }
 
 async function submitAnswer(answerIndex) {
   if (state.answered) {
     return;
   }
+
+  // If the clicked option is wrong, mark it and give feedback without failing the question yet
+  if (state.activeQuestion && state.activeQuestion.correct_option_index !== undefined) {
+    if (answerIndex !== state.activeQuestion.correct_option_index) {
+      const clickedBtn = document.querySelector(`[data-answer-index="${answerIndex}"]`);
+      if (clickedBtn) {
+        clickedBtn.classList.add("is-wrong");
+        clickedBtn.disabled = true;
+      }
+      playTone("wrong");
+      triggerHaptic("error");
+      const indicatorSub = $("#autoIndicatorSub");
+      if (indicatorSub) {
+        indicatorSub.textContent = "• Not correct yet! Keep trying";
+      }
+      return;
+    }
+  }
+
   state.answered = true;
   clearQuestionTimer();
   clearAutoAdvance();
@@ -2156,46 +2663,55 @@ async function submitAnswer(answerIndex) {
     }
   });
 
-  if (result.is_correct) {
-    state.currentStreak += 1;
-    state.bestStreak = Math.max(state.bestStreak, state.currentStreak);
-    triggerHaptic("success");
-    playTone("correct");
-  } else {
-    state.currentStreak = 0;
-    triggerHaptic("error");
-    playTone("wrong");
-  }
-  if (state.session) {
-    state.session.score = result.score;
-    state.session.answered = result.answered;
-  }
-  $("#progressBar").style.width = `${(result.answered / result.total_questions) * 100}%`;
-  updateQuestionHud({ ...state.activeQuestion, question_number: result.answered + 1, total_questions: result.total_questions });
-  $("#feedbackTitle").textContent = result.is_correct ? "Correct" : "Review";
-  $("#feedbackText").textContent = result.explanation || `Correct answer: ${result.correct_option}`;
-  playAnswerFeedback(result.is_correct);
-  syncGameAnswer(result, answerIndex);
-  const gameComplete = Boolean(state.activeGameMode?.isComplete?.(state.gameState));
+  finalizeAnswerResponse(result, answerIndex);
+}
 
-  if (result.complete || gameComplete) {
-    const finishEarly = gameComplete && !result.complete;
-    $("#nextButton").textContent = finishEarly ? "View game report" : "View result";
-    $("#nextButton").onclick = finishEarly ? finishGameSessionEarly : () => showResults(result.summary);
-    $("#autoAdvanceText").textContent = finishEarly ? "Showing game report automatically..." : "Showing result automatically...";
-    $("#autoAdvanceText").hidden = false;
-    state.autoAdvanceId = window.setTimeout(finishEarly ? finishGameSessionEarly : () => showResults(result.summary), AUTO_ADVANCE_MS);
-  } else {
-    $("#nextButton").textContent = "Next question";
-    $("#nextButton").onclick = loadNextQuestion;
-    $("#autoAdvanceText").textContent = "Next question loading automatically...";
-    $("#autoAdvanceText").hidden = false;
-    state.autoAdvanceId = window.setTimeout(loadNextQuestion, AUTO_ADVANCE_MS);
+async function submitTypedAnswer(customVal) {
+  clearAutoSubmitTimer();
+  if (state.answered) {
+    return;
   }
-  $("#nextButton").disabled = false;
-  if (result.complete) {
-    window.setTimeout(() => loadProfile(), 250);
+  const typed = String(customVal ?? state.numpadValue ?? "").trim();
+  if (!typed) {
+    return;
   }
+  state.answered = true;
+  clearQuestionTimer();
+  clearAutoAdvance();
+  markTypedAnswerPending(typed);
+
+  let result;
+  try {
+    result = await api(`/api/session/${state.session.session_id}/answer`, {
+      method: "POST",
+      body: JSON.stringify({ typed_answer: typed }),
+    });
+  } catch (error) {
+    state.answered = false;
+    resetTypedAnswerPending();
+    startQuestionTimer();
+    showStatus(error.message);
+    return;
+  }
+
+  const display = $("#numpadDisplay");
+  if (display) {
+    display.classList.remove("is-pending");
+    display.classList.add(result.is_correct ? "is-correct" : "is-wrong");
+  }
+
+  document.querySelectorAll(".option-button").forEach((button) => {
+    const index = Number(button.dataset.answerIndex);
+    button.disabled = true;
+    button.classList.remove("is-pending", "is-dimmed");
+    if (index === result.correct_option_index) {
+      button.classList.add("is-correct");
+    } else if (result.selected_option_index !== null && index === result.selected_option_index) {
+      button.classList.add("is-wrong");
+    }
+  });
+
+  finalizeAnswerResponse(result, result.selected_option_index ?? result.correct_option_index);
 }
 
 async function stopPractice() {
@@ -2240,12 +2756,98 @@ function showResults(summary) {
   } else {
     $("#resultAccuracy").textContent = `Accuracy ${summary.accuracy}%`;
   }
+
+  // Display Average Time & Weak Questions Count
+  const avgTime = summary.avg_time !== undefined ? summary.avg_time : 0.0;
+  const weakCount = summary.weak_count !== undefined ? summary.weak_count : 0;
+  const avgElem = $("#resultAvgTime");
+  if (avgElem) avgElem.textContent = `${avgTime}s`;
+  const weakElem = $("#resultWeakCount");
+  if (weakElem) weakElem.textContent = `${weakCount}`;
+
+  // Configure Re-Practice Weak Banner
+  const banner = $("#weakRepracticeBanner");
+  const rePracticeCount = $("#rePracticeWeakCount");
+  const targetTotal = summary.total_questions || summary.planned_total_questions || 10;
+  if (banner && rePracticeCount) {
+    if (weakCount > 0) {
+      banner.hidden = false;
+      rePracticeCount.textContent = weakCount;
+      rePracticeCount.textContent = `${weakCount} (${targetTotal}-Q Drill)`;
+      const note = $("#weakRepracticeNote");
+      if (note) {
+        note.textContent = `${weakCount} question(s) took longer than average (${avgTime}s) or missed. Drill them across a full ${targetTotal}-question set!`;
+      }
+    } else {
+      banner.hidden = true;
+    }
+  }
+
   renderGameResult(summary);
   setScreen("result");
   replayAnimation($("#resultPanel"), "is-complete");
   if (!summary.stopped && summary.total_questions && Number(summary.accuracy || 0) >= 80) {
     triggerConfetti("success");
     playTone("mission");
+  }
+
+  if (window.AptitudeLocalDB && summary) {
+    window.AptitudeLocalDB.recordLocalSession({
+      session_id: state.session?.session_id || summary.session_id,
+      score: summary.score || 0,
+      total_questions: summary.total_questions || summary.planned_total_questions || 0,
+      accuracy: summary.accuracy || 0,
+      avg_time: summary.avg_time || 0,
+      weak_count: summary.weak_count || 0,
+      stopped: Boolean(summary.stopped),
+      user_id: state.telegramUser?.id || null,
+      date: new Date().toISOString().slice(0, 10),
+      timestamp: Date.now(),
+    }).catch((err) => console.warn("Failed to record local session:", err));
+  }
+}
+
+async function rePracticeWeakQuestions() {
+  if (!state.session?.session_id) {
+    showStatus("No active session to re-practice from.");
+    return;
+  }
+  const sessionId = state.session.session_id;
+  clearAutoAdvance();
+  clearQuestionTimer();
+  showStatus("Building weak questions drill session...");
+  try {
+    let clientHistory = [];
+    if (window.AptitudeLocalDB) {
+      try {
+        const attempts = await window.AptitudeLocalDB.getAllLocalAttempts();
+        clientHistory = (attempts || []).slice(0, 30);
+      } catch {
+        // best effort fallback
+      }
+    }
+    const payload = await api(`/api/session/${sessionId}/re-practice-weak`, {
+      method: "POST",
+      body: JSON.stringify({
+        history: clientHistory,
+        target_count: state.session?.total_questions || undefined,
+      }),
+    });
+    if (!payload?.session) {
+      throw new Error("Failed to create weak questions session.");
+    }
+    state.session = payload.session;
+    state.activeQuestion = null;
+    state.currentQuestion = null;
+    state.answered = false;
+    state.selectedOptionIndex = null;
+    clearTypedAnswer();
+    clearStatus();
+    updateQuestionHud({ question_number: 1, total_questions: state.session.total_questions });
+    setScreen("question");
+    await loadNextQuestion();
+  } catch (error) {
+    showStatus(`Cannot start weak practice: ${error.message}`);
   }
 }
 
@@ -2263,33 +2865,74 @@ async function showReview() {
 
   try {
     const review = await api(`/api/session/${state.session.session_id}/review`);
-    renderReview(review.questions || []);
+    renderReview(review.questions || [], review.summary || {});
   } catch (error) {
     $("#reviewList").innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
   }
 }
 
-function renderReview(questions) {
+function renderReview(questions, summary = {}) {
+  // Update review header with average time and slow count
+  const metaElem = $("#reviewSpeedMeta");
+  if (metaElem && summary.avg_time !== undefined) {
+    metaElem.innerHTML = `<span>Avg Time: <strong class="badge">${summary.avg_time}s</strong></span> <span>Slow: <strong class="badge">${summary.slow_count || 0}</strong></span>`;
+  }
+
+  const reviewRePracticeBtn = $("#reviewRePracticeWeakButton");
+  if (reviewRePracticeBtn) {
+    const weakCount = summary.weak_count || 0;
+    const drillTotal = summary.total_questions || summary.planned_total_questions || (questions.length || 10);
+    if (weakCount > 0) {
+      reviewRePracticeBtn.hidden = false;
+      reviewRePracticeBtn.textContent = `⚡ Re-Practice Weak (${weakCount})`;
+      reviewRePracticeBtn.textContent = `⚡ Re-Practice Weak (${drillTotal}-Q Drill)`;
+    } else {
+      reviewRePracticeBtn.hidden = true;
+    }
+  }
+
   if (!questions.length) {
     $("#reviewList").innerHTML = `<div class="empty-state">No answered questions to review yet.</div>`;
     return;
   }
 
+  const avg = summary.avg_time || 0;
+
   $("#reviewList").innerHTML = questions.map((question) => {
-    const skipped = question.is_skipped || question.selected_option_index === null || question.selected_option_index === undefined;
-    const selectedLabel = skipped ? "" : String.fromCharCode(65 + question.selected_option_index);
-    const correctLabel = String.fromCharCode(65 + question.correct_option_index);
+    const skipped = question.is_skipped || (question.selected_option_index === null && !question.typed_answer && question.selected_option === null);
+    const hasOptionIndex = question.selected_option_index !== null && question.selected_option_index !== undefined;
+    const selectedLabel = hasOptionIndex ? `${String.fromCharCode(65 + question.selected_option_index)}. ` : "";
+    const correctPrefix = (question.options?.length > 1 && !question.typed_answer) ? `${String.fromCharCode(65 + question.correct_option_index)}. ` : "";
     const statusClass = skipped ? "is-skipped" : question.is_correct ? "is-correct" : "is-wrong";
     const statusText = skipped ? "Skipped" : question.is_correct ? "Correct" : "Incorrect";
     const selectedAnswer = skipped
       ? "Skipped"
-      : `${selectedLabel}. ${escapeHtml(String(question.selected_option))}`;
+      : question.typed_answer
+        ? escapeHtml(String(question.typed_answer))
+        : `${selectedLabel}${escapeHtml(String(question.selected_option ?? ""))}`;
+    const correctAnswer = `${correctPrefix}${escapeHtml(String(question.correct_option ?? ""))}`;
+
+    // Compute time badge
+    const timeTaken = question.time_taken !== undefined && question.time_taken !== null ? Number(question.time_taken) : null;
+    let timeBadge = "";
+    if (timeTaken !== null && !skipped) {
+      if (avg > 0 && timeTaken > avg) {
+        timeBadge = `<span class="time-badge is-slow" title="Took ${timeTaken}s (Slower than average ${avg}s)">⏱️ ${timeTaken}s (Slow)</span>`;
+      } else if (avg > 0) {
+        timeBadge = `<span class="time-badge is-fast" title="Took ${timeTaken}s (Faster than average ${avg}s)">⚡ ${timeTaken}s (Fast)</span>`;
+      } else {
+        timeBadge = `<span class="time-badge">${timeTaken}s</span>`;
+      }
+    }
 
     return `
       <article class="review-card ${statusClass}">
         <div class="review-card-header">
           <span>Question ${question.question_number}</span>
-          <strong>${statusText}</strong>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${timeBadge}
+            <strong>${statusText}</strong>
+          </div>
         </div>
         <h3>${escapeHtml(question.question_text)}</h3>
         <div class="review-answer-grid">
@@ -2299,7 +2942,7 @@ function renderReview(questions) {
           </div>
           <div>
             <span>Correct answer</span>
-            <strong>${correctLabel}. ${escapeHtml(String(question.correct_option))}</strong>
+            <strong>${correctAnswer}</strong>
           </div>
         </div>
         <p>${escapeHtml(question.explanation || "No explanation available.")}</p>
@@ -2308,23 +2951,118 @@ function renderReview(questions) {
   }).join("");
 }
 
+const QUESTION_TIME_LIMIT_SECONDS = 30;
+
+function updateTimerDisplay(remaining) {
+  const timerElem = $("#questionTimer");
+  if (!timerElem) return;
+  timerElem.textContent = `${remaining}s`;
+  if (remaining <= 5) {
+    timerElem.classList.add("is-urgent");
+    timerElem.classList.remove("is-warning");
+  } else if (remaining <= 10) {
+    timerElem.classList.add("is-warning");
+    timerElem.classList.remove("is-urgent");
+  } else {
+    timerElem.classList.remove("is-warning", "is-urgent");
+  }
+}
+
 function startQuestionTimer() {
+  clearQuestionTimer();
   state.questionStartedAt = Date.now();
   $("#questionTimer").textContent = "0s";
+  updateTimerDisplay(QUESTION_TIME_LIMIT_SECONDS);
+
   state.timerId = window.setInterval(() => {
+    if (state.answered) {
+      clearQuestionTimer();
+      return;
+    }
     const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
-    $("#questionTimer").textContent = `${elapsed}s`;
+    const remaining = Math.max(0, QUESTION_TIME_LIMIT_SECONDS - elapsed);
+    updateTimerDisplay(remaining);
+
     if (state.activeGameMode && state.gameState && !state.answered) {
       renderGamePanels();
     }
-  }, 1000);
+
+    if (remaining <= 0) {
+      clearQuestionTimer();
+      handleQuestionTimeout();
+    }
+  }, 250);
 }
 
 function clearQuestionTimer() {
+  clearAutoSubmitTimer();
   if (state.timerId) {
     window.clearInterval(state.timerId);
     state.timerId = null;
   }
+  const timerElem = $("#questionTimer");
+  if (timerElem) {
+    timerElem.classList.remove("is-warning", "is-urgent");
+  }
+}
+
+async function handleQuestionTimeout() {
+  if (state.answered || !state.session?.session_id) {
+    return;
+  }
+  state.answered = true;
+  clearQuestionTimer();
+  clearAutoAdvance();
+
+  const display = $("#numpadDisplay");
+  if (display) {
+    display.classList.remove("is-pending", "is-correct");
+    display.classList.add("is-wrong");
+  }
+
+  document.querySelectorAll(".numpad-key").forEach((key) => {
+    key.disabled = true;
+  });
+  const submitBtn = $("#numpadSubmitBtn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+  }
+
+  const feedbackPanel = $("#feedbackPanel");
+  if (feedbackPanel) {
+    feedbackPanel.classList.remove("is-correct", "is-checking");
+    feedbackPanel.classList.add("is-wrong");
+  }
+  $("#feedbackTitle").textContent = "Time's Up (Failed)";
+  $("#feedbackText").textContent = "30 seconds expired. Showing correct answer...";
+  playTone("wrong");
+  triggerHaptic("error");
+
+  let result;
+  try {
+    result = await api(`/api/session/${state.session.session_id}/answer`, {
+      method: "POST",
+      body: JSON.stringify({
+        is_timeout: true,
+        typed_answer: state.numpadValue.trim() || undefined,
+      }),
+    });
+    result.is_timeout = true;
+  } catch (error) {
+    showStatus(error.message);
+    return;
+  }
+
+  document.querySelectorAll(".option-button").forEach((button) => {
+    const index = Number(button.dataset.answerIndex);
+    button.disabled = true;
+    button.classList.remove("is-pending", "is-dimmed");
+    if (index === result.correct_option_index) {
+      button.classList.add("is-correct");
+    }
+  });
+
+  finalizeAnswerResponse(result, null);
 }
 
 function escapeHtml(value) {
@@ -2497,6 +3235,44 @@ function bindEvents() {
       return;
     }
 
+    const answerModeBtn = event.target.closest("[data-answer-mode]");
+    if (answerModeBtn) {
+      event.preventDefault();
+      setAnswerMode(answerModeBtn.dataset.answerMode);
+      return;
+    }
+
+    const numpadKey = event.target.closest("[data-numpad-key]");
+    if (numpadKey) {
+      event.preventDefault();
+      if (Date.now() - lastNumpadPointerTime < 350) {
+        return;
+      }
+      const key = numpadKey.dataset.numpadKey;
+      if (key === "backspace") {
+        backspaceNumpad();
+      } else if (key === "clear") {
+        clearNumpad();
+      } else {
+        appendNumpadKey(key);
+      }
+      return;
+    }
+
+    if (event.target.closest("#numpadClearBtn")) {
+      event.preventDefault();
+      clearNumpad();
+      return;
+    }
+
+    const numpadSubmitBtn = event.target.closest("#numpadSubmitBtn");
+    if (numpadSubmitBtn && !numpadSubmitBtn.disabled) {
+      event.preventDefault();
+      submitTypedAnswer();
+      handleManualSubmitAttempt();
+      return;
+    }
+
     const answerButton = event.target.closest("[data-answer-index]");
     if (answerButton) {
       submitAnswer(Number(answerButton.dataset.answerIndex));
@@ -2530,20 +3306,990 @@ function bindEvents() {
     }
   });
 
-  $("#selectTopicButton").addEventListener("click", selectWholeTopic);
-  $("#startButton").addEventListener("click", startPractice);
-  $("#practiceAgainButton").addEventListener("click", () => {
+  let lastNumpadPointerTime = 0;
+  const numpadGrid = $("#numpadGrid");
+  if (numpadGrid) {
+    numpadGrid.addEventListener("pointerdown", (event) => {
+      const keyBtn = event.target.closest("[data-numpad-key]");
+      if (keyBtn && !keyBtn.disabled) {
+        event.preventDefault();
+        lastNumpadPointerTime = Date.now();
+        const key = keyBtn.dataset.numpadKey;
+        if (key === "backspace") {
+          backspaceNumpad();
+        } else if (key === "clear") {
+          clearNumpad();
+        } else {
+          appendNumpadKey(key);
+        }
+      }
+    });
+  }
+
+  window.addEventListener("keydown", (event) => {
+    if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
+      return;
+    }
+    const questionScreen = $("#questionScreen");
+    if (!questionScreen || !questionScreen.classList.contains("is-active")) {
+      return;
+    }
+    if (!state.session || !state.activeQuestion || state.answered) {
+      return;
+    }
+
+    if (state.answerMode === "numpad") {
+      if ((event.key >= "0" && event.key <= "9") || event.key === "." || event.key === "-" || event.key === "/" || event.key === "%") {
+        event.preventDefault();
+        appendNumpadKey(event.key);
+        highlightKeyElement(event.key);
+      } else if (event.key === "Backspace") {
+        event.preventDefault();
+        backspaceNumpad();
+        highlightKeyElement("backspace");
+      } else if (event.key === "Escape" || event.key === "Delete") {
+        event.preventDefault();
+        clearNumpad();
+        highlightKeyElement("clear");
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        submitTypedAnswer();
+        handleManualSubmitAttempt();
+      }
+    } else if (state.answerMode === "mcq") {
+      const key = event.key.toUpperCase();
+      if (["A", "B", "C", "D"].includes(key)) {
+        event.preventDefault();
+        const idx = key.charCodeAt(0) - 65;
+        if (idx < (state.activeQuestion.options?.length || 0)) {
+          submitAnswer(idx);
+        }
+      } else if (["1", "2", "3", "4"].includes(event.key)) {
+        event.preventDefault();
+        const idx = Number(event.key) - 1;
+        if (idx < (state.activeQuestion.options?.length || 0)) {
+          submitAnswer(idx);
+        }
+      }
+    }
+  });
+
+  $("#selectTopicButton")?.addEventListener("click", selectWholeTopic);
+  $("#startButton")?.addEventListener("click", startPractice);
+  $("#practiceAgainButton")?.addEventListener("click", () => {
     startPractice();
   });
-  $("#backToSetupButton").addEventListener("click", () => {
+  $("#backToSetupButton")?.addEventListener("click", () => {
     setScreen("practice");
   });
-  $("#reviewAnswersButton").addEventListener("click", showReview);
-  $("#reviewBackButton").addEventListener("click", () => setScreen("result"));
-  $("#saveReminderButton").addEventListener("click", saveReminder);
-  $("#reminderEnabled").addEventListener("change", saveReminder);
-  $("#practiceMistakesButton").addEventListener("click", startAllMistakeRetry);
-  $("#stopPracticeButton").addEventListener("click", stopPractice);
+  $("#reviewAnswersButton")?.addEventListener("click", showReview);
+  $("#reviewBackButton")?.addEventListener("click", () => setScreen("result"));
+  $("#saveReminderButton")?.addEventListener("click", saveReminder);
+  $("#reminderEnabled")?.addEventListener("change", saveReminder);
+  $("#practiceMistakesButton")?.addEventListener("click", startAllMistakeRetry);
+  $("#stopPracticeButton")?.addEventListener("click", stopPractice);
+
+  const rePracticeBtn = $("#rePracticeWeakButton");
+  if (rePracticeBtn) {
+    rePracticeBtn.addEventListener("click", rePracticeWeakQuestions);
+  }
+  const reviewRePracticeBtn = $("#reviewRePracticeWeakButton");
+  if (reviewRePracticeBtn) {
+    reviewRePracticeBtn.addEventListener("click", rePracticeWeakQuestions);
+  }
+
+  const downloadJsonBtn = $("#downloadJsonBtn");
+  if (downloadJsonBtn) {
+    downloadJsonBtn.addEventListener("click", async () => {
+      if (window.AptitudeLocalDB) {
+        try {
+          await window.AptitudeLocalDB.exportLocalDataJSON();
+          showStatus("Downloaded JSON backup of your practice data.", "info");
+        } catch (err) {
+          showStatus(`Failed to export JSON: ${err.message}`);
+        }
+      }
+    });
+  }
+
+  const downloadCsvBtn = $("#downloadCsvBtn");
+  if (downloadCsvBtn) {
+    downloadCsvBtn.addEventListener("click", async () => {
+      if (window.AptitudeLocalDB) {
+        try {
+          await window.AptitudeLocalDB.exportLocalDataCSV();
+          showStatus("Exported CSV of your question attempts.", "info");
+        } catch (err) {
+          showStatus(`Failed to export CSV: ${err.message}`);
+        }
+      }
+    });
+  }
+
+  const importBackupFile = $("#importBackupFile");
+  if (importBackupFile) {
+    importBackupFile.addEventListener("change", async (event) => {
+      const file = event.target.files?.[0];
+      if (!file || !window.AptitudeLocalDB) {
+        return;
+      }
+      try {
+        const text = await file.text();
+        const res = await window.AptitudeLocalDB.importLocalDataJSON(text);
+        showStatus(`Imported ${res.attemptsImported} attempts and ${res.sessionsImported} sessions successfully!`, "info");
+        void renderLocalJournal();
+      } catch (err) {
+        showStatus(`Failed to import backup: ${err.message}`);
+      } finally {
+        importBackupFile.value = "";
+      }
+    });
+  }
+
+  const chartDayBtn = $("#chartViewDayBtn");
+  const chartSessionBtn = $("#chartViewSessionBtn");
+  if (chartDayBtn && chartSessionBtn) {
+    chartDayBtn.addEventListener("click", () => {
+      currentTrendMode = "day";
+      chartDayBtn.classList.add("is-active");
+      chartSessionBtn.classList.remove("is-active");
+      renderPerformanceTrendSvg();
+    });
+    chartSessionBtn.addEventListener("click", () => {
+      currentTrendMode = "session";
+      chartSessionBtn.classList.add("is-active");
+      chartDayBtn.classList.remove("is-active");
+      renderPerformanceTrendSvg();
+    });
+  }
+
+  document.querySelectorAll(".journal-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".journal-tab-btn").forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+      const view = btn.dataset.journalView || "day";
+      void renderLocalJournal(view);
+    });
+  });
+
+  const journalSearchInput = $("#journalSearchInput");
+  if (journalSearchInput) {
+    journalSearchInput.addEventListener("input", (event) => {
+      void renderLocalJournal(journalState.activeView, journalState.filterStatus, event.target.value.trim());
+    });
+  }
+
+  const journalStatusFilter = $("#journalStatusFilter");
+  if (journalStatusFilter) {
+    journalStatusFilter.addEventListener("change", (event) => {
+      void renderLocalJournal(journalState.activeView, event.target.value, journalState.searchQuery);
+    });
+  }
+
+  const drillAllMistakesBtn = $("#drillAllMistakesBtn");
+  if (drillAllMistakesBtn) {
+    drillAllMistakesBtn.addEventListener("click", () => {
+      void startAllMistakeRetry();
+    });
+  }
+
+  document.querySelectorAll(".root-pill").forEach((pill) => {
+    pill.addEventListener("click", () => {
+      document.querySelectorAll(".root-pill").forEach((p) => p.classList.remove("is-active"));
+      pill.classList.add("is-active");
+      currentMistakeFilter = pill.dataset.mistakeFilter || "all";
+      void renderAdvancedProgressDashboard();
+    });
+  });
+
+  document.addEventListener("click", async (event) => {
+    const drillBtn = event.target.closest("[data-drill-pattern]");
+    if (drillBtn) {
+      const patId = drillBtn.dataset.drillPattern;
+      const drillType = drillBtn.dataset.drillType;
+      if (drillType === "mistake" || !patId) {
+        await startAllMistakeRetry();
+      } else {
+        await startPracticeWithPatternIds([Number(patId)]);
+      }
+    }
+  });
+}
+
+const journalState = {
+  activeView: "day",
+  filterStatus: "all",
+  searchQuery: "",
+};
+
+function renderJournalAttemptCard(attempt, overallAvgTime = 15) {
+  const isCorrect = Boolean(attempt.is_correct);
+  const isTimeout = Boolean(attempt.is_timeout);
+  const isSlow = attempt.time_taken > (overallAvgTime || 15) || isTimeout;
+  const timeSec = Number(attempt.time_taken || 0).toFixed(1);
+
+  let userAnswerText = attempt.typed_answer;
+  if (userAnswerText === null || userAnswerText === undefined || userAnswerText === "") {
+    userAnswerText = attempt.selected_answer;
+  }
+  if (userAnswerText === null || userAnswerText === undefined || userAnswerText === "") {
+    userAnswerText = isTimeout ? "(Timed out)" : "(None)";
+  }
+
+  let correctAnswerText = attempt.correct_answer;
+  if ((correctAnswerText === null || correctAnswerText === undefined || correctAnswerText === "") && Array.isArray(attempt.options) && attempt.correct_option_index !== null && attempt.correct_option_index !== undefined) {
+    correctAnswerText = attempt.options[attempt.correct_option_index];
+  }
+  if (correctAnswerText === null || correctAnswerText === undefined) {
+    correctAnswerText = "";
+  }
+
+  let optionsHtml = "";
+  if (Array.isArray(attempt.options) && attempt.options.length > 0) {
+    optionsHtml = `
+      <div class="journal-attempt-options">
+        ${attempt.options.map((opt, idx) => {
+          const isUserPicked = (attempt.selected_answer === opt) || (attempt.typed_answer && String(attempt.typed_answer).trim() === String(opt).trim()) || (attempt.selected_option_index === idx);
+          const isCorrectTarget = (idx === attempt.correct_option_index) || (String(correctAnswerText).trim() === String(opt).trim());
+          let cls = "journal-option-item";
+          if (isCorrectTarget) cls += " is-correct-target";
+          if (isUserPicked) cls += " is-user-picked";
+          return `<div class="${cls}"><span>${String.fromCharCode(65 + idx)}.</span> <span>${escapeHtml(opt)}</span></div>`;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  const dateDisplay = attempt.timestamp ? new Date(attempt.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+
+  return `
+    <article class="journal-attempt-card">
+      <div class="journal-attempt-header">
+        <div class="journal-attempt-meta">
+          <strong>${escapeHtml(attempt.pattern_name || "General")}</strong>
+          <span>•</span>
+          <span>${escapeHtml(attempt.category_name || "")} › ${escapeHtml(attempt.topic_name || "")}</span>
+          ${attempt.date ? `<span>• ${escapeHtml(attempt.date)} ${dateDisplay}</span>` : ""}
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          ${isCorrect ? '<span class="journal-badge badge-correct">✓ Correct</span>' : '<span class="journal-badge badge-wrong">✗ Wrong</span>'}
+          ${isTimeout ? '<span class="journal-badge badge-timeout">⏰ 30s Timeout</span>' : ""}
+          <span class="journal-badge ${isSlow ? "badge-slow" : "badge-fast"}">${isSlow ? "🐢" : "⚡"} ${timeSec}s</span>
+        </div>
+      </div>
+      <div class="journal-attempt-qtext">${escapeHtml(attempt.question_text)}</div>
+      ${optionsHtml}
+      <div class="journal-attempt-answers">
+        <span><strong>Your Answer:</strong> <span style="color:${isCorrect ? "var(--success)" : "var(--danger)"};font-weight:600;">${escapeHtml(userAnswerText)}</span></span>
+        <span><strong>Correct Answer:</strong> <span style="color:var(--success);font-weight:600;">${escapeHtml(correctAnswerText)}</span></span>
+      </div>
+      ${attempt.explanation ? `<div class="journal-attempt-explanation"><strong>Explanation:</strong> ${escapeHtml(attempt.explanation)}</div>` : ""}
+    </article>
+  `;
+}
+
+let currentMistakeFilter = "all";
+let currentTrendMode = "day";
+let cachedTrendDays = [];
+let cachedSessions = [];
+
+function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cachedSessions) {
+  if (trendDays && Array.isArray(trendDays)) cachedTrendDays = trendDays;
+  if (sessions && Array.isArray(sessions)) cachedSessions = sessions;
+
+  const svgGrid = $("#svgGridLines");
+  const svgAccArea = $("#svgAccArea");
+  const svgAccLine = $("#svgAccLine");
+  const svgSpeedLine = $("#svgSpeedLine");
+  const svgPoints = $("#svgDataPoints");
+  const summaryBadge = $("#chartSummaryBadge");
+
+  if (!svgAccLine) return;
+
+  let points = [];
+  if (currentTrendMode === "session" && cachedSessions.length > 0) {
+    points = cachedSessions.slice(0, 15).reverse().map((s, idx) => ({
+      label: `S${idx + 1}`,
+      tooltip: `Session #${idx + 1} (${s.date || ""}): ${s.accuracy || 0}% Acc • ${s.avg_time || 0}s (${s.total_questions || 0} Qs)`,
+      accuracy: Number(s.accuracy || 0),
+      avg_time: Number(s.avg_time || 0),
+      total: Number(s.total_questions || 0),
+    }));
+  } else if (cachedTrendDays && cachedTrendDays.length > 0) {
+    points = cachedTrendDays.map((d) => ({
+      label: d.display_date || d.date?.slice(5) || "Day",
+      tooltip: `${d.date}: ${d.accuracy}% Acc • ${d.avg_time}s (${d.total} Qs)`,
+      accuracy: Number(d.accuracy || 0),
+      avg_time: Number(d.avg_time || 0),
+      total: Number(d.total || 0),
+    }));
+  } else if (cachedSessions.length > 0) {
+    points = cachedSessions.slice(0, 15).reverse().map((s, idx) => ({
+      label: `S${idx + 1}`,
+      tooltip: `Session #${idx + 1}: ${s.accuracy || 0}% Acc • ${s.avg_time || 0}s`,
+      accuracy: Number(s.accuracy || 0),
+      avg_time: Number(s.avg_time || 0),
+      total: Number(s.total_questions || 0),
+    }));
+  }
+
+  if (!points.length) {
+    if (svgGrid) svgGrid.innerHTML = `<text x="250" y="95" text-anchor="middle" fill="var(--muted)" font-size="13">Complete practice sets to see your accuracy & speed curve</text>`;
+    if (svgAccArea) svgAccArea.setAttribute("d", "");
+    if (svgAccLine) svgAccLine.setAttribute("d", "");
+    if (svgSpeedLine) svgSpeedLine.setAttribute("d", "");
+    if (svgPoints) svgPoints.innerHTML = "";
+    if (summaryBadge) summaryBadge.textContent = "No data yet";
+    return;
+  }
+
+  const width = 500;
+  const height = 180;
+  const padLeft = 35;
+  const padRight = 25;
+  const padTop = 20;
+  const padBottom = 30;
+
+  const chartW = width - padLeft - padRight;
+  const chartH = height - padTop - padBottom;
+
+  // Grid lines
+  let gridHtml = "";
+  [0, 25, 50, 75, 100].forEach((pct) => {
+    const y = padTop + chartH - (pct / 100) * chartH;
+    gridHtml += `<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${(width - padRight).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(120,120,120,0.15)" stroke-width="1"/>`;
+    gridHtml += `<text x="${padLeft - 6}" y="${(y + 3.5).toFixed(1)}" font-size="10" fill="var(--muted)" text-anchor="end">${pct}%</text>`;
+  });
+  if (svgGrid) svgGrid.innerHTML = gridHtml;
+
+  const n = points.length;
+  const stepX = n > 1 ? chartW / (n - 1) : 0;
+
+  const accCoords = [];
+  const speedCoords = [];
+  let pointsHtml = "";
+
+  points.forEach((item, idx) => {
+    const x = n > 1 ? padLeft + idx * stepX : padLeft + chartW / 2;
+    const yAcc = padTop + chartH - (Math.max(0, Math.min(100, item.accuracy)) / 100) * chartH;
+    accCoords.push({ x, y: yAcc });
+
+    const speedClamped = Math.min(30, Math.max(0, item.avg_time));
+    const ySpeed = padTop + chartH - (speedClamped / 30) * chartH;
+    speedCoords.push({ x, y: ySpeed });
+
+    pointsHtml += `
+      <g class="chart-point-group">
+        <circle cx="${x.toFixed(1)}" cy="${yAcc.toFixed(1)}" r="4.5" fill="#10b981" stroke="#ffffff" stroke-width="1.5">
+          <title>${escapeHtml(item.tooltip)}</title>
+        </circle>
+        <circle cx="${x.toFixed(1)}" cy="${ySpeed.toFixed(1)}" r="3.5" fill="#f59e0b" stroke="#ffffff" stroke-width="1">
+          <title>${escapeHtml(item.tooltip)}</title>
+        </circle>
+        <text x="${x.toFixed(1)}" y="${height - 10}" font-size="10" font-weight="600" fill="var(--muted)" text-anchor="middle">${escapeHtml(item.label)}</text>
+      </g>
+    `;
+  });
+
+  let accD = "";
+  let areaD = "";
+  let speedD = "";
+
+  if (n === 1) {
+    const p = accCoords[0];
+    const sp = speedCoords[0];
+    accD = `M ${padLeft} ${p.y.toFixed(1)} L ${(width - padRight).toFixed(1)} ${p.y.toFixed(1)}`;
+    areaD = `M ${padLeft} ${p.y.toFixed(1)} L ${(width - padRight).toFixed(1)} ${p.y.toFixed(1)} L ${(width - padRight).toFixed(1)} ${(padTop + chartH).toFixed(1)} L ${padLeft} ${(padTop + chartH).toFixed(1)} Z`;
+    speedD = `M ${padLeft} ${sp.y.toFixed(1)} L ${(width - padRight).toFixed(1)} ${sp.y.toFixed(1)}`;
+  } else {
+    accD = accCoords.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    areaD = `${accD} L ${accCoords[accCoords.length - 1].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} L ${accCoords[0].x.toFixed(1)} ${(padTop + chartH).toFixed(1)} Z`;
+    speedD = speedCoords.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+  }
+
+  if (svgAccArea) svgAccArea.setAttribute("d", areaD);
+  if (svgAccLine) svgAccLine.setAttribute("d", accD);
+  if (svgSpeedLine) svgSpeedLine.setAttribute("d", speedD);
+  if (svgPoints) svgPoints.innerHTML = pointsHtml;
+
+  if (summaryBadge) {
+    const latest = points[points.length - 1];
+    summaryBadge.textContent = `${latest.accuracy}% Accuracy • ${latest.avg_time}s Avg`;
+  }
+}
+
+function renderRootCauseMistakes(mistakes, filter = "all") {
+  const container = $("#rootCauseMistakeList");
+  if (!container) return;
+
+  const filtered = (mistakes || []).filter((m) => {
+    if (filter === "all") return true;
+    return m.root_cause === filter;
+  });
+
+  if (!filtered.length) {
+    container.innerHTML = `<div class="empty-state">No mistakes in this category. You are mastering these patterns!</div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.slice(0, 25).map((m) => {
+    const timeSec = Number(m.time_taken || 0).toFixed(1);
+    let userAns = m.typed_answer || m.selected_answer || (m.is_timeout ? "(Timed Out)" : "(None)");
+    let corrAns = m.correct_answer || (m.options && m.options[m.correct_option_index]) || "";
+
+    return `
+      <article class="mistake-classified-card is-${m.root_cause}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
+          <div>
+            <strong>${escapeHtml(m.pattern_name || "General")}</strong>
+            <span style="font-size:12px;color:var(--muted);margin-left:6px;">(${escapeHtml(m.category_name)} › ${escapeHtml(m.topic_name)})</span>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="journal-badge ${m.root_cause_badge}">${escapeHtml(m.root_cause_label)}</span>
+            <span class="journal-badge badge-slow">${timeSec}s</span>
+          </div>
+        </div>
+        <div style="font-size:14px;color:var(--text);font-weight:600;margin:6px 0;">${escapeHtml(m.question_text)}</div>
+        <div style="font-size:13px;display:flex;gap:16px;color:var(--muted);flex-wrap:wrap;">
+          <span>Your Answer: <strong style="color:var(--danger);">${escapeHtml(userAns)}</strong></span>
+          <span>Correct Answer: <strong style="color:var(--success);">${escapeHtml(corrAns)}</strong></span>
+        </div>
+        ${m.explanation ? `<div style="font-size:12px;color:var(--muted);line-height:1.45;background:var(--surface-muted);padding:8px 10px;border-radius:6px;margin-top:6px;"><strong>Explanation:</strong> ${escapeHtml(m.explanation)}</div>` : ""}
+      </article>
+    `;
+  }).join("");
+}
+
+async function renderAdvancedProgressDashboard() {
+  if (!window.AptitudeLocalDB || typeof window.AptitudeLocalDB.getAdvancedLocalAnalytics !== "function") {
+    return;
+  }
+
+  let adv;
+  try {
+    adv = await window.AptitudeLocalDB.getAdvancedLocalAnalytics();
+  } catch (err) {
+    console.warn("Failed to load advanced analytics:", err);
+    return;
+  }
+
+  // 1. Executive Readiness Cockpit
+  const scoreElem = $("#readinessScore");
+  const gaugeElem = $("#readinessGaugeRing");
+  const tierElem = $("#readinessTier");
+  const summaryElem = $("#readinessSummary");
+
+  if (scoreElem) scoreElem.textContent = String(adv.readiness.score);
+  if (gaugeElem) {
+    gaugeElem.style.setProperty("--gauge-fill", `${adv.readiness.score}%`);
+    gaugeElem.style.setProperty("--readiness-color", adv.readiness.color);
+  }
+  if (tierElem) {
+    tierElem.textContent = adv.readiness.tier;
+    tierElem.style.borderColor = adv.readiness.color;
+    tierElem.style.color = adv.readiness.color;
+  }
+  if (summaryElem && adv.totals.total_attempts > 0) {
+    summaryElem.textContent = `Analyzed ${adv.totals.total_attempts} attempts across ${Object.keys(adv.patterns).length} patterns. Accuracy: ${adv.totals.accuracy}%, Average Speed: ${adv.totals.avg_time}s.`;
+  }
+
+  // Pillar Bars
+  const pAcc = $("#pillarAccuracyBar");
+  const pAccVal = $("#pillarAccuracyVal");
+  if (pAcc) pAcc.style.width = `${Math.min(100, (adv.readiness.components.accuracy / 35) * 100)}%`;
+  if (pAccVal) pAccVal.textContent = `${adv.totals.accuracy}%`;
+
+  const pSpeed = $("#pillarSpeedBar");
+  const pSpeedVal = $("#pillarSpeedVal");
+  if (pSpeed) pSpeed.style.width = `${Math.min(100, (adv.readiness.components.speed / 25) * 100)}%`;
+  if (pSpeedVal) pSpeedVal.textContent = `${adv.totals.avg_time}s`;
+
+  const pCov = $("#pillarCoverageBar");
+  const pCovVal = $("#pillarCoverageVal");
+  if (pCov) pCov.style.width = `${Math.min(100, (adv.readiness.components.coverage / 20) * 100)}%`;
+  if (pCovVal) pCovVal.textContent = `${Math.min(100, adv.readiness.components.coverage * 5)}%`;
+
+  const pCon = $("#pillarConsistencyBar");
+  const pConVal = $("#pillarConsistencyVal");
+  if (pCon) pCon.style.width = `${Math.min(100, (adv.readiness.components.consistency / 10) * 100)}%`;
+  if (pConVal) pConVal.textContent = `${Math.min(100, adv.readiness.components.consistency * 10)}%`;
+
+  const pRec = $("#pillarRecoveryBar");
+  const pRecVal = $("#pillarRecoveryVal");
+  if (pRec) pRec.style.width = `${Math.min(100, (adv.readiness.components.liquidation / 10) * 100)}%`;
+  if (pRecVal) pRecVal.textContent = `${Math.min(100, adv.readiness.components.liquidation * 10)}%`;
+
+  // KPI Ribbon
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayCount = (adv.days[todayStr]?.total) || 0;
+  const todayElem = $("#todaySolved");
+  if (todayElem) todayElem.textContent = String(todayCount);
+
+  const accElem = $("#accuracyStat");
+  if (accElem) accElem.textContent = `${adv.totals.accuracy}%`;
+
+  const masteryElem = $("#masteryStat");
+  if (masteryElem) masteryElem.textContent = `${adv.readiness.score}%`;
+
+  const solvedElem = $("#totalSolved");
+  if (solvedElem) solvedElem.textContent = String(adv.totals.total_attempts);
+
+  const corrElem = $("#totalCorrect");
+  if (corrElem) corrElem.textContent = String(adv.totals.total_correct);
+
+  const avgElem = $("#avgTime");
+  if (avgElem) avgElem.textContent = `${adv.totals.avg_time}s`;
+
+  const timeoutRateElem = $("#kpiTimeoutRate");
+  if (timeoutRateElem) timeoutRateElem.textContent = `${adv.pacing.timeout_rate}%`;
+
+  const streakElem = $("#kpiStreak");
+  if (streakElem) streakElem.textContent = `${adv.streak} ${adv.streak === 1 ? "Day" : "Days"}`;
+
+  // 2. AI Prescriptions
+  const prescContainer = $("#aiPrescriptionsContainer");
+  if (prescContainer) {
+    if (!adv.prescriptions.length) {
+      prescContainer.innerHTML = `<div class="empty-state">No critical bottlenecks detected yet! Practice any topic to generate recommendations.</div>`;
+    } else {
+      prescContainer.innerHTML = adv.prescriptions.map((p) => `
+        <div class="prescription-card presc-${p.type}">
+          <div>
+            <div class="prescription-header">
+              <span class="prescription-badge">${p.badge}</span>
+            </div>
+            <h3>${escapeHtml(p.title)}</h3>
+            <div class="prescription-subtitle">${escapeHtml(p.subtitle)}</div>
+            <div class="prescription-metric">${escapeHtml(p.metric)}</div>
+            <p class="prescription-desc">${escapeHtml(p.description)}</p>
+          </div>
+          <button class="prescription-action-btn" data-drill-pattern="${p.pattern_id || ''}" data-drill-type="${p.type}" type="button">
+            ${escapeHtml(p.action_label)}
+          </button>
+        </div>
+      `).join("");
+    }
+  }
+
+  // 3. 4-Quadrant Strategic Matrix
+  const mastersCount = $("#quadMastersCount");
+  if (mastersCount) mastersCount.textContent = `${adv.quadrants.speed_masters.length} Patterns`;
+  const trapsCount = $("#quadTrapsCount");
+  if (trapsCount) trapsCount.textContent = `${adv.quadrants.speed_traps.length} Patterns`;
+  const rushersCount = $("#quadRushersCount");
+  if (rushersCount) rushersCount.textContent = `${adv.quadrants.rushers.length} Patterns`;
+  const bottlenecksCount = $("#quadBottlenecksCount");
+  if (bottlenecksCount) bottlenecksCount.textContent = `${adv.quadrants.bottlenecks.length} Patterns`;
+
+  const renderChips = (list) => {
+    if (!list.length) return `<div class="empty-mini">No patterns in this quadrant yet.</div>`;
+    return list.map((p) => `
+      <div class="quad-chip" title="${escapeHtml(p.pattern_name)} (${escapeHtml(p.topic_name)})">
+        <strong>${escapeHtml(p.pattern_name)}</strong>
+        <span>${p.accuracy}% • ${p.avg_time}s</span>
+        <button class="chip-drill-btn" data-drill-pattern="${p.pattern_id}" type="button">⚡ Drill</button>
+      </div>
+    `).join("");
+  };
+
+  const mastersList = $("#quadMastersList");
+  if (mastersList) mastersList.innerHTML = renderChips(adv.quadrants.speed_masters);
+  const trapsList = $("#quadTrapsList");
+  if (trapsList) trapsList.innerHTML = renderChips(adv.quadrants.speed_traps);
+  const rushersList = $("#quadRushersList");
+  if (rushersList) rushersList.innerHTML = renderChips(adv.quadrants.rushers);
+  const bottlenecksList = $("#quadBottlenecksList");
+  if (bottlenecksList) bottlenecksList.innerHTML = renderChips(adv.quadrants.bottlenecks);
+
+  // 4. Pacing Spectrum
+  const totalAnalyzed = $("#pacingTotalAnalyzed");
+  if (totalAnalyzed) totalAnalyzed.textContent = `${adv.totals.total_attempts} Attempts Analyzed`;
+
+  const barL = $("#paceBarLightning");
+  if (barL) barL.style.width = `${adv.pacing.lightning.pct}%`;
+  const valL = $("#paceValLightning");
+  if (valL) valL.textContent = `${adv.pacing.lightning.pct}% (${adv.pacing.lightning.count})`;
+
+  const barO = $("#paceBarOptimal");
+  if (barO) barO.style.width = `${adv.pacing.optimal.pct}%`;
+  const valO = $("#paceValOptimal");
+  if (valO) valO.textContent = `${adv.pacing.optimal.pct}% (${adv.pacing.optimal.count})`;
+
+  const barS = $("#paceBarSlow");
+  if (barS) barS.style.width = `${adv.pacing.slow.pct}%`;
+  const valS = $("#paceValSlow");
+  if (valS) valS.textContent = `${adv.pacing.slow.pct}% (${adv.pacing.slow.count})`;
+
+  const barT = $("#paceBarTimeout");
+  if (barT) barT.style.width = `${adv.pacing.timeout.pct}%`;
+  const valT = $("#paceValTimeout");
+  if (valT) valT.textContent = `${adv.pacing.timeout.pct}% (${adv.pacing.timeout.count})`;
+
+  // Cognitive Stamina
+  const sEarlyAcc = $("#staminaEarlyAcc");
+  if (sEarlyAcc) sEarlyAcc.textContent = `${adv.stamina.early.accuracy}%`;
+  const sEarlySpeed = $("#staminaEarlySpeed");
+  if (sEarlySpeed) sEarlySpeed.textContent = `${adv.stamina.early.avg_time}s`;
+  const sEarlyCount = $("#staminaEarlyCount");
+  if (sEarlyCount) sEarlyCount.textContent = String(adv.stamina.early.count);
+
+  const sMidAcc = $("#staminaMidAcc");
+  if (sMidAcc) sMidAcc.textContent = `${adv.stamina.mid.accuracy}%`;
+  const sMidSpeed = $("#staminaMidSpeed");
+  if (sMidSpeed) sMidSpeed.textContent = `${adv.stamina.mid.avg_time}s`;
+  const sMidCount = $("#staminaMidCount");
+  if (sMidCount) sMidCount.textContent = String(adv.stamina.mid.count);
+
+  const sLateAcc = $("#staminaLateAcc");
+  if (sLateAcc) sLateAcc.textContent = `${adv.stamina.late.accuracy}%`;
+  const sLateSpeed = $("#staminaLateSpeed");
+  if (sLateSpeed) sLateSpeed.textContent = `${adv.stamina.late.avg_time}s`;
+  const sLateCount = $("#staminaLateCount");
+  if (sLateCount) sLateCount.textContent = String(adv.stamina.late.count);
+
+  // Performance Trend SVG Chart
+  renderPerformanceTrendSvg(adv.trend_days);
+
+  // 5. Root Cause Mistake Book
+  const rootAll = $("#rootCountAll");
+  if (rootAll) rootAll.textContent = String(adv.mistakes.total);
+  const rootTimeout = $("#rootCountTimeout");
+  if (rootTimeout) rootTimeout.textContent = String(adv.mistakes.timeout.count);
+  const rootCalc = $("#rootCountCalc");
+  if (rootCalc) rootCalc.textContent = String(adv.mistakes.calculation.count);
+  const rootConcept = $("#rootCountConcept");
+  if (rootConcept) rootConcept.textContent = String(adv.mistakes.conceptual.count);
+
+  renderRootCauseMistakes(adv.mistakes.mistakes, currentMistakeFilter);
+}
+
+async function renderLocalJournal(activeView = journalState.activeView, filterStatus = journalState.filterStatus, searchQuery = journalState.searchQuery) {
+  void renderAdvancedProgressDashboard();
+  const container = $("#localJournalContent");
+  if (!container) {
+    return;
+  }
+
+  journalState.activeView = activeView;
+  journalState.filterStatus = filterStatus;
+  journalState.searchQuery = searchQuery;
+
+  if (!window.AptitudeLocalDB) {
+    container.innerHTML = `<div class="empty-state">Local database is not available on this device.</div>`;
+    return;
+  }
+
+  let analytics;
+  let attempts;
+  try {
+    analytics = await window.AptitudeLocalDB.getLocalAnalytics();
+    attempts = await window.AptitudeLocalDB.getAllLocalAttempts();
+    const localSessions = await window.AptitudeLocalDB.getAllLocalSessions();
+    if (localSessions && localSessions.length > 0) {
+      cachedSessions = localSessions;
+    }
+    if (analytics && analytics.days) {
+      const localDays = Object.values(analytics.days).sort((a, b) => (a.date > b.date ? 1 : -1));
+      if (localDays.length > 0 && (!cachedTrendDays || cachedTrendDays.length === 0)) {
+        cachedTrendDays = localDays.map((d) => ({
+          date: d.date,
+          display_date: d.date.slice(5),
+          accuracy: d.accuracy,
+          avg_time: d.avg_time,
+          total: d.total,
+        }));
+      }
+    }
+    renderPerformanceTrendSvg();
+  } catch (err) {
+    console.error("Failed to load local journal analytics:", err);
+    container.innerHTML = `<div class="empty-state">Unable to read local database: ${escapeHtml(err.message)}</div>`;
+    return;
+  }
+
+  const badge = $("#totalAttemptsBadge");
+  if (badge) {
+    badge.textContent = String(analytics.totals.total_attempts || 0);
+  }
+
+  if (analytics && analytics.totals && analytics.totals.total_attempts > 0) {
+    const solved = $("#totalSolved");
+    if (solved) solved.textContent = String(analytics.totals.total_attempts);
+    const acc = $("#accuracyStat");
+    if (acc) acc.textContent = `${analytics.totals.accuracy}%`;
+    const avg = $("#avgTime");
+    if (avg) avg.textContent = `${analytics.totals.avg_time}s`;
+    const streak = $("#kpiStreak");
+    if (streak && (!streak.textContent || streak.textContent === "0d" || streak.textContent === "0")) {
+      const dayCount = Object.keys(analytics.days || {}).length;
+      streak.textContent = `${dayCount} ${dayCount === 1 ? "Day" : "Days"}`;
+    }
+  }
+
+  document.querySelectorAll(".journal-tab-btn").forEach((b) => {
+    b.classList.toggle("is-active", b.dataset.journalView === journalState.activeView);
+  });
+
+  const filterBar = $("#journalFilterBar");
+  if (filterBar) {
+    filterBar.style.display = "flex";
+  }
+
+  const overallAvgTime = analytics.totals.avg_time || 0;
+
+  if (!attempts.length) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 36px 20px; text-align: center;">
+        <div style="font-size: 42px; margin-bottom: 12px;">📊</div>
+        <h3 style="font-size: 17px; margin-bottom: 8px; color: var(--text);">No practice attempts recorded yet</h3>
+        <p style="color: var(--muted); font-size: 14px; max-width: 440px; margin: 0 auto 18px;">
+          Practice any aptitude topic to start generating your day-wise history, speed analysis, and mistake book on this device.
+        </p>
+        <button class="primary-button" type="button" onclick="document.querySelector('[data-screen-target=practice]')?.click()">
+          🚀 Start Practice Now
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  if (journalState.activeView === "mistakes") {
+    const mistakes = attempts.filter((a) => !a.is_correct || a.is_timeout);
+    const timeoutCount = mistakes.filter((m) => m.is_timeout).length;
+    const calcCount = mistakes.filter((m) => !m.is_timeout && m.typed_answer !== null && m.typed_answer !== "").length;
+    const otherCount = mistakes.length - timeoutCount - calcCount;
+
+    const filteredMistakes = mistakes.filter((a) => {
+      if (journalState.filterStatus === "slow" && !a.is_timeout && a.time_taken <= (overallAvgTime || 15)) return false;
+      if (journalState.filterStatus === "timeout" && !a.is_timeout) return false;
+      if (journalState.searchQuery) {
+        const q = journalState.searchQuery.toLowerCase();
+        const qText = (a.question_text || "").toLowerCase();
+        const patName = (a.pattern_name || "").toLowerCase();
+        const topName = (a.topic_name || "").toLowerCase();
+        if (!qText.includes(q) && !patName.includes(q) && !topName.includes(q)) return false;
+      }
+      return true;
+    });
+
+    if (!mistakes.length) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding: 32px 20px; text-align: center;">
+          <div style="font-size: 40px; margin-bottom: 12px;">🎉</div>
+          <h3 style="font-size: 17px; margin-bottom: 8px; color: var(--text);">Zero Mistakes Logged!</h3>
+          <p style="color: var(--muted); font-size: 14px;">Great work! You haven't made any mistakes in your recorded practice sessions.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const cardsHtml = filteredMistakes.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("");
+
+    container.innerHTML = `
+      <div class="mistake-book-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; padding:12px 16px; background:var(--surface-muted); border:1px solid var(--line); border-radius:10px;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <span class="journal-badge badge-wrong" style="font-size:13px; font-weight:700;">🥊 ${mistakes.length} Total Mistakes</span>
+          <span class="journal-badge badge-timeout">⏱️ ${timeoutCount} Timed Out</span>
+          <span class="journal-badge badge-calc">🧮 ${calcCount} Calculation</span>
+          <span class="journal-badge badge-concept">❓ ${otherCount} Conceptual</span>
+        </div>
+        <button class="accent-button pulse-button" id="journalDrillMistakesBtn" type="button">
+          ⚡ Drill Mistake Book
+        </button>
+      </div>
+      <div class="mistake-cards-list" style="display:flex; flex-direction:column; gap:12px;">
+        ${cardsHtml}
+      </div>
+    `;
+
+    const drillBtn = $("#journalDrillMistakesBtn");
+    if (drillBtn) {
+      drillBtn.addEventListener("click", () => {
+        void startAllMistakeRetry();
+      });
+    }
+    return;
+  }
+
+  const filteredAttempts = attempts.filter((a) => {
+    if (journalState.filterStatus === "correct" && !a.is_correct) return false;
+    if (journalState.filterStatus === "wrong" && a.is_correct) return false;
+    if (journalState.filterStatus === "slow") {
+      const isSlow = a.time_taken > (overallAvgTime || 15) || Boolean(a.is_timeout);
+      if (!isSlow) return false;
+    }
+    if (journalState.filterStatus === "timeout" && !a.is_timeout) return false;
+
+    if (journalState.searchQuery) {
+      const q = journalState.searchQuery.toLowerCase();
+      const qText = (a.question_text || "").toLowerCase();
+      const patName = (a.pattern_name || "").toLowerCase();
+      const topName = (a.topic_name || "").toLowerCase();
+      const catName = (a.category_name || "").toLowerCase();
+      if (!qText.includes(q) && !patName.includes(q) && !topName.includes(q) && !catName.includes(q)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  if (!attempts.length) {
+    container.innerHTML = `<div class="empty-state">No practice attempts recorded yet on this device. Practice any topic to see your journal grow!</div>`;
+    return;
+  }
+
+  if (!filteredAttempts.length) {
+    container.innerHTML = `<div class="empty-state">No attempts match your search or filter criteria.</div>`;
+    return;
+  }
+
+  // View 1: Day-Wise
+  if (journalState.activeView === "day") {
+    const dayGroups = new Map();
+    filteredAttempts.forEach((a) => {
+      const d = a.date || (a.timestamp ? new Date(a.timestamp).toISOString().slice(0, 10) : "Unknown Date");
+      if (!dayGroups.has(d)) {
+        dayGroups.set(d, []);
+      }
+      dayGroups.get(d).push(a);
+    });
+
+    const dayCards = Array.from(dayGroups.entries()).map(([d, dayAttempts], idx) => {
+      const count = dayAttempts.length;
+      const correct = dayAttempts.filter((a) => a.is_correct).length;
+      const accuracy = count > 0 ? Math.round((correct / count) * 100) : 0;
+      const sumTime = dayAttempts.reduce((acc, a) => acc + Number(a.time_taken || 0), 0);
+      const avgTime = count > 0 ? (sumTime / count).toFixed(1) : 0;
+      const slowCount = dayAttempts.filter((a) => a.time_taken > (overallAvgTime || 15) || a.is_timeout).length;
+
+      const attemptsHtml = dayAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("");
+
+      return `
+        <details class="journal-group" ${idx === 0 ? "open" : ""}>
+          <summary class="journal-group-header">
+            <div><strong>📅 ${escapeHtml(d)}</strong></div>
+            <div class="journal-group-stats">
+              <span><strong>${count}</strong> Questions</span>
+              <span>•</span>
+              <span class="journal-badge ${accuracy >= 75 ? "badge-correct" : accuracy < 50 ? "badge-wrong" : "badge-slow"}">${accuracy}% Accuracy</span>
+              <span>•</span>
+              <span>Avg <strong>${avgTime}s</strong></span>
+              ${slowCount > 0 ? `<span>• <strong class="badge-slow" style="padding:1px 6px;border-radius:4px;">${slowCount} Slow</strong></span>` : ""}
+            </div>
+          </summary>
+          <div class="journal-group-body">
+            ${attemptsHtml}
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    container.innerHTML = dayCards;
+    return;
+  }
+
+  // View 2: Category-Wise
+  if (journalState.activeView === "category") {
+    const cats = Object.values(analytics.categories);
+    if (!cats.length) {
+      container.innerHTML = `<div class="empty-state">No category data available.</div>`;
+      return;
+    }
+
+    const catCards = cats.map((cat) => {
+      const catAttempts = filteredAttempts.filter((a) => a.category_name === cat.category);
+      const topics = Object.values(cat.topics || {});
+
+      const topicsHtml = topics.map((t) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:6px;margin-top:6px;">
+          <div>
+            <strong style="font-size:13px;color:var(--text);">${escapeHtml(t.topic)}</strong>
+            <span style="font-size:12px;color:var(--muted);margin-left:8px;">${t.total} attempts</span>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span class="journal-badge ${t.accuracy >= 75 ? "badge-correct" : t.accuracy < 50 ? "badge-wrong" : "badge-slow"}">${t.accuracy}%</span>
+            <span style="font-size:12px;color:var(--muted);">Avg ${t.avg_time}s</span>
+          </div>
+        </div>
+      `).join("");
+
+      return `
+        <details class="journal-group" open>
+          <summary class="journal-group-header">
+            <div><strong>📚 ${escapeHtml(cat.category)}</strong></div>
+            <div class="journal-group-stats">
+              <span><strong>${cat.total}</strong> Solved</span>
+              <span>•</span>
+              <span class="journal-badge ${cat.accuracy >= 75 ? "badge-correct" : cat.accuracy < 50 ? "badge-wrong" : "badge-slow"}">${cat.accuracy}% Accuracy</span>
+              <span>•</span>
+              <span>Avg <strong>${cat.avg_time}s</strong></span>
+            </div>
+          </summary>
+          <div class="journal-group-body">
+            <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px;">Sub-Topics in this Category:</div>
+            ${topicsHtml || `<div class="empty-state" style="padding:8px;">No topics recorded.</div>`}
+            ${catAttempts.length > 0 ? `
+              <div style="margin-top:10px;font-size:13px;font-weight:600;color:var(--muted);">Recent Filtered Questions (${catAttempts.length}):</div>
+              ${catAttempts.slice(0, 10).map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("")}
+            ` : ""}
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    container.innerHTML = catCards;
+    return;
+  }
+
+  // View 3: Sub-Topic (Pattern)
+  if (journalState.activeView === "pattern") {
+    const patterns = Object.values(analytics.patterns);
+    if (!patterns.length) {
+      container.innerHTML = `<div class="empty-state">No pattern data available.</div>`;
+      return;
+    }
+
+    patterns.sort((a, b) => b.total - a.total);
+
+    const patternCards = patterns.map((p) => {
+      const isWeak = p.accuracy < 60 || p.slow_count > 0;
+      const patternAttempts = filteredAttempts.filter((a) => Number(a.pattern_id) === Number(p.pattern_id));
+
+      return `
+        <details class="journal-group">
+          <summary class="journal-group-header">
+            <div>
+              <strong>🎯 ${escapeHtml(p.pattern_name)}</strong>
+              <span style="font-size:12px;color:var(--muted);margin-left:6px;">(${escapeHtml(p.category_name)} › ${escapeHtml(p.topic_name)})</span>
+            </div>
+            <div class="journal-group-stats">
+              <span><strong>${p.total}</strong> Solved</span>
+              <span>•</span>
+              <span class="journal-badge ${p.accuracy >= 75 ? "badge-correct" : p.accuracy < 50 ? "badge-wrong" : "badge-slow"}">${p.accuracy}%</span>
+              <span>•</span>
+              <span>Avg <strong>${p.avg_time}s</strong></span>
+              ${isWeak ? `<span class="journal-badge badge-wrong">Needs Focus</span>` : `<span class="journal-badge badge-correct">Strong</span>`}
+            </div>
+          </summary>
+          <div class="journal-group-body">
+            ${patternAttempts.length > 0
+              ? patternAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("")
+              : `<div class="empty-state" style="padding:8px;">No matching attempts in current filter.</div>`
+            }
+          </div>
+        </details>
+      `;
+    }).join("");
+
+    container.innerHTML = patternCards;
+    return;
+  }
+
+  // View 4: All Questions
+  if (journalState.activeView === "questions") {
+    const attemptsHtml = filteredAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("");
+    container.innerHTML = attemptsHtml;
+  }
 }
 
 async function markMistakeReviewed(mistakeId) {
@@ -2559,13 +4305,23 @@ async function markMistakeReviewed(mistakeId) {
 }
 
 async function boot() {
+  if (window.AptitudeLocalDB) {
+    try {
+      await window.AptitudeLocalDB.initLocalDB();
+    } catch (e) {
+      console.warn("IndexedDB initialization warning:", e);
+    }
+  }
   await initWebConfig();
   initInternalProfile();
   setSoundEnabled(readSoundPreference());
+  setAnswerMode(readAnswerModePreference());
   bindEvents();
   renderProgressVisuals();
   void loadCatalog();
   void loadProfile();
+  void renderLocalJournal();
 }
 
 boot();
+

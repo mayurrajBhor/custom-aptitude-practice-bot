@@ -1,5 +1,6 @@
 import os
 import json
+import math
 import random
 import re
 import secrets
@@ -71,13 +72,21 @@ class StartSessionRequest(BaseModel):
 
 
 class AnswerRequest(BaseModel):
-    answer_index: int
+    answer_index: Optional[int] = None
+    typed_answer: Optional[str] = None
+    is_timeout: Optional[bool] = False
 
 
 class ReminderRequest(BaseModel):
     enabled: bool = False
     reminder_time: str = "20:00"
     timezone: str = "Asia/Kolkata"
+
+
+class RePracticeWeakRequest(BaseModel):
+    history: Optional[list[dict[str, Any]]] = None
+    target_count: Optional[int] = None
+
 
 
 SESSIONS: dict[str, dict[str, Any]] = {}
@@ -330,6 +339,73 @@ def next_question(session_id: str, background_tasks: BackgroundTasks):
     return {"complete": False, "question": _question_public(session)}
 
 
+def _parse_answer_number(val: Any) -> Optional[float]:
+    if val is None:
+        return None
+    s = str(val).strip().rstrip("%").replace(",", "")
+    m = re.match(r"^(\d+)\s*\((\d+)/(\d+)\)$", s)
+    if m:
+        w, n, d = int(m.group(1)), int(m.group(2)), int(m.group(3))
+        return w + (n / d if d else 0)
+    m2 = re.match(r"^(\d+)\s+(\d+)/(\d+)$", s)
+    if m2:
+        w, n, d = int(m2.group(1)), int(m2.group(2)), int(m2.group(3))
+        return w + (n / d if d else 0)
+    m3 = re.match(r"^(-?\d+)/(\d+)$", s)
+    if m3:
+        n, d = int(m3.group(1)), int(m3.group(2))
+        return n / d if d else None
+    try:
+        return float(s)
+    except (ValueError, TypeError):
+        return None
+
+
+def _evaluate_typed_answer(typed_answer: str, question: dict[str, Any]) -> tuple[bool, Optional[int]]:
+    typed = str(typed_answer).strip()
+    options = [str(opt) for opt in question.get("options", [])]
+    correct_idx = question.get("correct_option_index", 0)
+    correct_str = options[correct_idx] if 0 <= correct_idx < len(options) else ""
+
+    clean_typed = re.sub(r"\s+", "", typed.lower())
+    clean_correct = re.sub(r"\s+", "", correct_str.lower())
+
+    # 1. Exact string match
+    if clean_typed == clean_correct:
+        return True, correct_idx
+
+    # 2. Match without percentage symbol
+    if clean_typed.rstrip("%") == clean_correct.rstrip("%"):
+        return True, correct_idx
+
+    # 3. Numeric / fraction value equivalence
+    typed_num = _parse_answer_number(typed)
+    correct_num = _parse_answer_number(correct_str)
+    if typed_num is not None and correct_num is not None:
+        if math.isclose(typed_num, correct_num, rel_tol=1e-3, abs_tol=1e-3):
+            return True, correct_idx
+
+    # 4. Check if typed matches one of the distractor options
+    for idx, opt in enumerate(options):
+        if idx == correct_idx:
+            continue
+        clean_opt = re.sub(r"\s+", "", opt.lower())
+        if clean_typed == clean_opt or clean_typed.rstrip("%") == clean_opt.rstrip("%"):
+            return False, idx
+        opt_num = _parse_answer_number(opt)
+        if typed_num is not None and opt_num is not None:
+            if math.isclose(typed_num, opt_num, rel_tol=1e-3, abs_tol=1e-3):
+                return False, idx
+
+    # 5. If options are categorical/text and typed is 1-based index (1, 2, 3, 4)
+    if typed.isdigit() and not any(_parse_answer_number(opt) is not None for opt in options):
+        digit_idx = int(typed) - 1
+        if 0 <= digit_idx < len(options):
+            return (digit_idx == correct_idx), digit_idx
+
+    return False, None
+
+
 @app.post("/api/session/{session_id}/answer")
 def answer_question(session_id: str, request: AnswerRequest, background_tasks: BackgroundTasks):
     session = _get_session(session_id)
@@ -340,11 +416,25 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
     if not question:
         raise HTTPException(status_code=409, detail="No active question to answer.")
 
-    if request.answer_index < 0 or request.answer_index >= len(question["options"]):
-        raise HTTPException(status_code=400, detail="Invalid answer option.")
+    if not request.is_timeout and request.answer_index is None and request.typed_answer is None:
+        raise HTTPException(status_code=400, detail="Either answer_index or typed_answer must be provided.")
 
-    is_correct = request.answer_index == question["correct_option_index"]
-    time_taken = round(time.monotonic() - (session.get("current_started_at") or time.monotonic()), 2)
+    if request.is_timeout:
+        is_correct = False
+        selected_index = None
+        typed_str = request.typed_answer or ""
+        time_taken = 30.0
+    elif request.answer_index is not None:
+        if request.answer_index < 0 or request.answer_index >= len(question["options"]):
+            raise HTTPException(status_code=400, detail="Invalid answer option.")
+        is_correct = request.answer_index == question["correct_option_index"]
+        selected_index = request.answer_index
+        typed_str = None
+        time_taken = round(time.monotonic() - (session.get("current_started_at") or time.monotonic()), 2)
+    else:
+        typed_str = str(request.typed_answer).strip()
+        is_correct, selected_index = _evaluate_typed_answer(typed_str, question)
+        time_taken = round(time.monotonic() - (session.get("current_started_at") or time.monotonic()), 2)
     pattern_id = question.get("pattern_id")
 
     if is_correct:
@@ -352,8 +442,23 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
     elif pattern_id:
         session["wrong_patterns"].append(pattern_id)
 
-    session["history"].append(_question_history_entry(question, request.answer_index, time_taken))
-    background_tasks.add_task(_persist_question_result, session, dict(question), request.answer_index, is_correct, time_taken)
+    session["history"].append(
+        _question_history_entry(
+            question,
+            selected_index,
+            time_taken,
+            typed_answer=typed_str,
+            is_correct=is_correct,
+        )
+    )
+    background_tasks.add_task(
+        _persist_question_result,
+        session,
+        dict(question),
+        selected_index,
+        is_correct,
+        time_taken,
+    )
 
     session["current_index"] += 1
     session["current_question"] = None
@@ -373,6 +478,8 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         "time_taken": time_taken,
         "complete": complete,
         "summary": _session_summary(session) if complete else None,
+        "selected_option_index": selected_index,
+        "typed_answer": typed_str,
     }
 
 
@@ -414,6 +521,153 @@ def review_session(session_id: str):
     return {
         "summary": _session_summary(session),
         "questions": session.get("history", []),
+    }
+
+
+@app.post("/api/session/{session_id}/re-practice-weak")
+def re_practice_weak(session_id: str, request: Optional[RePracticeWeakRequest] = None):
+    session = SESSIONS.get(session_id)
+    if not session:
+        try:
+            session = _get_session(session_id)
+        except Exception:
+            session = None
+    if not session:
+        if request and request.history:
+            session = {
+                "id": session_id,
+                "user_id": INTERNAL_USER_ID,
+                "mode": "quick",
+                "session_type": "quick",
+                "pattern_ids": list(dict.fromkeys(e.get("pattern_id") for e in request.history if e.get("pattern_id"))),
+                "pattern_names": [],
+                "items": [],
+                "queue": [],
+                "pool": [],
+                "total_questions": request.target_count or len(request.history) or 10,
+                "planned_total_questions": request.target_count or len(request.history) or 10,
+                "history": request.history,
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Session not found.")
+
+    planned_target = (
+        (request.target_count if request and request.target_count else None)
+        or session.get("planned_total_questions")
+        or session.get("total_questions")
+    )
+    history = session.get("history", [])
+    if not history and request and request.history:
+        history = request.history
+
+    target_total = planned_target or (len(history) if history else 10)
+    if not history:
+        raise HTTPException(status_code=404, detail="No answered questions to re-practice.")
+
+    target_total = planned_target or len(history) or 10
+    if target_total <= 0:
+        target_total = 10
+
+    times = [entry.get("time_taken", 0) for entry in history if not entry.get("is_skipped")]
+    avg_time = round(sum(times) / len(times), 2) if times else 0.0
+    weak_entries = [
+        entry
+        for entry in history
+        if not entry.get("is_skipped") and (entry.get("time_taken", 0) > avg_time or not entry.get("is_correct"))
+    ]
+    if not weak_entries:
+        weak_entries = [entry for entry in history if not entry.get("is_skipped")]
+    if not weak_entries:
+        weak_entries = list(history)
+    if not weak_entries and session.get("pool"):
+        weak_entries = list(session["pool"])
+    if not weak_entries:
+        pattern_ids = session.get("pattern_ids") or [1]
+        session_items, _ = _build_session_items(pattern_ids, user_id=session.get("user_id"))
+        if session_items:
+            temp_session = {
+                "id": uuid4().hex,
+                "user_id": session.get("user_id"),
+                "total_questions": target_total,
+                "current_index": 0,
+                "pool": [],
+                "items": session_items,
+                "queue": [],
+                "used_question_keys": set(),
+                "used_question_texts": [],
+            }
+            try:
+                _fill_question_pool(temp_session, batch_size=target_total)
+                weak_entries = temp_session.get("pool", [])
+            except Exception as exc:
+                logging.warning("Failed to generate fallback questions for weak drill: %s", exc)
+
+    if not weak_entries:
+        raise HTTPException(status_code=404, detail="No answered questions to re-practice.")
+
+    distinct_weak_count = len(weak_entries)
+
+    # Sort weak entries so incorrect and slowest questions appear first
+    sorted_weak = sorted(
+        weak_entries,
+        key=lambda e: (0 if not e.get("is_correct", True) else 1, -float(e.get("time_taken", 0.0)))
+    )
+
+    # Cycle / repeat weak questions again and again until target_total is reached
+    repeated_entries = []
+    while len(repeated_entries) < target_total:
+        for entry in sorted_weak:
+            if len(repeated_entries) >= target_total:
+                break
+            repeated_entries.append(entry)
+
+    prefilled_questions = []
+    for idx, entry in enumerate(repeated_entries):
+        prefilled_questions.append({
+            "question_number": idx + 1,
+            "question_text": entry.get("question_text", ""),
+            "options": list(entry.get("options", [])),
+            "correct_option_index": entry.get("correct_option_index", 0),
+            "explanation": entry.get("explanation", ""),
+            "difficulty": entry.get("difficulty", 3),
+            "pattern_id": entry.get("pattern_id"),
+            "saved": True,
+        })
+
+    new_session_id = uuid4().hex
+    session_pattern_ids = list(dict.fromkeys(q["pattern_id"] for q in prefilled_questions if q.get("pattern_id")))
+    new_session = {
+        "id": new_session_id,
+        "user_id": session.get("user_id"),
+        "mode": "quick",
+        "session_type": "weak_questions_retry",
+        "pattern_ids": session_pattern_ids,
+        "pattern_names": session.get("pattern_names", []),
+        "adaptive": False,
+        "items": [],
+        "queue": [],
+        "pool": prefilled_questions.copy(),
+        "current_question": None,
+        "current_started_at": None,
+        "current_index": 0,
+        "total_questions": target_total,
+        "planned_total_questions": target_total,
+        "score": 0,
+        "wrong_patterns": [],
+        "skipped_count": 0,
+        "history": [],
+        "stopped": False,
+        "prefilled": True,
+        "used_question_keys": set(),
+        "used_question_texts": [],
+        "started_at": time.time(),
+    }
+    SESSIONS[new_session_id] = new_session
+    return {
+        "session": _session_public(new_session),
+        "avg_time": avg_time,
+        "weak_count": distinct_weak_count,
+        "total_questions": target_total,
     }
 
 
@@ -738,11 +992,16 @@ def _session_public(session: dict[str, Any]):
 
 
 def _session_summary(session: dict[str, Any]):
+    history = session.get("history", [])
     planned_total = session["total_questions"]
-    review_count = len(session.get("history", []))
+    review_count = len(history)
     stopped = bool(session.get("stopped"))
     total = review_count if stopped else planned_total
     score = session["score"]
+    times = [entry.get("time_taken", 0) for entry in history if not entry.get("is_skipped")]
+    avg_time = round(sum(times) / len(times), 2) if times else 0.0
+    slow_count = sum(1 for entry in history if not entry.get("is_skipped") and entry.get("time_taken", 0) > avg_time)
+    weak_count = sum(1 for entry in history if not entry.get("is_skipped") and (entry.get("time_taken", 0) > avg_time or not entry.get("is_correct")))
     return {
         "score": score,
         "total_questions": total,
@@ -754,6 +1013,9 @@ def _session_summary(session: dict[str, Any]):
         "stopped": stopped,
         "pattern_names": session["pattern_names"],
         "review_count": review_count,
+        "avg_time": avg_time,
+        "slow_count": slow_count,
+        "weak_count": weak_count,
     }
 
 
@@ -1165,6 +1427,7 @@ def _question_public(session: dict[str, Any]):
         "difficulty": question.get("difficulty", 3),
         "pattern_id": question.get("pattern_id"),
         "score": session["score"],
+        "correct_option_index": question.get("correct_option_index", 0),
     }
 
 
@@ -1173,12 +1436,20 @@ def _question_history_entry(
     selected_option_index: Optional[int],
     time_taken: float,
     is_skipped: bool = False,
+    typed_answer: Optional[str] = None,
+    is_correct: Optional[bool] = None,
 ):
     options = question.get("options", [])
     correct_option_index = question.get("correct_option_index", 0)
-    selected_option = None if selected_option_index is None else options[selected_option_index]
+    selected_option = None
+    if selected_option_index is not None and 0 <= selected_option_index < len(options):
+        selected_option = options[selected_option_index]
+    elif typed_answer is not None:
+        selected_option = typed_answer
+
     correct_option = options[correct_option_index] if 0 <= correct_option_index < len(options) else ""
-    is_correct = (selected_option_index == correct_option_index) if selected_option_index is not None else False
+    if is_correct is None:
+        is_correct = (selected_option_index == correct_option_index) if selected_option_index is not None else False
 
     return {
         "question_number": question.get("question_number"),
@@ -1186,6 +1457,7 @@ def _question_history_entry(
         "options": options,
         "selected_option_index": selected_option_index,
         "selected_option": selected_option,
+        "typed_answer": typed_answer,
         "correct_option_index": correct_option_index,
         "correct_option": correct_option,
         "is_correct": is_correct,
