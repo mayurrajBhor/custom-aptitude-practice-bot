@@ -279,6 +279,7 @@ def start_session(request: StartSessionRequest):
         "current_started_at": None,
         "current_index": 0,
         "total_questions": target_count,
+        "planned_total_questions": target_count,
         "score": 0,
         "wrong_patterns": [],
         "history": [],
@@ -460,6 +461,45 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         time_taken,
     )
 
+    # GMAT Dual-Zone Speed Tier Benchmarks
+    if time_taken < 5.0:
+        speed_tier = "gmat_ready"
+    elif time_taken <= 12.0:
+        speed_tier = "acceptable"
+    else:
+        speed_tier = "hesitation"
+
+    # In-Session Spaced Repetition (The "Loop-Back" Mechanism):
+    is_hesitant = time_taken > 10.0
+    needs_loopback = (not is_correct) or is_hesitant
+    repetition_queued = False
+    repetition_reason = None
+
+    pool = session.get("pool", [])
+    if needs_loopback and not session.get("stopped") and not question.get("is_reinforcement") and len(pool) > 0:
+        repetition_reason = "hesitation" if (is_hesitant and is_correct) else "mistake"
+        repetition_queued = True
+        cloned_q = {
+            **dict(question),
+            "is_reinforcement": True,
+            "reinforcement_reason": repetition_reason,
+            "saved": True,
+        }
+        if len(pool) >= 3:
+            pool.insert(2, cloned_q)
+            session["total_questions"] += 1
+            end_cloned_q = {
+                **dict(question),
+                "is_reinforcement": True,
+                "reinforcement_reason": repetition_reason,
+                "saved": True,
+            }
+            pool.append(end_cloned_q)
+            session["total_questions"] += 1
+        else:
+            pool.append(cloned_q)
+            session["total_questions"] += 1
+
     session["current_index"] += 1
     session["current_question"] = None
     session["current_started_at"] = None
@@ -480,6 +520,9 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         "summary": _session_summary(session) if complete else None,
         "selected_option_index": selected_index,
         "typed_answer": typed_str,
+        "speed_tier": speed_tier,
+        "repetition_queued": repetition_queued,
+        "repetition_reason": repetition_reason,
     }
 
 
@@ -1428,6 +1471,8 @@ def _question_public(session: dict[str, Any]):
         "pattern_id": question.get("pattern_id"),
         "score": session["score"],
         "correct_option_index": question.get("correct_option_index", 0),
+        "is_reinforcement": bool(question.get("is_reinforcement")),
+        "reinforcement_reason": question.get("reinforcement_reason"),
     }
 
 
