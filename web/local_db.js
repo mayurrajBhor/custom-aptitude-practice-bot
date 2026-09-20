@@ -486,11 +486,11 @@ async function getAdvancedLocalAnalytics() {
 
   attempts.forEach((a) => {
     const t = Number(a.time_taken || 0);
-    if (a.is_timeout || t >= 30) {
+    if (a.is_timeout || t >= 15) {
       timeout++;
-    } else if (t < 8) {
+    } else if (t < 4) {
       lightning++;
-    } else if (t <= 18) {
+    } else if (t <= 10) {
       optimal++;
     } else {
       slow++;
@@ -660,9 +660,9 @@ async function getAdvancedLocalAnalytics() {
     let label = "Conceptual Trap";
     let badgeClass = "badge-concept";
 
-    if (m.is_timeout || Number(m.time_taken || 0) >= 30) {
+    if (m.is_timeout || Number(m.time_taken || 0) >= 15) {
       cause = "timeout";
-      label = "30s Timeout Panic";
+      label = "15s Timeout Panic";
       badgeClass = "badge-timeout";
       rootTimeout++;
     } else {
@@ -704,9 +704,9 @@ async function getAdvancedLocalAnalytics() {
 
   let speedScore = 15;
   if (total_attempts > 0) {
-    if (overallAvgTime <= 10) speedScore = 25;
-    else if (overallAvgTime >= 30) speedScore = 5;
-    else speedScore = 25 - ((overallAvgTime - 10) / 20) * 20;
+    if (overallAvgTime <= 5) speedScore = 25;
+    else if (overallAvgTime >= 15) speedScore = 5;
+    else speedScore = 25 - ((overallAvgTime - 5) / 10) * 20;
   }
   speedScore = Math.max(0, Math.min(25, speedScore));
 

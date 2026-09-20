@@ -316,7 +316,7 @@ function handleManualSubmitAttempt() {
     submitTypedAnswer();
   } else {
     // Answer is not correct yet. DO NOT FAIL!
-    // Give feedback that user should keep trying before the 30s timer runs out
+    // Give feedback that user should keep trying before the 15s timer runs out
     const display = $("#numpadDisplay");
     if (display) {
       replayAnimation(display, "numpad-wrong-shake");
@@ -360,7 +360,7 @@ function updateNumpadDisplay() {
       indicatorTitle.textContent = "Checking on digit...";
       indicatorSub.textContent = "• Auto-passes instantly when correct";
     } else {
-      indicatorTitle.textContent = "30s Timer Active";
+      indicatorTitle.textContent = "15s Timer Active";
       indicatorSub.textContent = "• Auto-passes on correct answer";
     }
   }
@@ -2648,7 +2648,7 @@ function finalizeAnswerResponse(result, effectiveIndex) {
       correct_answer: correctAnswer ?? null,
       correct_option_index: result.correct_option_index !== undefined ? result.correct_option_index : (q.correct_option_index ?? null),
       is_correct: Boolean(result.is_correct),
-      is_timeout: Boolean(result.is_timeout || (result.time_taken >= 30.0 && !result.is_correct)),
+      is_timeout: Boolean(result.is_timeout || (result.time_taken >= QUESTION_TIME_LIMIT_SECONDS && !result.is_correct)),
       is_skipped: false,
       time_taken: typeof result.time_taken === "number" ? result.time_taken : Number(result.time_taken) || 0,
       explanation: result.explanation || "",
@@ -3003,7 +3003,7 @@ function renderReview(questions, summary = {}) {
   }).join("");
 }
 
-const QUESTION_TIME_LIMIT_SECONDS = 30;
+const QUESTION_TIME_LIMIT_SECONDS = 15;
 
 function updateTimerDisplay(remaining, elapsed = 0) {
   const timerElem = $("#questionTimer");
@@ -3040,7 +3040,7 @@ function updateTimerDisplay(remaining, elapsed = 0) {
 function startQuestionTimer() {
   clearQuestionTimer();
   state.questionStartedAt = Date.now();
-  $("#questionTimer").textContent = "30s";
+  $("#questionTimer").textContent = `${QUESTION_TIME_LIMIT_SECONDS}s`;
   updateTimerDisplay(QUESTION_TIME_LIMIT_SECONDS, 0);
 
   state.timerId = window.setInterval(() => {
@@ -3104,7 +3104,7 @@ async function handleQuestionTimeout() {
     feedbackPanel.classList.add("is-wrong");
   }
   $("#feedbackTitle").textContent = "Time's Up (Failed)";
-  $("#feedbackText").textContent = "30 seconds expired. Showing correct answer...";
+  $("#feedbackText").textContent = `${QUESTION_TIME_LIMIT_SECONDS} seconds expired. Showing correct answer...`;
   playTone("wrong");
   triggerHaptic("error");
 
@@ -3532,6 +3532,7 @@ function bindEvents() {
 
   const chartDayBtn = $("#chartViewDayBtn");
   const chartSessionBtn = $("#chartViewSessionBtn");
+  const chartTimeScale = $("#chartTimeScale");
   if (chartDayBtn && chartSessionBtn) {
     chartDayBtn.addEventListener("click", () => {
       currentTrendMode = "day";
@@ -3543,6 +3544,12 @@ function bindEvents() {
       currentTrendMode = "session";
       chartSessionBtn.classList.add("is-active");
       chartDayBtn.classList.remove("is-active");
+      renderPerformanceTrendSvg();
+    });
+  }
+  if (chartTimeScale) {
+    chartTimeScale.addEventListener("change", (event) => {
+      currentChartTimeScale = Math.max(1, Number(event.target.value) || 15);
       renderPerformanceTrendSvg();
     });
   }
@@ -3791,7 +3798,7 @@ function renderJournalAttemptCard(attempt, overallAvgTime = 15) {
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${isCorrect ? '<span class="journal-badge badge-correct">✓ Correct</span>' : '<span class="journal-badge badge-wrong">✗ Wrong</span>'}
-          ${isTimeout ? '<span class="journal-badge badge-timeout">⏰ 30s Timeout</span>' : ""}
+          ${isTimeout ? `<span class="journal-badge badge-timeout">⏰ ${QUESTION_TIME_LIMIT_SECONDS}s Timeout</span>` : ""}
           <span class="journal-badge ${isSlow ? "badge-slow" : "badge-fast"}">${isSlow ? "🐢" : "⚡"} ${timeSec}s</span>
         </div>
       </div>
@@ -3844,7 +3851,7 @@ function renderQuestionFrequencyCard(q, overallAvgTime = 15) {
         <span class="attempt-date">${escapeHtml(attDate)} ${escapeHtml(attTimeStr)}</span>
         <span class="attempt-user-answer">Answer: <strong>${escapeHtml(attAns)}</strong></span>
         <span class="journal-badge ${isAttCorr ? "badge-correct" : "badge-wrong"}">${isAttCorr ? "✓ Correct" : "✗ Wrong"}</span>
-        <span class="journal-badge ${Number(att.time_taken || 0) > (overallAvgTime || 15) ? "badge-slow" : "badge-fast"}">${att.is_timeout ? "⏰ 30s Timeout" : `⏱️ ${attTime}s`}</span>
+        <span class="journal-badge ${Number(att.time_taken || 0) > (overallAvgTime || 15) ? "badge-slow" : "badge-fast"}">${att.is_timeout ? `⏰ ${QUESTION_TIME_LIMIT_SECONDS}s Timeout` : `⏱️ ${attTime}s`}</span>
       </div>
     `;
   }).join("");
@@ -3890,6 +3897,7 @@ function renderQuestionFrequencyCard(q, overallAvgTime = 15) {
 
 let currentMistakeFilter = "all";
 let currentTrendMode = "day";
+let currentChartTimeScale = 15;
 let cachedTrendDays = [];
 let cachedSessions = [];
 
@@ -3963,10 +3971,11 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
   });
   gridHtml += `<text x="${padLeft}" y="11" font-size="10" font-weight="700" fill="#059669">Accuracy %</text>`;
   gridHtml += `<text x="${width - padRight}" y="11" font-size="10" font-weight="700" fill="#d97706" text-anchor="end">Avg time (seconds)</text>`;
-  [30, 15, 0].forEach((seconds) => {
-    const y = padTop + chartH - (seconds / 30) * chartH;
+  const timeStep = currentChartTimeScale <= 5 ? 1 : currentChartTimeScale <= 10 ? 2 : 3;
+  for (let seconds = currentChartTimeScale; seconds >= 0; seconds -= timeStep) {
+    const y = padTop + chartH - (seconds / currentChartTimeScale) * chartH;
     gridHtml += `<text x="${width - padRight + 6}" y="${(y + 3.5).toFixed(1)}" font-size="10" fill="#d97706">${seconds}s</text>`;
-  });
+  }
   if (svgGrid) svgGrid.innerHTML = gridHtml;
 
   const n = points.length;
@@ -3981,8 +3990,8 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
     const yAcc = padTop + chartH - (Math.max(0, Math.min(100, item.accuracy)) / 100) * chartH;
     accCoords.push({ x, y: yAcc });
 
-    const speedClamped = Math.min(30, Math.max(0, item.avg_time));
-    const ySpeed = padTop + chartH - (speedClamped / 30) * chartH;
+    const speedClamped = Math.min(currentChartTimeScale, Math.max(0, item.avg_time));
+    const ySpeed = padTop + chartH - (speedClamped / currentChartTimeScale) * chartH;
     speedCoords.push({ x, y: ySpeed });
 
     pointsHtml += `

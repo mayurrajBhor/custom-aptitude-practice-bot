@@ -447,6 +447,63 @@ class WebPracticeSessionTests(unittest.TestCase):
         self.assertEqual(questions[0]["options"], ["20", "25", "30", "35"])
         self.assertTrue(questions[0]["saved"])
 
+    def test_in_session_loop_back_requeues_slow_and_missed_questions(self):
+        # 5-question practice session
+        session_id, _ = self.start_local_session(target_count=5)
+        q1_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q1_res.status_code, 200)
+        q1 = q1_res.json()["question"]
+
+        # Question 1 takes 14.0s (hesitation > 10.0s) but is answered correctly
+        web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 14.0
+        ans1_res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"answer_index": q1["correct_option_index"]},
+        )
+        self.assertEqual(ans1_res.status_code, 200)
+        p1 = ans1_res.json()
+        self.assertTrue(p1["is_correct"])
+        self.assertEqual(p1["speed_tier"], "hesitation")
+        self.assertTrue(p1["repetition_queued"])
+        self.assertEqual(p1["repetition_reason"], "hesitation")
+        self.assertGreaterEqual(p1["total_questions"], 6)
+
+        # Question 2 and Question 3 answered quickly (< 5s)
+        for _ in range(2):
+            q_res = self.client.post(f"/api/session/{session_id}/next")
+            self.assertEqual(q_res.status_code, 200)
+            q = q_res.json()["question"]
+            web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 2.0
+            self.client.post(
+                f"/api/session/{session_id}/answer",
+                json={"answer_index": q["correct_option_index"]},
+            )
+
+        # Question 4 should be the loop-back reinforcement of Question 1!
+        q4_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q4_res.status_code, 200)
+        q4 = q4_res.json()["question"]
+        self.assertTrue(q4.get("is_reinforcement"))
+        self.assertEqual(q4["question_text"], q1["question_text"])
+
+    def test_fast_answer_does_not_trigger_loop_back(self):
+        session_id, _ = self.start_local_session(target_count=5)
+        q1_res = self.client.post(f"/api/session/{session_id}/next")
+        self.assertEqual(q1_res.status_code, 200)
+        q1 = q1_res.json()["question"]
+
+        # Question 1 answered in 2.5s (gmat_ready)
+        web_app.SESSIONS[session_id]["current_started_at"] = time.monotonic() - 2.5
+        ans1_res = self.client.post(
+            f"/api/session/{session_id}/answer",
+            json={"answer_index": q1["correct_option_index"]},
+        )
+        self.assertEqual(ans1_res.status_code, 200)
+        p1 = ans1_res.json()
+        self.assertTrue(p1["is_correct"])
+        self.assertEqual(p1["speed_tier"], "gmat_ready")
+        self.assertFalse(p1["repetition_queued"])
+
 
 class DatabaseManagerTests(unittest.TestCase):
     def test_execute_query_sets_search_path_before_query(self):
@@ -616,7 +673,7 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn(".numpad-grid", styles_css)
         self.assertIn(".answer-mode-toggle", styles_css)
         self.assertIn(".numpad-auto-status", styles_css)
-        self.assertIn("QUESTION_TIME_LIMIT_SECONDS = 30", app_js)
+        self.assertIn("QUESTION_TIME_LIMIT_SECONDS = 15", app_js)
         self.assertIn("handleQuestionTimeout", app_js)
         self.assertIn("isAnswerCorrect", app_js)
         self.assertIn("checkDigitInput", app_js)
@@ -650,6 +707,7 @@ class FrontendContractTests(unittest.TestCase):
             "getLocalAnalytics",
             "exportLocalDataJSON",
             "exportLocalDataCSV",
+            "exportQuestionStatsCSV",
             "importLocalDataJSON",
         ]:
             self.assertIn(fn, local_db_js)
@@ -658,15 +716,20 @@ class FrontendContractTests(unittest.TestCase):
         self.assertIn('id="localAnalyticsCard"', index_html)
         self.assertIn('id="downloadJsonBtn"', index_html)
         self.assertIn('id="downloadCsvBtn"', index_html)
+        self.assertIn('id="downloadQuestionCsvBtn"', index_html)
         self.assertIn('id="localJournalContent"', index_html)
 
         self.assertIn("AptitudeLocalDB", app_js)
         self.assertIn("exportLocalDataJSON", app_js)
         self.assertIn("exportLocalDataCSV", app_js)
+        self.assertIn("exportQuestionStatsCSV", app_js)
+        self.assertIn("renderQuestionFrequencyCard", app_js)
 
         self.assertIn(".local-analytics-card", styles_css)
         self.assertIn(".journal-tabs", styles_css)
         self.assertIn(".journal-attempt-card", styles_css)
+        self.assertIn(".question-frequency-card", styles_css)
+        self.assertIn(".pattern-questions-section", styles_css)
 
     def test_advanced_progress_dashboard_contract(self):
         root = Path(__file__).resolve().parents[1]
