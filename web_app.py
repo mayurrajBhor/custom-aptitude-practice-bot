@@ -33,6 +33,11 @@ except ImportError:
     get_verbal_diagnostic_set = None
     get_foundation_diagnostic_set = None
 
+try:
+    from llm.english_generator import english_generator
+except Exception:
+    english_generator = None
+
 
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
@@ -1906,3 +1911,76 @@ def english_diagnostic_foundation():
     if not get_foundation_diagnostic_set:
         raise HTTPException(status_code=503, detail="Foundation diagnostic generator is unavailable.")
     return get_foundation_diagnostic_set()
+
+
+class EnglishGenerateCRRequest(BaseModel):
+    question_type: Optional[str] = None
+    difficulty: int = Field(default=3, ge=1, le=5)
+    domain: Optional[str] = None
+    avoid_questions: Optional[list[str]] = None
+
+
+class EnglishGenerateRCRequest(BaseModel):
+    category: Optional[str] = None
+    difficulty: int = Field(default=3, ge=1, le=5)
+    question_count: int = Field(default=3, ge=1, le=5)
+
+
+class EnglishGenerateGrammarRequest(BaseModel):
+    subtopic: Optional[str] = None
+    level: int = Field(default=2, ge=1, le=4)
+    difficulty: int = Field(default=3, ge=1, le=5)
+
+
+class EnglishGenerateDrillRequest(BaseModel):
+    mode: str = "mixed"
+    count: int = Field(default=5, ge=1, le=20)
+    target_difficulty: int = Field(default=3, ge=1, le=5)
+    avoid_questions: Optional[list[str]] = None
+
+
+@app.post("/api/english/generate/cr")
+def english_generate_cr(req: EnglishGenerateCRRequest):
+    if not english_generator:
+        raise HTTPException(status_code=503, detail="English generator is unavailable.")
+    return english_generator.generate_cr_question(
+        question_type=req.question_type,
+        difficulty=req.difficulty,
+        domain=req.domain,
+        avoid_questions=req.avoid_questions,
+    )
+
+
+@app.post("/api/english/generate/rc")
+def english_generate_rc(req: EnglishGenerateRCRequest):
+    if not english_generator:
+        raise HTTPException(status_code=503, detail="English generator is unavailable.")
+    return english_generator.generate_rc_passage(
+        category=req.category,
+        difficulty=req.difficulty,
+        question_count=req.question_count,
+    )
+
+
+@app.post("/api/english/generate/grammar")
+def english_generate_grammar(req: EnglishGenerateGrammarRequest):
+    if not english_generator:
+        raise HTTPException(status_code=503, detail="English generator is unavailable.")
+    return english_generator.generate_grammar_question(
+        subtopic=req.subtopic,
+        level=req.level,
+        difficulty=req.difficulty,
+    )
+
+
+@app.post("/api/english/generate/drill")
+def english_generate_drill(req: EnglishGenerateDrillRequest):
+    if not english_generator:
+        raise HTTPException(status_code=503, detail="English generator is unavailable.")
+    return english_generator.generate_drill_set(
+        mode=req.mode,
+        count=req.count,
+        target_difficulty=req.target_difficulty,
+        avoid_questions=req.avoid_questions,
+    )
+

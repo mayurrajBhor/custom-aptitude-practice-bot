@@ -1626,3 +1626,13 @@
     grid-template-columns: 1fr;
   }
 }
+
+@keyframes engSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes engBounce {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-8px); }
+}

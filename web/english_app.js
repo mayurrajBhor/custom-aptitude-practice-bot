@@ -519,6 +519,11 @@
             <span class="english-mode-pill ${this.session.mode}">
               <span>${modeLabel}</span>
             </span>
+            ${(q.is_ai_generated || this.session.is_ai_generated) ? `
+              <span class="english-badge" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; display: inline-flex; align-items: center; gap: 4px;" title="Dynamically generated with adaptive difficulty">
+                <span>🤖 Level ${q.difficulty || 3}/5</span>
+              </span>
+            ` : ''}
             <div class="english-progress-cluster">
               <span class="english-q-counter">Q${index + 1} of ${this.session.totalQuestions}</span>
               <div class="english-progress-track" title="${progressPercent}% complete">
@@ -1200,6 +1205,7 @@
             mode: q.section === "foundation" ? "foundation" : "gmat_verbal",
             verbal_type: q.type === "cr" ? "critical_reasoning" : (q.type === "rc" ? "reading_comprehension" : null),
             foundation_type: q.foundation_type || null,
+            is_ai_generated: Boolean(q.is_ai_generated || this.session.is_ai_generated),
           });
           if (engRecord && engRecord.id) {
             attempt.id = engRecord.id;
@@ -1856,6 +1862,13 @@
     FlashcardUI: FlashcardUI,
     activeSubtab: "gmat_verbal",
     currentTrajectoryVariant: "Critical Reasoning",
+    isAiMode: (function () {
+      try {
+        return localStorage.getItem("gmat_english_ai_mode") !== "false";
+      } catch (e) {
+        return true;
+      }
+    })(),
 
     init: async function () {
       const screen = document.getElementById("englishScreen");
@@ -2034,6 +2047,33 @@
 
       container.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Adaptive AI Generator Banner -->
+          <div style="background: linear-gradient(135deg, ${self.isAiMode ? '#f0fdf4, #eff6ff' : '#f8fafc, #f1f5f9'}); border: 1.5px solid ${self.isAiMode ? '#86efac' : '#cbd5e1'}; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; gap: 14px; max-width: 620px;">
+              <div style="font-size: 28px; background: #fff; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+                ${self.isAiMode ? '🤖' : '📚'}
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+                  <strong style="color: #1e3a5f; font-size: 15px;">Dynamic AI Question Generator</strong>
+                  <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: ${self.isAiMode ? '#dcfce7; color: #166534' : '#e2e8f0; color: #475569'};">
+                    ${self.isAiMode ? '● ACTIVE' : 'OFFLINE BANK'}
+                  </span>
+                </div>
+                <div style="font-size: 13px; color: #475569; line-height: 1.4;">
+                  ${self.isAiMode
+                    ? 'Generates non-repeating GMAT questions with adaptive difficulty (Levels 1-5) and official trap patterns based on your real-time accuracy.'
+                    : 'Using standardized curated questions from the offline question bank.'}
+                </div>
+              </div>
+            </div>
+            <div>
+              <button id="toggleAiModeVerbalBtn" class="english-btn" style="background: ${self.isAiMode ? '#166534' : '#1e3a5f'}; color: #fff; padding: 10px 18px; font-weight: 600; font-size: 13px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;" type="button">
+                <span>${self.isAiMode ? '✓ AI Mode Active (Click to Switch)' : '⚡ Switch to AI Generator'}</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Section Selector (Critical Reasoning vs Reading Comprehension) -->
           <div>
             <h3 style="margin: 0 0 12px; font-size: 16px; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.04em;">
@@ -2123,30 +2163,42 @@
         </div>
       `;
 
+      // Event listeners for AI toggle
+      const toggleAiBtn = container.querySelector("#toggleAiModeVerbalBtn");
+      if (toggleAiBtn) {
+        toggleAiBtn.addEventListener("click", () => {
+          self.isAiMode = !self.isAiMode;
+          try {
+            localStorage.setItem("gmat_english_ai_mode", self.isAiMode ? "true" : "false");
+          } catch (e) {}
+          self.renderGmatVerbalTab(container, overview);
+        });
+      }
+
       // Event listeners for actions
       container.querySelector("#startCrDrillBtn").addEventListener("click", () => {
         const crs = (window.ENGLISH_DATA && window.ENGLISH_DATA.CR_QUESTIONS) ? window.ENGLISH_DATA.CR_QUESTIONS : self.getCRQuestions();
-        self.startPracticeSession({ mode: "drill", subsection: "Critical Reasoning", questions: crs.slice(0, 10) });
+        self.startPracticeSession({ mode: "drill", subsection: "Critical Reasoning", count: 10, questions: self.isAiMode ? null : crs.slice(0, 10) });
       });
 
       container.querySelector("#startRcDrillBtn").addEventListener("click", () => {
         const rcs = (window.ENGLISH_DATA && window.ENGLISH_DATA.RC_QUESTIONS) ? window.ENGLISH_DATA.RC_QUESTIONS : self.getRCQuestions();
-        self.startPracticeSession({ mode: "drill", subsection: "Reading Comprehension", questions: rcs.slice(0, 8) });
+        self.startPracticeSession({ mode: "drill", subsection: "Reading Comprehension", count: 8, questions: self.isAiMode ? null : rcs.slice(0, 8) });
       });
 
       container.querySelector("#quick5DrillBtn").addEventListener("click", () => {
         const pool = self.getMixedQuestions();
-        self.startPracticeSession({ mode: "drill", questions: pool.slice(0, 5) });
+        self.startPracticeSession({ mode: "drill", count: 5, questions: self.isAiMode ? null : pool.slice(0, 5) });
       });
 
       container.querySelector("#quick10DrillBtn").addEventListener("click", () => {
         const pool = self.getMixedQuestions();
-        self.startPracticeSession({ mode: "drill", questions: pool.slice(0, 10) });
+        self.startPracticeSession({ mode: "drill", count: 10, questions: self.isAiMode ? null : pool.slice(0, 10) });
       });
 
       container.querySelector("#quick20DrillBtn").addEventListener("click", () => {
         const pool = self.getMixedQuestions();
-        self.startPracticeSession({ mode: "drill", questions: pool.slice(0, 20) });
+        self.startPracticeSession({ mode: "drill", count: 20, questions: self.isAiMode ? null : pool.slice(0, 20) });
       });
 
       container.querySelector("#sim45Btn").addEventListener("click", () => {
@@ -2172,6 +2224,33 @@
 
       container.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 24px;">
+          <!-- Adaptive AI Generator Banner -->
+          <div style="background: linear-gradient(135deg, ${self.isAiMode ? '#f0fdf4, #eff6ff' : '#f8fafc, #f1f5f9'}); border: 1.5px solid ${self.isAiMode ? '#86efac' : '#cbd5e1'}; border-radius: 12px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.03);">
+            <div style="display: flex; align-items: center; gap: 14px; max-width: 620px;">
+              <div style="font-size: 28px; background: #fff; width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+                ${self.isAiMode ? '🤖' : '🌱'}
+              </div>
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 3px;">
+                  <strong style="color: #166534; font-size: 15px;">Dynamic Foundation AI Generator</strong>
+                  <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; background: ${self.isAiMode ? '#dcfce7; color: #166534' : '#e2e8f0; color: #475569'};">
+                    ${self.isAiMode ? '● ACTIVE' : 'OFFLINE BANK'}
+                  </span>
+                </div>
+                <div style="font-size: 13px; color: #475569; line-height: 1.4;">
+                  ${self.isAiMode
+                    ? 'Generates fresh, non-repeating grammar exercises with educational rule breakdowns and trap distractors scaled to your foundation level.'
+                    : 'Serving standardized curated curriculum questions from the offline grammar bank.'}
+                </div>
+              </div>
+            </div>
+            <div>
+              <button id="toggleAiModeFoundationBtn" class="english-btn" style="background: ${self.isAiMode ? '#166534' : '#0f766e'}; color: #fff; padding: 10px 18px; font-weight: 600; font-size: 13px; border-radius: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;" type="button">
+                <span>${self.isAiMode ? '✓ AI Mode Active (Click to Switch)' : '⚡ Switch to AI Generator'}</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Level 1-4 Learning Path Roadmap -->
           <div class="cr-stimulus-card" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
             <span class="english-badge foundation-badge">Curriculum Progression</span>
@@ -2242,15 +2321,27 @@
         </div>
       `;
 
+      // Event listener for AI toggle
+      const toggleAiBtn = container.querySelector("#toggleAiModeFoundationBtn");
+      if (toggleAiBtn) {
+        toggleAiBtn.addEventListener("click", () => {
+          self.isAiMode = !self.isAiMode;
+          try {
+            localStorage.setItem("gmat_english_ai_mode", self.isAiMode ? "true" : "false");
+          } catch (e) {}
+          self.renderFoundationTab(container, overview);
+        });
+      }
+
       // Event listeners
       container.querySelector("#startGrammarLearnBtn").addEventListener("click", () => {
         const qs = (window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) ? window.ENGLISH_DATA.GRAMMAR_QUESTIONS : [];
-        self.startPracticeSession({ mode: "untimed", subsection: "Grammar", questions: qs });
+        self.startPracticeSession({ mode: "untimed", subsection: "Grammar", count: 10, questions: self.isAiMode ? null : qs });
       });
 
       container.querySelector("#startGrammarDrillBtn").addEventListener("click", () => {
         const qs = (window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) ? window.ENGLISH_DATA.GRAMMAR_QUESTIONS : [];
-        self.startPracticeSession({ mode: "drill", subsection: "Grammar", questions: qs });
+        self.startPracticeSession({ mode: "drill", subsection: "Grammar", count: 10, questions: self.isAiMode ? null : qs });
       });
 
       container.querySelector("#openFlashcardsBtn").addEventListener("click", () => {
@@ -2602,9 +2693,16 @@
       }
     },
 
-    startPracticeSession: function (config = {}) {
+    startPracticeSession: async function (config = {}) {
+      const self = this;
       const qView = document.getElementById("englishQuestionView") || document.querySelector("main");
       let selectedQuestions = [];
+      let isAiGenerated = false;
+
+      const isAdaptiveDrill = self.isAiMode &&
+        config.mode !== "simulation" &&
+        config.mode !== "verbal_diagnostic" &&
+        config.mode !== "foundation_diagnostic";
 
       if (config.mode === "simulation") {
         if (window.ENGLISH_DATA) {
@@ -2645,15 +2743,105 @@
         } else {
           selectedQuestions = BUILTIN_QUESTIONS;
         }
+      } else if (isAdaptiveDrill) {
+        // Calculate dynamic adaptive difficulty from user performance in AptitudeEnglishDB
+        let targetDifficulty = 3;
+        let avoidQuestions = [];
+        try {
+          if (window.AptitudeEnglishDB) {
+            const attempts = await window.AptitudeEnglishDB.getAllEnglishAttempts();
+            if (attempts && attempts.length > 0) {
+              const relevant = attempts
+                .filter(a => config.subsection === "Grammar" ? a.section === "foundation" : a.section === "gmat_verbal")
+                .slice(-10);
+              if (relevant.length >= 3) {
+                const acc = relevant.filter(a => a.is_correct).length / relevant.length;
+                if (acc >= 0.8) targetDifficulty = 5;
+                else if (acc >= 0.6) targetDifficulty = 4;
+                else if (acc <= 0.3) targetDifficulty = 2;
+                else if (acc <= 0.15) targetDifficulty = 1;
+                else targetDifficulty = 3;
+              }
+              avoidQuestions = attempts.slice(-25).map(a => a.question_id || a.question_text).filter(Boolean);
+            }
+          }
+        } catch (e) {
+          console.warn("Could not calculate adaptive difficulty:", e);
+        }
+
+        const count = (config.questions && config.questions.length) || config.count || 5;
+        let drillMode = "mixed";
+        if (config.subsection === "Critical Reasoning") drillMode = "cr";
+        else if (config.subsection === "Reading Comprehension") drillMode = "rc";
+        else if (config.subsection === "Grammar") drillMode = "grammar";
+
+        // Render generation state
+        if (qView) {
+          qView.innerHTML = `
+            <div style="min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; background: #fff; border-radius: 12px; margin: 20px auto; max-width: 560px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+              <div style="font-size: 40px; margin-bottom: 14px; animation: engBounce 1s infinite alternate;">🤖</div>
+              <h3 style="margin: 0 0 8px; color: #1e3a5f; font-size: 20px; font-weight: 700;">Adaptive AI Question Generator</h3>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1d4ed8; padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; margin-bottom: 14px;">
+                <span>Target Difficulty: Level ${targetDifficulty} / 5</span>
+              </div>
+              <p style="margin: 0 0 18px; color: #64748b; font-size: 13.5px; max-width: 420px; line-height: 1.5;">
+                Synthesizing non-repeating ${config.subsection || "Verbal"} questions calibrated to your accuracy trajectory...
+              </p>
+              <div style="width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: engSpin 0.8s linear infinite;"></div>
+            </div>
+          `;
+        }
+
+        try {
+          const resp = await fetch("/api/english/generate/drill", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: drillMode,
+              count: count,
+              target_difficulty: targetDifficulty,
+              avoid_questions: avoidQuestions,
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data && Array.isArray(data.questions) && data.questions.length > 0) {
+              selectedQuestions = data.questions.map(q => ({
+                ...q,
+                is_ai_generated: data.is_ai_generated !== false,
+              }));
+              isAiGenerated = data.is_ai_generated !== false;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("AI drill generation fetch error, falling back to curated bank:", fetchErr);
+        }
+
+        // Fallback to local questions if fetch was unsuccessful
+        if (!selectedQuestions || selectedQuestions.length === 0) {
+          if (config.questions) {
+            selectedQuestions = config.questions;
+          } else if (config.subsection === "Critical Reasoning") {
+            selectedQuestions = self.getCRQuestions().slice(0, count);
+          } else if (config.subsection === "Reading Comprehension") {
+            selectedQuestions = self.getRCQuestions().slice(0, count);
+          } else if (config.subsection === "Grammar") {
+            selectedQuestions = ((window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) || []).slice(0, count);
+          } else {
+            selectedQuestions = self.getMixedQuestions().slice(0, count);
+          }
+        }
       } else if (config.questions) {
         selectedQuestions = config.questions;
       } else {
-        selectedQuestions = this.getMixedQuestions().slice(0, 10);
+        selectedQuestions = self.getMixedQuestions().slice(0, 10);
       }
 
       QuestionRunner.startSession({
         ...config,
         questions: selectedQuestions,
+        is_ai_generated: isAiGenerated,
         container: qView,
         onFinish: () => {
           alert("Session finished! Returning to English Dashboard.");

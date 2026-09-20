@@ -277,6 +277,7 @@ async function recordEnglishAttempt(attempt) {
   if (attempt.passage_text) record.passage_text = String(attempt.passage_text);
   if (attempt.explanation) record.explanation = String(attempt.explanation);
   if (attempt.notes) record.notes = String(attempt.notes);
+  if (attempt.is_ai_generated !== undefined) record.is_ai_generated = Boolean(attempt.is_ai_generated);
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORES.ATTEMPTS, "readwrite");
