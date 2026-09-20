@@ -654,6 +654,12 @@ async function getEnglishOverview() {
   });
   weakTopics.sort((a, b) => a.accuracy - b.accuracy);
 
+  // Estimated Verbal Readiness Score (0-100 index)
+  // Components:
+  // 1. CR Accuracy: up to 35 points
+  // 2. RC Accuracy: up to 35 points
+  // 3. Pacing Management: up to 15 points (Target: CR 80-120s, RC 60-100s)
+  // 4. Coverage / Volume: up to 15 points (Scales with question diversity and volume up to 40 attempts)
   // -------------------------------------------------------------------------
   // 1. GMAT Verbal Readiness (CR + RC only - zero foundation leakage)
   // -------------------------------------------------------------------------

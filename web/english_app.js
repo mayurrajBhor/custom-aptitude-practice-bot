@@ -707,7 +707,12 @@
       this.markedForReview = new Set();
       this.passageScrollPositions = {};
 
-      let mountTarget = config.container || EnglishOverlayManager.getViewContainer();
+      let mountTarget = config.container || (window.EnglishOverlayManager && typeof EnglishOverlayManager.getViewContainer === "function" ? EnglishOverlayManager.getViewContainer() : null);
+      if (!mountTarget) {
+        mountTarget = document.getElementById("englishQuestionView") ||
+                      document.getElementById("questionScreen") ||
+                      document.querySelector("main");
+      }
       this.container = mountTarget;
 
       if (this.session.isSimulation) {
@@ -1191,9 +1196,13 @@
       const exitBtn = container.querySelector("#engExitBtn");
       if (exitBtn) {
         exitBtn.addEventListener("click", () => {
-          EnglishOverlayManager.confirmExit(() => {
+          if (window.EnglishOverlayManager && typeof EnglishOverlayManager.confirmExit === "function") {
+            EnglishOverlayManager.confirmExit(() => {
+              self.exitSession();
+            });
+          } else {
             self.exitSession();
-          });
+          }
         });
       }
 
@@ -1561,10 +1570,12 @@
 
       if (typeof this.session.onFinish === "function") {
         this.session.onFinish(this.session);
-      } else {
+      } else if (window.EnglishOverlayManager && typeof EnglishOverlayManager.showCompletion === "function") {
         EnglishOverlayManager.showCompletion(this.session, () => {
           this.exitSession();
         });
+      } else {
+        this.exitSession();
       }
     },
 
@@ -1910,6 +1921,7 @@
         ? config.deck
         : BUILTIN_FLASHCARDS;
       this.currentIndex = 0;
+      this.container = config.container || document.getElementById("englishFlashcardView") || document.getElementById("englishQuestionView");
       this.container = config.container || EnglishOverlayManager.getViewContainer();
       this.onComplete = config.onComplete || null;
       this.isFlipped = false;
@@ -1933,6 +1945,7 @@
         <div class="flashcard-wrapper" id="engFlashcardWrapper">
           <div class="flashcard-hud">
             <span>Vocabulary Deck (${index + 1} of ${total})</span>
+            <span>Spaced Repetition Practice</span>
             <button class="english-btn english-btn-ghost" id="engCardCloseBtn" type="button" style="padding: 4px 10px; font-size: 12px; color: #64748b;">
               ✕ Exit Deck
             </button>
@@ -2115,6 +2128,17 @@
       }
       if (typeof this.onComplete === "function") {
         this.onComplete();
+      } else if (this.container) {
+        this.container.innerHTML = `
+          <div class="flashcard-wrapper" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 48px;">🎉</div>
+            <h2>Vocabulary Flashcards Completed!</h2>
+            <p style="color: #64748b;">You have reviewed all cards in this deck. Repetitions have been recorded into your spaced repetition system.</p>
+            <button class="english-btn english-btn-primary" onclick="window.EnglishFlashcardUI.startDeck({});" type="button">
+              Review Deck Again
+            </button>
+          </div>
+        `;
       } else {
         EnglishOverlayManager.showCompletion({
           totalQuestions: this.deck.length,
@@ -2203,6 +2227,8 @@
 
     renderMainLayout: function (screen, overview, activeSession, studyPlan, beginnerProfile) {
       const self = this;
+      const readinessScore = overview.readiness_score || 0;
+      const readinessTier = overview.readiness_tier || "Diagnostic Phase";
       const verbalReadiness = overview.verbal_readiness || overview.readiness_score || 0;
       const verbalTier = overview.verbal_tier || overview.readiness_tier || "Diagnostic Phase";
       const foundationReadiness = overview.foundation_readiness || 0;
@@ -2212,6 +2238,7 @@
       const rcAvg = overview.rc_avg_question_time ? `${overview.rc_avg_question_time}s` : "--";
       const streak = overview.current_streak ? `${overview.current_streak}d` : "0d";
       const accuracy = overview.accuracy ? `${overview.accuracy}%` : "0%";
+      const totalSolved = overview.total_attempts || 0;
 
       let resumeBannerHtml = "";
       if (activeSession && activeSession.questions && activeSession.questions.length > 0) {
@@ -2366,6 +2393,7 @@
 
       screen.innerHTML = `
         <div class="english-container" style="padding: 16px 0 40px;">
+          <!-- Top HUD Strip -->
           <!-- Top HUD Strip with Segregated Readiness -->
           <header class="english-hud-bar" style="margin-bottom: 16px;">
             <div>
@@ -2439,6 +2467,7 @@
         </div>
       `;
 
+      // Event listener for subtabs
       // Subtab clicks
       screen.querySelectorAll(".english-subtab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -2456,13 +2485,21 @@
       }
       const discardBtn = screen.querySelector("#engDiscardBtn");
       if (discardBtn) {
-        discardBtn.addEventListener("click", async () => {
-          EnglishOverlayManager.confirmExit(async () => {
+        discardBtn.addEventListener("click", () => {
+          if (window.EnglishOverlayManager && typeof EnglishOverlayManager.confirmExit === "function") {
+            EnglishOverlayManager.confirmExit(async () => {
+              if (window.AptitudeEnglishDB) {
+                await window.AptitudeEnglishDB.clearActiveEnglishSession();
+              }
+              self.init();
+            });
+          } else {
             if (window.AptitudeEnglishDB) {
-              await window.AptitudeEnglishDB.clearActiveEnglishSession();
+              window.AptitudeEnglishDB.clearActiveEnglishSession().then(() => self.init());
+            } else {
+              self.init();
             }
-            self.init();
-          });
+          }
         });
       }
 
@@ -3192,6 +3229,7 @@
 
     startPracticeSession: async function (config = {}) {
       const self = this;
+      const qView = document.getElementById("englishQuestionView") || document.querySelector("main");
       EnglishOverlayManager.open();
       const view = EnglishOverlayManager.getViewContainer();
       let selectedQuestions = [];
@@ -3273,6 +3311,22 @@
         else if (config.subsection === "Reading Comprehension") drillMode = "rc";
         else if (config.subsection === "Grammar") drillMode = "grammar";
 
+        // Render generation state
+        if (qView) {
+          qView.innerHTML = `
+            <div style="min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; background: #fff; border-radius: 12px; margin: 20px auto; max-width: 560px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
+              <div style="font-size: 40px; margin-bottom: 14px; animation: engBounce 1s infinite alternate;">🤖</div>
+              <h3 style="margin: 0 0 8px; color: #1e3a5f; font-size: 20px; font-weight: 700;">Adaptive AI Question Generator</h3>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1d4ed8; padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; margin-bottom: 14px;">
+                <span>Target Difficulty: Level ${targetDifficulty} / 5</span>
+              </div>
+              <p style="margin: 0 0 18px; color: #64748b; font-size: 13.5px; max-width: 420px; line-height: 1.5;">
+                Synthesizing non-repeating ${config.subsection || "Verbal"} questions calibrated to your accuracy trajectory...
+              </p>
+              <div style="width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: engSpin 0.8s linear infinite;"></div>
+            </div>
+          `;
+        }
         // Show animated overlay loading card with cancellation
         let isCancelled = false;
         const controller = new AbortController();
@@ -3318,6 +3372,7 @@
             }
           }
         } catch (fetchErr) {
+          console.warn("AI drill generation fetch error, falling back to curated bank:", fetchErr);
           clearTimeout(timeoutId);
           console.warn("AI drill generation fetch error or timeout, falling back to curated bank:", fetchErr);
         }
@@ -3384,6 +3439,10 @@
             EnglishOverlayManager.close();
             self.init();
           });
+        },
+        onExit: () => {
+          EnglishOverlayManager.close();
+          self.init();
         },
       });
     },
