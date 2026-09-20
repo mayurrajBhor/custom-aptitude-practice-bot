@@ -711,11 +711,13 @@ function setScreen(name) {
   document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("is-active"));
 
   $(`#${name}Screen`)?.classList.add("is-active");
-  const navTarget = name === "progress" ? name : "practice";
+  const navTarget = name === "progress" ? "progress" : (name === "english" ? "english" : "practice");
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
   if (name === "progress") {
     void renderAdvancedProgressDashboard();
     void renderLocalJournal();
+  } else if (name === "english") {
+    window.EnglishApp?.init();
   }
 }
 
@@ -3303,6 +3305,9 @@ function bindEvents() {
     const screenButton = event.target.closest("[data-screen-target]");
     if (screenButton) {
       setScreen(screenButton.dataset.screenTarget);
+      if (screenButton.dataset.screenTarget === "english") {
+        window.EnglishApp?.init();
+      }
       return;
     }
 

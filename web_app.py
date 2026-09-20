@@ -18,6 +18,20 @@ from pydantic import BaseModel, Field
 from database.db_manager import db
 from llm.generator import generator
 from local_catalog import get_local_catalog_payload, get_local_pattern, is_local_pattern_id
+try:
+    from database.english_data import (
+        get_english_catalog,
+        get_english_questions,
+        get_verbal_simulation_set,
+        get_verbal_diagnostic_set,
+        get_foundation_diagnostic_set,
+    )
+except ImportError:
+    get_english_catalog = None
+    get_english_questions = None
+    get_verbal_simulation_set = None
+    get_verbal_diagnostic_set = None
+    get_foundation_diagnostic_set = None
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -1842,3 +1856,53 @@ def _save_question_once(question: dict[str, Any]):
     except Exception as exc:
         logging.warning("Skipping question persistence because database is unavailable: %s", exc)
     question["saved"] = True
+
+
+@app.get("/api/english/catalog")
+def english_catalog():
+    if not get_english_catalog:
+        raise HTTPException(status_code=503, detail="English catalog is unavailable.")
+    return get_english_catalog()
+
+
+@app.get("/api/english/questions")
+def english_questions(
+    mode: Optional[str] = None,
+    subsection: Optional[str] = None,
+    question_type: Optional[str] = None,
+    topic: Optional[str] = None,
+    difficulty: Optional[int] = None,
+    limit: Optional[int] = None,
+):
+    if not get_english_questions:
+        raise HTTPException(status_code=503, detail="English question bank is unavailable.")
+    questions = get_english_questions(
+        mode=mode,
+        subsection=subsection,
+        question_type=question_type,
+        topic=topic,
+        difficulty=difficulty,
+        limit=limit,
+    )
+    return {"total": len(questions), "questions": questions}
+
+
+@app.get("/api/english/simulation/verbal")
+def english_simulation_verbal():
+    if not get_verbal_simulation_set:
+        raise HTTPException(status_code=503, detail="Verbal simulation generator is unavailable.")
+    return get_verbal_simulation_set()
+
+
+@app.get("/api/english/diagnostic/verbal")
+def english_diagnostic_verbal():
+    if not get_verbal_diagnostic_set:
+        raise HTTPException(status_code=503, detail="Verbal diagnostic generator is unavailable.")
+    return get_verbal_diagnostic_set()
+
+
+@app.get("/api/english/diagnostic/foundation")
+def english_diagnostic_foundation():
+    if not get_foundation_diagnostic_set:
+        raise HTTPException(status_code=503, detail="Foundation diagnostic generator is unavailable.")
+    return get_foundation_diagnostic_set()

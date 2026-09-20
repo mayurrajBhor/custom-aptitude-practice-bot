@@ -129,6 +129,15 @@ async function recordLocalAttempt(attempt) {
     explanation: String(attempt.explanation || ""),
     difficulty: attempt.difficulty !== undefined ? attempt.difficulty : 3,
     user_id: attempt.user_id !== undefined ? attempt.user_id : null,
+    error_category: attempt.error_category !== undefined ? attempt.error_category : null,
+    time_spent_reading_passage: Number(attempt.time_spent_reading_passage || 0),
+    time_spent_on_question: Number(attempt.time_spent_on_question || 0),
+    time_before_first_interaction: Number(attempt.time_before_first_interaction || 0),
+    time_after_eliminating_choices: Number(attempt.time_after_eliminating_choices || 0),
+    passage_id: attempt.passage_id || null,
+    trap_type: attempt.trap_type || null,
+    question_type: attempt.question_type || null,
+    reasoning_path: attempt.reasoning_path || null,
   };
 
   return new Promise((resolve, reject) => {
@@ -189,6 +198,27 @@ async function getAllLocalAttempts() {
     };
 
     req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function updateLocalAttemptErrorCategory(attemptId, errorCategory) {
+  const db = await initLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("attempts", "readwrite");
+    const store = tx.objectStore("attempts");
+    const getReq = store.get(Number(attemptId));
+    getReq.onsuccess = () => {
+      const record = getReq.result;
+      if (!record) {
+        resolve(null);
+        return;
+      }
+      record.error_category = String(errorCategory || "");
+      const putReq = store.put(record);
+      putReq.onsuccess = () => resolve(record);
+      putReq.onerror = (e) => reject(e.target.error);
+    };
+    getReq.onerror = (e) => reject(e.target.error);
   });
 }
 
@@ -1111,6 +1141,7 @@ const AptitudeLocalDB = {
   recordLocalAttempt,
   recordLocalSession,
   getAllLocalAttempts,
+  updateLocalAttemptErrorCategory,
   getAllLocalSessions,
   syncRemoteHistory,
   getLocalAnalytics,
@@ -1127,6 +1158,7 @@ if (typeof window !== "undefined") {
   window.recordLocalAttempt = recordLocalAttempt;
   window.recordLocalSession = recordLocalSession;
   window.getAllLocalAttempts = getAllLocalAttempts;
+  window.updateLocalAttemptErrorCategory = updateLocalAttemptErrorCategory;
   window.getAllLocalSessions = getAllLocalSessions;
   window.syncRemoteHistory = syncRemoteHistory;
   window.getLocalAnalytics = getLocalAnalytics;

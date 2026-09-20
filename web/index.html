@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aptitude Practice</title>
     <link rel="stylesheet" href="/static/styles.css?v=41">
+    <link rel="stylesheet" href="/static/english.css?v=1">
   </head>
   <body>
     <div class="app-shell">
@@ -36,6 +37,10 @@
         <button class="tab is-active" data-screen-target="practice">
           <span>Practice</span>
           <small>Topics and tests</small>
+        </button>
+        <button class="tab" data-screen-target="english">
+          <span>English</span>
+          <small>GMAT Verbal &amp; Foundation</small>
         </button>
         <button class="tab" data-screen-target="progress">
           <span>Progress</span>
@@ -659,10 +664,16 @@
           </div>
           <div class="review-list" id="reviewList"></div>
         </section>
+        <section class="screen" id="englishScreen">
+          <div id="englishScreenContent"></div>
+        </section>
       </main>
     </div>
 
     <script src="/static/local_db.js?v=42"></script>
+    <script src="/static/english_db.js?v=1"></script>
+    <script src="/static/english_data.js?v=1"></script>
+    <script src="/static/english_app.js?v=1"></script>
     <script src="/static/app.js?v=42"></script>
   </body>
 </html>
