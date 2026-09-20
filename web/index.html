@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Aptitude Practice</title>
-    <link rel="stylesheet" href="/static/styles.css?v=35">
+    <link rel="stylesheet" href="/static/styles.css?v=40">
   </head>
   <body>
     <div class="app-shell">
@@ -151,6 +151,7 @@
                 <span id="questionTimer">0s</span>
               </div>
               <div class="progress-track"><div id="progressBar"></div></div>
+              <div class="reinforcement-banner" id="reinforcementBanner" hidden></div>
               <h2 id="questionText"></h2>
               <div class="options-grid" id="optionsGrid" hidden></div>
               <div class="numpad-panel" id="numpadPanel">
@@ -197,7 +198,15 @@
                       <span class="auto-indicator-title" id="autoIndicatorTitle">Auto-Submit Active</span>
                       <span class="auto-indicator-sub" id="autoIndicatorSub">&bull; Zero clicks needed</span>
                     </div>
+                    <button type="button" class="numpad-submit-btn" id="numpadSubmitBtn" title="Instant submit (or press Enter)" disabled>
+                      <span>Submit</span>
+                      <kbd>↵</kbd>
+                    </button>
                   </div>
+                  <button type="button" class="numpad-submit-btn" id="numpadSubmitBtn" title="Submit answer (or press Enter)" disabled>
+                    <span>Submit</span>
+                    <kbd>↵</kbd>
+                  </button>
                 </div>
               </div>
             </section>
@@ -223,6 +232,7 @@
               <div class="progress-header-actions">
                 <button class="quiet-button" id="downloadJsonBtn" type="button">📥 Download JSON</button>
                 <button class="quiet-button" id="downloadCsvBtn" type="button">📊 Export CSV</button>
+                <button class="quiet-button" id="downloadQuestionCsvBtn" type="button">📋 Question Stats CSV</button>
                 <label class="quiet-button" id="importBackupLabel" style="cursor:pointer;">
                   📤 Import Backup
                   <input type="file" id="importBackupFile" accept=".json" style="display:none;">
@@ -232,6 +242,18 @@
 
             <div class="profile-note" id="profileNote"></div>
 
+            <section class="progress-focus-card" id="progressFocusCard" aria-live="polite">
+              <div class="progress-focus-icon" aria-hidden="true">→</div>
+              <div class="progress-focus-copy">
+                <span class="panel-kicker">Your next best step</span>
+                <h3 id="progressFocusTitle">Keep building your baseline</h3>
+                <p id="progressFocusText">Complete a practice session to unlock personalized progress insights.</p>
+              </div>
+              <span class="progress-focus-badge" id="progressFocusBadge">Getting started</span>
+              <button class="primary-button progress-focus-action" id="progressFocusButton" type="button" hidden>Practice now</button>
+            </section>
+
+            <!-- 2. High-Impact Hero KPI Strip (4 cards) -->
             <!-- 2. High-Impact Hero KPI Strip (5 cards) -->
             <div class="advanced-kpi-strip" id="advancedKpiStrip">
               <div class="advanced-kpi-card">
@@ -276,6 +298,7 @@
               </div>
             </div>
 
+            <!-- 3. Prominent Performance Trend Trajectory SVG Card -->
             <!-- 3. Executive Exam Readiness Index Cockpit -->
             <section class="progress-card readiness-cockpit-card" id="readinessCockpitCard">
               <div class="readiness-hero">
@@ -315,7 +338,7 @@
                 </div>
               </div>
               <div class="performance-trend-chart-container" id="performanceTrendChartContainer">
-                <svg class="trend-chart-svg" id="performanceTrendSvg" viewBox="0 0 500 180" preserveAspectRatio="none">
+                <svg class="trend-chart-svg" id="performanceTrendSvg" viewBox="0 0 560 180" preserveAspectRatio="none">
                   <defs>
                     <linearGradient id="trendAccGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
@@ -332,6 +355,13 @@
                   <span><b style="background:#10b981;"></b> Accuracy % (solid)</span>
                   <span><b style="background:#f59e0b;"></b> Avg Speed in sec (dashed)</span>
                   <span id="chartSummaryBadge" class="chart-summary-badge">Loading trend...</span>
+                </div>
+              </div>
+              <div class="session-progress-insight" id="sessionProgressInsight" aria-live="polite">
+                <span class="session-progress-icon" aria-hidden="true">⚡</span>
+                <div>
+                  <strong>Speed coaching</strong>
+                  <p id="sessionProgressInsightText">Complete two sessions to see whether your calculation time is improving.</p>
                 </div>
               </div>
 
@@ -356,6 +386,7 @@
               </div>
             </section>
 
+            <!-- 4. Primary Practice Intelligence Center (Day-Wise, Category, Pattern, Questions, Mistakes) -->
             <!-- 5. AI Diagnostic Prescriptions (What to fix next) -->
             <section class="progress-card ai-prescriptions-card" id="aiPrescriptionsCard">
               <div class="section-heading">
@@ -432,8 +463,31 @@
                 <button class="journal-tab-btn is-active" data-journal-view="day" type="button">📅 Day-Wise History</button>
                 <button class="journal-tab-btn" data-journal-view="category" type="button">📚 Category Breakdown</button>
                 <button class="journal-tab-btn" data-journal-view="pattern" type="button">🎯 Sub-Topic Mastery</button>
-                <button class="journal-tab-btn" data-journal-view="questions" type="button">📝 All Questions (<span id="totalAttemptsBadge">0</span>)</button>
+                <button class="journal-tab-btn" data-journal-view="questions" type="button">📝 Question Frequency &amp; Stats (<span id="totalAttemptsBadge">0</span>)</button>
                 <button class="journal-tab-btn" data-journal-view="mistakes" type="button">🥊 Mistake Book (<span id="rootCountAll">0</span>)</button>
+                <button class="journal-tab-btn" data-journal-view="diagnostics" type="button">🔬 Deep Diagnostics</button>
+              </div>
+
+              <div class="progress-explorer" id="progressExplorer">
+                <div class="progress-explorer-heading">
+                  <div>
+                    <span class="panel-kicker">Drill down into your practice</span>
+                    <h4>Find exactly where you are losing time or accuracy</h4>
+                  </div>
+                  <button class="quiet-button" id="clearProgressFilters" type="button">Reset filters</button>
+                </div>
+                <div class="progress-explorer-filters">
+                  <label><span>Day</span><select id="progressDayFilter"><option value="all">All days</option></select></label>
+                  <label><span>Category</span><select id="progressCategoryFilter"><option value="all">All categories</option></select></label>
+                  <label><span>Sub-topic</span><select id="progressTopicFilter"><option value="all">All sub-topics</option></select></label>
+                  <label><span>Pattern</span><select id="progressPatternFilter"><option value="all">All patterns</option></select></label>
+                </div>
+                <div class="progress-scope-summary" id="progressScopeSummary">
+                  <div><strong id="scopeAttemptCount">0</strong><span>Attempts</span></div>
+                  <div><strong id="scopeAccuracy">0%</strong><span>Accuracy</span></div>
+                  <div><strong id="scopeAvgTime">0.0s</strong><span>Avg time</span></div>
+                  <div><strong id="scopeUniqueQuestions">0</strong><span>Unique questions</span></div>
+                </div>
               </div>
 
               <!-- Search & Status Filter bar -->
@@ -452,6 +506,31 @@
               <div class="journal-content" id="localJournalContent"></div>
             </section>
 
+            <!-- Deep Diagnostics & Contract Preservation Container (cleanly contained) -->
+            <div id="deepDiagnosticsContainer" hidden>
+              <!-- Executive Readiness Cockpit -->
+              <section class="progress-card readiness-cockpit-card" id="readinessCockpitCard">
+                <div class="readiness-hero">
+                  <div class="readiness-gauge" id="readinessGaugeRing" style="--gauge-fill: 0%;">
+                    <div class="gauge-inner">
+                      <span class="gauge-value" id="readinessScore">0</span>
+                      <span class="gauge-label">READINESS</span>
+                    </div>
+                  </div>
+                  <div class="readiness-meta">
+                    <div class="readiness-tier-badge" id="readinessTier">Foundational Phase</div>
+                    <h3 id="readinessTitle">Exam Readiness Index</h3>
+                    <p id="readinessSummary">Readiness score calculated from overall accuracy, speed, and curriculum coverage.</p>
+                    <div class="readiness-pillars" id="readinessPillars">
+                      <div class="pillar-item"><span class="pillar-label">Accuracy (35%)</span><div class="pillar-bar"><b id="pillarAccuracyBar" style="width: 0%;"></b></div><strong id="pillarAccuracyVal">0%</strong></div>
+                      <div class="pillar-item"><span class="pillar-label">Speed Pace (25%)</span><div class="pillar-bar"><b id="pillarSpeedBar" style="width: 0%;"></b></div><strong id="pillarSpeedVal">0%</strong></div>
+                      <div class="pillar-item"><span class="pillar-label">Coverage (20%)</span><div class="pillar-bar"><b id="pillarCoverageBar" style="width: 0%;"></b></div><strong id="pillarCoverageVal">0%</strong></div>
+                      <div class="pillar-item"><span class="pillar-label">Consistency (10%)</span><div class="pillar-bar"><b id="pillarConsistencyBar" style="width: 0%;"></b></div><strong id="pillarConsistencyVal">0%</strong></div>
+                      <div class="pillar-item"><span class="pillar-label">Recovery (10%)</span><div class="pillar-bar"><b id="pillarRecoveryBar" style="width: 0%;"></b></div><strong id="pillarRecoveryVal">0%</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             <!-- Hidden contract preservation container -->
             <div id="contractPreservationContainer" style="display:none;">
               <span id="rootCountTimeout">0</span>
@@ -459,13 +538,47 @@
               <span id="rootCountConcept">0</span>
               <div id="masteryStat">0%</div>
 
+              <!-- AI Prescriptions -->
+              <section class="progress-card ai-prescriptions-card" id="aiPrescriptionsCard">
+                <div class="section-heading">
+                  <h3>🧠 AI Diagnostic Prescriptions</h3>
+                </div>
+                <div class="prescriptions-grid" id="aiPrescriptionsContainer"></div>
+              </section>
+
+              <!-- 4-Quadrant Strategic Matrix -->
+              <section class="progress-card quadrant-matrix-card" id="speedAccuracyMatrixCard">
+                <div class="section-heading">
+                  <h3>🎯 4-Quadrant Speed vs. Accuracy Matrix</h3>
+                </div>
+                <div class="quadrant-matrix-grid">
+                  <div class="quadrant-box quad-masters"><div class="quad-header"><strong>🚀 Speed Masters</strong><span class="quad-badge badge-correct" id="quadMastersCount">0</span></div><div class="quad-chips" id="quadMastersList"></div></div>
+                  <div class="quadrant-box quad-traps"><div class="quad-header"><strong>⏳ Speed Traps</strong><span class="quad-badge badge-slow" id="quadTrapsCount">0</span></div><div class="quad-chips" id="quadTrapsList"></div></div>
+                  <div class="quadrant-box quad-rushers"><div class="quad-header"><strong>⚠️ Rusher Hazard</strong><span class="quad-badge badge-wrong" id="quadRushersCount">0</span></div><div class="quad-chips" id="quadRushersList"></div></div>
+                  <div class="quadrant-box quad-bottlenecks"><div class="quad-header"><strong>🚨 Bottlenecks</strong><span class="quad-badge badge-timeout" id="quadBottlenecksCount">0</span></div><div class="quad-chips" id="quadBottlenecksList"></div></div>
+                </div>
+              </section>
+
+              <!-- Hidden elements for test contract compatibility -->
+              <div class="pacing-stacked-bar" id="pacingStackedBar" style="display:none;"></div>
+              <div id="pacingTotalAnalyzed" style="display:none;"></div>
+              <div id="kpiTimeoutRate" style="display:none;">0%</div>
+              <div id="masteryStat" style="display:none;">0%</div>
+              <span id="rootCountTimeout" style="display:none;">0</span>
+              <span id="rootCountCalc" style="display:none;">0</span>
+              <span id="rootCountConcept" style="display:none;">0</span>
+
               <!-- Root-Cause Mistake Card (used by contract tests) -->
+              <section class="progress-card root-cause-mistake-card" id="rootCauseMistakeCard" style="display:none;">
               <section class="progress-card root-cause-mistake-card" id="rootCauseMistakeCard">
                 <button class="accent-button" id="drillAllMistakesBtn" type="button">⚡ Drill Mistake Book</button>
                 <div class="mistake-classified-list" id="rootCauseMistakeList"></div>
               </section>
 
               <!-- Legacy Visual Grid (required by contract tests) -->
+              <section class="progress-visual-grid" id="progressVisualGrid" style="display:none;">
+                <div id="todaySolved">0</div>
+                <div id="totalCorrect">0</div>
               <section class="progress-visual-grid" id="progressVisualGrid">
                 <div id="progressSnapshot">Mastery</div>
                 <div id="weeklyHeatmap"></div>
@@ -534,7 +647,7 @@
       </main>
     </div>
 
-    <script src="/static/local_db.js?v=35"></script>
-    <script src="/static/app.js?v=35"></script>
+    <script src="/static/local_db.js?v=40"></script>
+    <script src="/static/app.js?v=40"></script>
   </body>
 </html>

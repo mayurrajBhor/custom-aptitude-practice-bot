@@ -2497,6 +2497,24 @@ function renderQuestion(question) {
   $("#questionText").textContent = question.question_text;
   $("#progressBar").style.width = `${((question.question_number - 1) / question.total_questions) * 100}%`;
   updateQuestionHud(question);
+
+  const rfBanner = $("#reinforcementBanner");
+  if (rfBanner) {
+    if (question.is_reinforcement) {
+      const reasonText = question.reinforcement_reason === "hesitation"
+        ? "You hesitated (&gt;10s) on this question earlier"
+        : "You missed this question earlier";
+      rfBanner.innerHTML = `
+        <span class="rf-badge">🔁 REINFORCEMENT LOOP</span>
+        <span>${reasonText}. <strong>Can you recall it in &lt; 5s now?</strong></span>
+      `;
+      rfBanner.hidden = false;
+    } else {
+      rfBanner.hidden = true;
+      rfBanner.innerHTML = "";
+    }
+  }
+
   $("#optionsGrid").innerHTML = question.options.map((option, index) => `
     <button class="option-button" data-answer-index="${index}">
       <span class="option-label">${String.fromCharCode(65 + index)}</span>
@@ -2530,14 +2548,46 @@ function finalizeAnswerResponse(result, effectiveIndex) {
   if (state.session) {
     state.session.score = result.score;
     state.session.answered = result.answered;
+    if (result.total_questions) {
+      state.session.total_questions = result.total_questions;
+    }
   }
   $("#progressBar").style.width = `${(result.answered / result.total_questions) * 100}%`;
   updateQuestionHud({ ...state.activeQuestion, question_number: result.answered + 1, total_questions: result.total_questions });
   $("#feedbackTitle").textContent = result.is_correct ? "Correct" : "Review";
   $("#feedbackText").textContent = result.explanation || `Correct answer: ${result.correct_option}`;
+  const totalQs = result.total_questions || state.session?.total_questions || 1;
+  $("#progressBar").style.width = `${(result.answered / totalQs) * 100}%`;
+  updateQuestionHud({ ...state.activeQuestion, question_number: result.answered + 1, total_questions: totalQs });
+
+  const timeTaken = Number(result.time_taken || 0);
+  let speedBadgeHtml = "";
+  if (result.speed_tier === "gmat_ready" || timeTaken < 5.0) {
+    speedBadgeHtml = `<span class="recall-tier-badge badge-gmat-ready">⚡ GMAT-Ready (${timeTaken.toFixed(1)}s)</span>`;
+  } else if (result.speed_tier === "acceptable" || timeTaken <= 12.0) {
+    speedBadgeHtml = `<span class="recall-tier-badge badge-acceptable">🎯 Acceptable (${timeTaken.toFixed(1)}s)</span>`;
+  } else {
+    speedBadgeHtml = `<span class="recall-tier-badge badge-hesitation">🐢 Hesitation (${timeTaken.toFixed(1)}s)</span>`;
+  }
+
+  let loopbackNoticeHtml = "";
+  if (result.repetition_queued) {
+    const noticeText = result.repetition_reason === "hesitation"
+      ? "Hesitation detected (&gt;10s): Queued to loop back in 3 questions for reinforcement!"
+      : "Missed question: Queued to loop back in 3 questions &amp; at session end!";
+    loopbackNoticeHtml = `<div class="loopback-notice"><span class="loopback-icon">🔁</span> ${noticeText}</div>`;
+  }
+
+  $("#feedbackTitle").innerHTML = `${result.is_correct ? "✓ Correct" : "✗ Review"} ${speedBadgeHtml}`;
+  $("#feedbackText").innerHTML = `
+    ${result.explanation ? `<div>${escapeHtml(result.explanation)}</div>` : `<div>Correct answer: <strong>${escapeHtml(String(result.correct_option))}</strong></div>`}
+    ${loopbackNoticeHtml}
+  `;
   playAnswerFeedback(result.is_correct);
   syncGameAnswer(result, effectiveIndex);
   const gameComplete = Boolean(state.activeGameMode?.isComplete?.(state.gameState));
+
+  const advanceDelay = (result.repetition_queued || !result.is_correct) ? 2000 : AUTO_ADVANCE_MS;
 
   if (result.complete || gameComplete) {
     const finishEarly = gameComplete && !result.complete;
@@ -2546,12 +2596,14 @@ function finalizeAnswerResponse(result, effectiveIndex) {
     $("#autoAdvanceText").textContent = finishEarly ? "Showing game report automatically..." : "Showing result automatically...";
     $("#autoAdvanceText").hidden = false;
     state.autoAdvanceId = window.setTimeout(finishEarly ? finishGameSessionEarly : () => showResults(result.summary), AUTO_ADVANCE_MS);
+    state.autoAdvanceId = window.setTimeout(finishEarly ? finishGameSessionEarly : () => showResults(result.summary), advanceDelay);
   } else {
     $("#nextButton").textContent = "Next question";
     $("#nextButton").onclick = loadNextQuestion;
     $("#autoAdvanceText").textContent = "Next question loading automatically...";
     $("#autoAdvanceText").hidden = false;
     state.autoAdvanceId = window.setTimeout(loadNextQuestion, AUTO_ADVANCE_MS);
+    state.autoAdvanceId = window.setTimeout(loadNextQuestion, advanceDelay);
   }
   $("#nextButton").disabled = false;
   if (result.complete) {
@@ -2953,10 +3005,12 @@ function renderReview(questions, summary = {}) {
 
 const QUESTION_TIME_LIMIT_SECONDS = 30;
 
-function updateTimerDisplay(remaining) {
+function updateTimerDisplay(remaining, elapsed = 0) {
   const timerElem = $("#questionTimer");
   if (!timerElem) return;
   timerElem.textContent = `${remaining}s`;
+
+  // Urgency check (final 5s alert)
   if (remaining <= 5) {
     timerElem.classList.add("is-urgent");
     timerElem.classList.remove("is-warning");
@@ -2966,13 +3020,28 @@ function updateTimerDisplay(remaining) {
   } else {
     timerElem.classList.remove("is-warning", "is-urgent");
   }
+
+  // GMAT Recall Speed Zone Benchmarks
+  if (elapsed < 5) {
+    timerElem.classList.add("timer-zone-emerald");
+    timerElem.classList.remove("timer-zone-blue", "timer-zone-amber");
+    timerElem.title = "⚡ GMAT-Ready Recall Zone (< 5s)";
+  } else if (elapsed <= 12) {
+    timerElem.classList.add("timer-zone-blue");
+    timerElem.classList.remove("timer-zone-emerald", "timer-zone-amber");
+    timerElem.title = "🎯 Acceptable Pace Zone (5–12s)";
+  } else {
+    timerElem.classList.add("timer-zone-amber");
+    timerElem.classList.remove("timer-zone-emerald", "timer-zone-blue");
+    timerElem.title = "🐢 Hesitation Zone (> 12s)";
+  }
 }
 
 function startQuestionTimer() {
   clearQuestionTimer();
   state.questionStartedAt = Date.now();
-  $("#questionTimer").textContent = "0s";
-  updateTimerDisplay(QUESTION_TIME_LIMIT_SECONDS);
+  $("#questionTimer").textContent = "30s";
+  updateTimerDisplay(QUESTION_TIME_LIMIT_SECONDS, 0);
 
   state.timerId = window.setInterval(() => {
     if (state.answered) {
@@ -2981,7 +3050,7 @@ function startQuestionTimer() {
     }
     const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
     const remaining = Math.max(0, QUESTION_TIME_LIMIT_SECONDS - elapsed);
-    updateTimerDisplay(remaining);
+    updateTimerDisplay(remaining, elapsed);
 
     if (state.activeGameMode && state.gameState && !state.answered) {
       renderGamePanels();
@@ -3003,6 +3072,7 @@ function clearQuestionTimer() {
   const timerElem = $("#questionTimer");
   if (timerElem) {
     timerElem.classList.remove("is-warning", "is-urgent");
+    timerElem.classList.remove("is-warning", "is-urgent", "timer-zone-emerald", "timer-zone-blue", "timer-zone-amber");
   }
 }
 
@@ -3426,6 +3496,20 @@ function bindEvents() {
     });
   }
 
+  const downloadQuestionCsvBtn = $("#downloadQuestionCsvBtn");
+  if (downloadQuestionCsvBtn) {
+    downloadQuestionCsvBtn.addEventListener("click", async () => {
+      if (window.AptitudeLocalDB?.exportQuestionStatsCSV) {
+        try {
+          await window.AptitudeLocalDB.exportQuestionStatsCSV();
+          showStatus("Exported Question Frequency & Repetition CSV.", "info");
+        } catch (err) {
+          showStatus(`Failed to export Question CSV: ${err.message}`);
+        }
+      }
+    });
+  }
+
   const importBackupFile = $("#importBackupFile");
   if (importBackupFile) {
     importBackupFile.addEventListener("change", async (event) => {
@@ -3486,6 +3570,40 @@ function bindEvents() {
     });
   }
 
+  ["#progressDayFilter", "#progressCategoryFilter", "#progressTopicFilter", "#progressPatternFilter"].forEach((selector) => {
+    const filter = $(selector);
+    if (filter) {
+      filter.addEventListener("change", (event) => {
+        const key = {
+          "#progressDayFilter": "day",
+          "#progressCategoryFilter": "category",
+          "#progressTopicFilter": "topic",
+          "#progressPatternFilter": "pattern",
+        }[selector];
+        journalState[key] = event.target.value;
+        if (key === "day") {
+          journalState.category = "all";
+          journalState.topic = "all";
+          journalState.pattern = "all";
+        } else if (key === "category") {
+          journalState.topic = "all";
+          journalState.pattern = "all";
+        } else if (key === "topic") {
+          journalState.pattern = "all";
+        }
+        void renderLocalJournal(journalState.activeView, journalState.filterStatus, journalState.searchQuery);
+      });
+    }
+  });
+
+  $("#clearProgressFilters")?.addEventListener("click", () => {
+    journalState.day = "all";
+    journalState.category = "all";
+    journalState.topic = "all";
+    journalState.pattern = "all";
+    void renderLocalJournal(journalState.activeView, journalState.filterStatus, journalState.searchQuery);
+  });
+
   const drillAllMistakesBtn = $("#drillAllMistakesBtn");
   if (drillAllMistakesBtn) {
     drillAllMistakesBtn.addEventListener("click", () => {
@@ -3520,7 +3638,107 @@ const journalState = {
   activeView: "day",
   filterStatus: "all",
   searchQuery: "",
+  day: "all",
+  category: "all",
+  topic: "all",
+  pattern: "all",
 };
+
+function scopedProgressAttempts(attempts) {
+  return (attempts || []).filter((attempt) => {
+    const date = attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : "");
+    return (journalState.day === "all" || date === journalState.day)
+      && (journalState.category === "all" || (attempt.category_name || "General") === journalState.category)
+      && (journalState.topic === "all" || (attempt.topic_name || "General") === journalState.topic)
+      && (journalState.pattern === "all" || (attempt.pattern_name || "General Pattern") === journalState.pattern);
+  });
+}
+
+function setProgressSelectOptions(id, values, current, allLabel) {
+  const select = $(id);
+  if (!select) return current;
+  const uniqueValues = [...new Set(values.filter(Boolean).map(String))].sort((a, b) => a.localeCompare(b));
+  const nextCurrent = current !== "all" && uniqueValues.includes(current) ? current : "all";
+  select.innerHTML = `<option value="all">${allLabel}</option>${uniqueValues.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+  select.value = nextCurrent;
+  return nextCurrent;
+}
+
+function renderProgressExplorer(attempts) {
+  const dayFiltered = (attempts || []).filter((attempt) => {
+    const date = attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : "");
+    return journalState.day === "all" || date === journalState.day;
+  });
+  journalState.day = setProgressSelectOptions("#progressDayFilter", (attempts || []).map((attempt) => attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : "")), journalState.day, "All days");
+
+  const categoryFiltered = dayFiltered.filter((attempt) => journalState.category === "all" || (attempt.category_name || "General") === journalState.category);
+  journalState.category = setProgressSelectOptions("#progressCategoryFilter", dayFiltered.map((attempt) => attempt.category_name || "General"), journalState.category, "All categories");
+  journalState.topic = setProgressSelectOptions("#progressTopicFilter", categoryFiltered.map((attempt) => attempt.topic_name || "General"), journalState.topic, "All sub-topics");
+
+  const topicFiltered = categoryFiltered.filter((attempt) => journalState.topic === "all" || (attempt.topic_name || "General") === journalState.topic);
+  journalState.pattern = setProgressSelectOptions("#progressPatternFilter", topicFiltered.map((attempt) => attempt.pattern_name || "General Pattern"), journalState.pattern, "All patterns");
+  const explorer = $("#progressExplorer");
+  if (explorer) explorer.hidden = journalState.activeView === "diagnostics";
+}
+
+function renderProgressScopeSummary(attempts) {
+  const total = attempts.length;
+  const correct = attempts.filter((attempt) => Boolean(attempt.is_correct)).length;
+  const totalTime = attempts.reduce((sum, attempt) => sum + Number(attempt.time_taken || 0), 0);
+  const uniqueQuestions = new Set(attempts.map((attempt) => `${attempt.pattern_id || 0}::${attempt.question_text || ""}`)).size;
+  const setText = (id, value) => { const target = $(id); if (target) target.textContent = value; };
+  setText("#scopeAttemptCount", String(total));
+  setText("#scopeAccuracy", `${total ? Math.round((correct / total) * 100) : 0}%`);
+  setText("#scopeAvgTime", `${total ? (totalTime / total).toFixed(1) : "0.0"}s`);
+  setText("#scopeUniqueQuestions", String(total ? uniqueQuestions : 0));
+}
+
+function buildScopedQuestionStats(attempts) {
+  const questionMap = new Map();
+  (attempts || []).forEach((attempt) => {
+    const questionText = String(attempt.question_text || "").trim() || "Unnamed question";
+    const key = `${attempt.pattern_id || 0}::${questionText}`;
+    if (!questionMap.has(key)) {
+      questionMap.set(key, {
+        question_text: questionText,
+        category_name: attempt.category_name || "General",
+        topic_name: attempt.topic_name || "General",
+        pattern_id: Number(attempt.pattern_id || 0),
+        pattern_name: attempt.pattern_name || "General Pattern",
+        options: Array.isArray(attempt.options) ? attempt.options : [],
+        correct_answer: attempt.correct_answer ?? null,
+        correct_option_index: attempt.correct_option_index,
+        explanation: attempt.explanation || "",
+        total_seen: 0,
+        correct_count: 0,
+        wrong_count: 0,
+        timeout_count: 0,
+        total_time: 0,
+        last_timestamp: 0,
+        last_date: "",
+        attempts: [],
+      });
+    }
+    const item = questionMap.get(key);
+    item.total_seen += 1;
+    if (attempt.is_correct) item.correct_count += 1;
+    else item.wrong_count += 1;
+    if (attempt.is_timeout) item.timeout_count += 1;
+    item.total_time += Number(attempt.time_taken || 0);
+    item.attempts.push(attempt);
+    if (Number(attempt.timestamp || 0) >= item.last_timestamp) {
+      item.last_timestamp = Number(attempt.timestamp || 0);
+      item.last_date = attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : "");
+    }
+  });
+  return [...questionMap.values()]
+    .map((item) => ({
+      ...item,
+      accuracy: item.total_seen ? Math.round((item.correct_count / item.total_seen) * 100) : 0,
+      avg_time: item.total_seen ? Number((item.total_time / item.total_seen).toFixed(1)) : 0,
+    }))
+    .sort((a, b) => b.total_seen - a.total_seen || a.question_text.localeCompare(b.question_text));
+}
 
 function renderJournalAttemptCard(attempt, overallAvgTime = 15) {
   const isCorrect = Boolean(attempt.is_correct);
@@ -3588,6 +3806,88 @@ function renderJournalAttemptCard(attempt, overallAvgTime = 15) {
   `;
 }
 
+function renderQuestionFrequencyCard(q, overallAvgTime = 15) {
+  const seen = Number(q.total_seen || 1);
+  const correct = Number(q.correct_count || 0);
+  const accuracy = Number(q.accuracy || 0);
+  const avgTime = Number(q.avg_time || 0);
+  const isSlow = avgTime > (overallAvgTime || 15) || Number(q.timeout_count || 0) > 0;
+
+  let freqBadgeClass = "badge-seen-once";
+  let freqIcon = "👁️";
+  if (seen >= 4) {
+    freqBadgeClass = "badge-seen-high";
+    freqIcon = "🔥";
+  } else if (seen >= 2) {
+    freqBadgeClass = "badge-seen-multi";
+    freqIcon = "🔁";
+  }
+
+  const accBadgeClass = accuracy >= 75 ? "badge-correct" : accuracy < 50 ? "badge-wrong" : "badge-slow";
+  const speedBadgeClass = isSlow ? "badge-slow" : "badge-fast";
+
+  let correctAnswerText = q.correct_answer;
+  if ((correctAnswerText === null || correctAnswerText === undefined || correctAnswerText === "") && Array.isArray(q.options) && q.correct_option_index !== null && q.correct_option_index !== undefined) {
+    correctAnswerText = q.options[q.correct_option_index];
+  }
+  if (!correctAnswerText) correctAnswerText = "—";
+
+  const attemptRows = (q.attempts || []).map((att, idx) => {
+    const isAttCorr = Boolean(att.is_correct);
+    const attTime = Number(att.time_taken || 0).toFixed(1);
+    const attAns = att.typed_answer || att.selected_answer || (att.is_timeout ? "Timed out" : "—");
+    const attDate = att.date || (att.timestamp ? new Date(att.timestamp).toISOString().slice(0, 10) : "");
+    const attTimeStr = att.timestamp ? new Date(att.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+    return `
+      <div class="question-attempt-row ${isAttCorr ? "is-correct" : "is-wrong"}">
+        <span class="attempt-idx">#${q.attempts.length - idx}</span>
+        <span class="attempt-date">${escapeHtml(attDate)} ${escapeHtml(attTimeStr)}</span>
+        <span class="attempt-user-answer">Answer: <strong>${escapeHtml(attAns)}</strong></span>
+        <span class="journal-badge ${isAttCorr ? "badge-correct" : "badge-wrong"}">${isAttCorr ? "✓ Correct" : "✗ Wrong"}</span>
+        <span class="journal-badge ${Number(att.time_taken || 0) > (overallAvgTime || 15) ? "badge-slow" : "badge-fast"}">${att.is_timeout ? "⏰ 30s Timeout" : `⏱️ ${attTime}s`}</span>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <article class="question-frequency-card">
+      <div class="question-freq-header">
+        <div class="question-freq-meta">
+          <span class="journal-badge ${freqBadgeClass}">${freqIcon} Seen ${seen} ${seen === 1 ? "time" : "times"}</span>
+          <strong class="question-pattern-title">${escapeHtml(q.pattern_name || "General Pattern")}</strong>
+          <span class="question-topic-sub">(${escapeHtml(q.category_name || "")} › ${escapeHtml(q.topic_name || "")})</span>
+        </div>
+        <div class="question-freq-badges">
+          <span class="journal-badge ${accBadgeClass}">${accuracy}% Accuracy (${correct}/${seen})</span>
+          <span class="journal-badge ${speedBadgeClass}">${isSlow ? "🐢" : "⚡"} Avg ${avgTime}s</span>
+          ${q.timeout_count > 0 ? `<span class="journal-badge badge-timeout">⏰ ${q.timeout_count} Timed Out</span>` : ""}
+        </div>
+      </div>
+      <div class="question-freq-text">${escapeHtml(q.question_text)}</div>
+      <div class="question-metrics-grid">
+        <div><span>Times seen</span><strong>${seen}</strong></div>
+        <div><span>Accuracy</span><strong>${accuracy}%</strong><small>${correct}/${seen} correct</small></div>
+        <div><span>Average time</span><strong>${avgTime}s</strong><small>${isSlow ? "Needs speed work" : "On pace"}</small></div>
+        <div><span>Wrong / timeout</span><strong>${Number(q.wrong_count || 0)} / ${Number(q.timeout_count || 0)}</strong><small>attempts</small></div>
+      </div>
+      <div class="question-freq-answer-strip">
+        <span><strong>Target Correct Answer:</strong> <span class="correct-ans-highlight">${escapeHtml(correctAnswerText)}</span></span>
+        ${q.last_date ? `<span class="question-last-practiced">Last Practiced: <strong>${escapeHtml(q.last_date)}</strong></span>` : ""}
+      </div>
+      ${q.explanation ? `<div class="journal-attempt-explanation" style="margin-top:8px;"><strong>Explanation:</strong> ${escapeHtml(q.explanation)}</div>` : ""}
+      <details class="question-history-details">
+        <summary class="question-history-summary">
+          <span>📜 View all ${seen} ${seen === 1 ? "attempt" : "attempts"} for this exact question</span>
+          <span class="summary-hint">Click to expand</span>
+        </summary>
+        <div class="question-history-drawer">
+          ${attemptRows}
+        </div>
+      </details>
+    </article>
+  `;
+}
+
 let currentMistakeFilter = "all";
 let currentTrendMode = "day";
 let cachedTrendDays = [];
@@ -3640,13 +3940,14 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
     if (svgSpeedLine) svgSpeedLine.setAttribute("d", "");
     if (svgPoints) svgPoints.innerHTML = "";
     if (summaryBadge) summaryBadge.textContent = "No data yet";
+    renderSessionProgressInsight(cachedSessions);
     return;
   }
 
-  const width = 500;
+  const width = 560;
   const height = 180;
   const padLeft = 35;
-  const padRight = 25;
+  const padRight = 45;
   const padTop = 20;
   const padBottom = 30;
 
@@ -3659,6 +3960,12 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
     const y = padTop + chartH - (pct / 100) * chartH;
     gridHtml += `<line x1="${padLeft}" y1="${y.toFixed(1)}" x2="${(width - padRight).toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(120,120,120,0.15)" stroke-width="1"/>`;
     gridHtml += `<text x="${padLeft - 6}" y="${(y + 3.5).toFixed(1)}" font-size="10" fill="var(--muted)" text-anchor="end">${pct}%</text>`;
+  });
+  gridHtml += `<text x="${padLeft}" y="11" font-size="10" font-weight="700" fill="#059669">Accuracy %</text>`;
+  gridHtml += `<text x="${width - padRight}" y="11" font-size="10" font-weight="700" fill="#d97706" text-anchor="end">Avg time (seconds)</text>`;
+  [30, 15, 0].forEach((seconds) => {
+    const y = padTop + chartH - (seconds / 30) * chartH;
+    gridHtml += `<text x="${width - padRight + 6}" y="${(y + 3.5).toFixed(1)}" font-size="10" fill="#d97706">${seconds}s</text>`;
   });
   if (svgGrid) svgGrid.innerHTML = gridHtml;
 
@@ -3716,6 +4023,39 @@ function renderPerformanceTrendSvg(trendDays = cachedTrendDays, sessions = cache
     const latest = points[points.length - 1];
     summaryBadge.textContent = `${latest.accuracy}% Accuracy • ${latest.avg_time}s Avg`;
   }
+}
+
+function renderSessionProgressInsight(sessions = cachedSessions) {
+  const target = $("#sessionProgressInsightText");
+  if (!target) return;
+
+  const ordered = (Array.isArray(sessions) ? sessions : [])
+    .filter((session) => Number(session.total_questions || 0) > 0)
+    .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0));
+
+  if (ordered.length < 2) {
+    target.textContent = "Complete two sessions to see whether your calculation time is improving.";
+    return;
+  }
+
+  const first = ordered[0];
+  const latest = ordered[ordered.length - 1];
+  const timeChange = Number(first.avg_time || 0) - Number(latest.avg_time || 0);
+  const accuracyChange = Number(latest.accuracy || 0) - Number(first.accuracy || 0);
+  const speedText = timeChange > 0
+    ? `${timeChange.toFixed(1)}s faster per question`
+    : timeChange < 0
+      ? `${Math.abs(timeChange).toFixed(1)}s slower per question`
+      : "the same average time";
+  const accuracyText = accuracyChange > 0
+    ? `accuracy is up ${accuracyChange} points`
+    : accuracyChange < 0
+      ? `accuracy is down ${Math.abs(accuracyChange)} points`
+      : "accuracy is unchanged";
+  const coaching = Number(latest.avg_time || 0) > 15
+    ? "For your next session, estimate first and write only the essential calculation steps."
+    : "Keep this pace and focus on accuracy before trying to go even faster.";
+  target.textContent = `Compared with your first session: ${speedText}; ${accuracyText}. ${coaching}`;
 }
 
 function renderRootCauseMistakes(mistakes, filter = "all") {
@@ -3818,6 +4158,41 @@ async function renderAdvancedProgressDashboard() {
   const pRecVal = $("#pillarRecoveryVal");
   if (pRec) pRec.style.width = `${Math.min(100, (adv.readiness.components.liquidation / 10) * 100)}%`;
   if (pRecVal) pRecVal.textContent = `${Math.min(100, adv.readiness.components.liquidation * 10)}%`;
+
+  // Make the first dashboard action obvious without hiding the detailed analytics.
+  const focusTitle = $("#progressFocusTitle");
+  const focusText = $("#progressFocusText");
+  const focusBadge = $("#progressFocusBadge");
+  const focusButton = $("#progressFocusButton");
+  const topPrescription = adv.prescriptions?.[0];
+  const totalAttempts = Number(adv.totals?.total_attempts || 0);
+  if (focusTitle && focusText && focusBadge && focusButton) {
+    focusButton.hidden = true;
+    focusButton.onclick = null;
+    focusButton.removeAttribute("data-drill-pattern");
+    focusButton.removeAttribute("data-drill-type");
+
+    if (topPrescription?.pattern_id) {
+      focusTitle.textContent = topPrescription.title || "Practice your next focus area";
+      focusText.textContent = topPrescription.description || topPrescription.subtitle || "A short targeted drill will help improve this area.";
+      focusBadge.textContent = topPrescription.metric || "Recommended";
+      focusButton.textContent = topPrescription.action_label || "Practice now";
+      focusButton.dataset.drillPattern = String(topPrescription.pattern_id);
+      focusButton.dataset.drillType = topPrescription.type || "pattern";
+      focusButton.hidden = false;
+    } else if (totalAttempts > 0) {
+      focusTitle.textContent = "Keep your momentum going";
+      focusText.textContent = `You have completed ${totalAttempts} question${totalAttempts === 1 ? "" : "s"}. Continue practicing to make your trend more reliable.`;
+      focusBadge.textContent = `${adv.totals.accuracy || 0}% accuracy`;
+      focusButton.textContent = "Practice again";
+      focusButton.onclick = () => startPractice();
+      focusButton.hidden = false;
+    } else {
+      focusTitle.textContent = "Build your baseline";
+      focusText.textContent = "Complete a practice session to unlock personalized strengths, weak areas, and recommendations.";
+      focusBadge.textContent = "Getting started";
+    }
+  }
 
   // KPI Ribbon
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -3948,7 +4323,7 @@ async function renderAdvancedProgressDashboard() {
   if (sLateCount) sLateCount.textContent = String(adv.stamina.late.count);
 
   // Performance Trend SVG Chart
-  renderPerformanceTrendSvg(adv.trend_days);
+  renderPerformanceTrendSvg(adv.trend_days, adv.sessions || cachedSessions);
 
   // 5. Root Cause Mistake Book
   const rootAll = $("#rootCountAll");
@@ -4009,7 +4384,7 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
 
   const badge = $("#totalAttemptsBadge");
   if (badge) {
-    badge.textContent = String(analytics.totals.total_attempts || 0);
+    badge.textContent = String(analytics.totals.total_unique_questions || analytics.question_list?.length || 0);
   }
 
   if (analytics && analytics.totals && analytics.totals.total_attempts > 0) {
@@ -4031,11 +4406,34 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
   });
 
   const filterBar = $("#journalFilterBar");
+  const deepDiag = $("#deepDiagnosticsContainer");
   if (filterBar) {
-    filterBar.style.display = "flex";
+    filterBar.style.display = (journalState.activeView === "diagnostics") ? "none" : "flex";
+  }
+  if (deepDiag) {
+    deepDiag.hidden = (journalState.activeView !== "diagnostics");
   }
 
-  const overallAvgTime = analytics.totals.avg_time || 0;
+  let overallAvgTime = analytics.totals.avg_time || 0;
+  renderProgressExplorer(attempts);
+  const scopedAttempts = scopedProgressAttempts(attempts);
+  renderProgressScopeSummary(scopedAttempts);
+  const scopeAvgTime = scopedAttempts.length
+    ? scopedAttempts.reduce((sum, attempt) => sum + Number(attempt.time_taken || 0), 0) / scopedAttempts.length
+    : overallAvgTime;
+  overallAvgTime = scopeAvgTime;
+
+  if (journalState.activeView === "diagnostics") {
+    container.innerHTML = `
+      <div class="diagnostics-intro-banner" style="padding:14px 18px; background:var(--surface-muted); border:1px solid var(--line); border-radius:10px; margin-bottom:12px;">
+        <h4 style="margin:0 0 4px; font-size:15px; color:var(--text); font-weight:700;">🔬 Diagnostic Intelligence Hub</h4>
+        <p style="margin:0; font-size:13px; color:var(--muted);">
+          In-depth strategic evaluation of your Exam Readiness Index, AI-generated prescriptions, and 4-Quadrant speed vs accuracy classification below.
+        </p>
+      </div>
+    `;
+    return;
+  }
 
   if (!attempts.length) {
     container.innerHTML = `
@@ -4111,7 +4509,7 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
     return;
   }
 
-  const filteredAttempts = attempts.filter((a) => {
+  const filteredAttempts = scopedAttempts.filter((a) => {
     if (journalState.filterStatus === "correct" && !a.is_correct) return false;
     if (journalState.filterStatus === "wrong" && a.is_correct) return false;
     if (journalState.filterStatus === "slow") {
@@ -4254,6 +4652,35 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
     const patternCards = patterns.map((p) => {
       const isWeak = p.accuracy < 60 || p.slow_count > 0;
       const patternAttempts = filteredAttempts.filter((a) => Number(a.pattern_id) === Number(p.pattern_id));
+      const patQuestions = p.question_list || [];
+
+      const questionsTableHtml = patQuestions.length > 0 ? `
+        <div class="pattern-questions-section">
+          <div class="pattern-questions-header">
+            <span>🔍 Specific Questions Tested (<strong>${patQuestions.length}</strong> unique)</span>
+            <span style="font-size:11px;font-weight:normal;color:var(--muted);">Repetition &amp; performance breakdown</span>
+          </div>
+          <div class="pattern-q-list">
+            ${patQuestions.map((q) => {
+              const isCorr = q.accuracy >= 75;
+              const isSlow = q.avg_time > (overallAvgTime || 15) || q.timeout_count > 0;
+              return `
+                <div class="pattern-q-row">
+                  <div class="pattern-q-info">
+                    <span class="badge-frequency">👁️ Seen ${q.total_seen} ${q.total_seen === 1 ? "time" : "times"}</span>
+                    <span class="pattern-q-text">${escapeHtml(q.question_text || "Question")}</span>
+                  </div>
+                  <div class="pattern-q-metrics">
+                    <span class="journal-badge ${isCorr ? "badge-correct" : q.accuracy < 50 ? "badge-wrong" : "badge-slow"}">${q.accuracy}% (${q.correct_count}/${q.total_seen})</span>
+                    <span class="journal-badge ${isSlow ? "badge-slow" : "badge-fast"}">${isSlow ? "🐢" : "⚡"} ${q.avg_time}s</span>
+                    <span class="pattern-q-date">Last: ${escapeHtml(q.last_date || "—")}</span>
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </div>
+      ` : "";
 
       return `
         <details class="journal-group">
@@ -4264,6 +4691,8 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
             </div>
             <div class="journal-group-stats">
               <span><strong>${p.total}</strong> Solved</span>
+              <span>•</span>
+              <span><strong>${p.unique_questions_count || patQuestions.length}</strong> Unique Questions</span>
               <span>•</span>
               <span class="journal-badge ${p.accuracy >= 75 ? "badge-correct" : p.accuracy < 50 ? "badge-wrong" : "badge-slow"}">${p.accuracy}%</span>
               <span>•</span>
@@ -4276,6 +4705,17 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
               ? patternAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("")
               : `<div class="empty-state" style="padding:8px;">No matching attempts in current filter.</div>`
             }
+            ${questionsTableHtml}
+            ${patternAttempts.length > 0 ? `
+              <details class="pattern-raw-attempts-details" style="margin-top:12px;border-top:1px solid var(--line);padding-top:10px;">
+                <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--accent);user-select:none;">
+                  <span>📝 View Chronological Attempt Stream (${patternAttempts.length} attempts)</span>
+                </summary>
+                <div style="margin-top:8px;display:flex;flex-direction:column;gap:8px;">
+                  ${patternAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("")}
+                </div>
+              </details>
+            ` : `<div class="empty-state" style="padding:8px;">No matching attempts in current filter.</div>`}
           </div>
         </details>
       `;
@@ -4286,9 +4726,55 @@ async function renderLocalJournal(activeView = journalState.activeView, filterSt
   }
 
   // View 4: All Questions
+  // View 4: Question Frequency & Stats
   if (journalState.activeView === "questions") {
     const attemptsHtml = filteredAttempts.map((a) => renderJournalAttemptCard(a, overallAvgTime)).join("");
     container.innerHTML = attemptsHtml;
+    let qList = buildScopedQuestionStats(scopedAttempts);
+
+    if (journalState.filterStatus === "correct") {
+      qList = qList.filter((q) => q.accuracy === 100);
+    } else if (journalState.filterStatus === "wrong") {
+      qList = qList.filter((q) => q.wrong_count > 0);
+    } else if (journalState.filterStatus === "slow") {
+      qList = qList.filter((q) => q.slow_count > 0 || q.avg_time > (overallAvgTime || 15));
+    } else if (journalState.filterStatus === "timeout") {
+      qList = qList.filter((q) => q.timeout_count > 0);
+    }
+
+    if (journalState.searchQuery) {
+      const query = journalState.searchQuery.toLowerCase();
+      qList = qList.filter((q) => {
+        const qText = (q.question_text || "").toLowerCase();
+        const pName = (q.pattern_name || "").toLowerCase();
+        const cName = (q.category_name || "").toLowerCase();
+        const tName = (q.topic_name || "").toLowerCase();
+        return qText.includes(query) || pName.includes(query) || cName.includes(query) || tName.includes(query);
+      });
+    }
+
+    if (!qList.length) {
+      container.innerHTML = `<div class="empty-state">No questions match your search or filter criteria.</div>`;
+      return;
+    }
+
+    const cardsHtml = qList.map((q) => renderQuestionFrequencyCard(q, overallAvgTime)).join("");
+
+    container.innerHTML = `
+      <div class="questions-view-summary-bar">
+        <div>
+          <strong>Showing ${qList.length} Unique Questions</strong>
+          <span style="color:var(--muted);margin-left:6px;">(${filteredAttempts.length} total attempts)</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);">
+          Each card tracks one exact question • Ranked by: <strong>Times Seen</strong>
+        </div>
+      </div>
+      <div class="questions-frequency-list">
+        ${cardsHtml}
+      </div>
+    `;
+    return;
   }
 }
 

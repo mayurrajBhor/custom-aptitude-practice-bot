@@ -225,6 +225,7 @@ async function getLocalAnalytics() {
   const days = {};
   const categories = {};
   const patterns = {};
+  const questions = {};
 
   attempts.forEach((attempt) => {
     const d = attempt.date || (attempt.timestamp ? new Date(attempt.timestamp).toISOString().slice(0, 10) : getTodayString());
@@ -235,6 +236,49 @@ async function getLocalAnalytics() {
     const isCorrect = Boolean(attempt.is_correct);
     const timeTaken = Number(attempt.time_taken || 0);
     const isSlow = timeTaken > (overallAvgTime || 15) || Boolean(attempt.is_timeout);
+    const qRaw = String(attempt.question_text || "").trim();
+    // Keep identical question text separate when it belongs to different patterns.
+    // This makes frequency data accurate for a specific pattern, e.g. Squares -> 21.
+    const qKey = `${patId}::${qRaw || (patId ? `Pattern ${patId} Question` : "General Question")}`;
+
+    // Global Question aggregation
+    if (!questions[qKey]) {
+      questions[qKey] = {
+        question_text: qRaw,
+        category_name: cat,
+        topic_name: top,
+        pattern_id: patId,
+        pattern_name: patName,
+        options: Array.isArray(attempt.options) ? attempt.options : [],
+        correct_answer: attempt.correct_answer !== undefined ? attempt.correct_answer : null,
+        correct_option_index: attempt.correct_option_index,
+        explanation: attempt.explanation || "",
+        difficulty: attempt.difficulty || 3,
+        total_seen: 0,
+        correct_count: 0,
+        wrong_count: 0,
+        timeout_count: 0,
+        slow_count: 0,
+        total_time: 0,
+        avg_time: 0,
+        accuracy: 0,
+        first_timestamp: attempt.timestamp || 0,
+        last_timestamp: attempt.timestamp || 0,
+        last_date: d,
+        attempts: [],
+      };
+    }
+    questions[qKey].total_seen++;
+    if (isCorrect) questions[qKey].correct_count++;
+    else questions[qKey].wrong_count++;
+    if (attempt.is_timeout) questions[qKey].timeout_count++;
+    if (isSlow) questions[qKey].slow_count++;
+    questions[qKey].total_time += timeTaken;
+    if ((attempt.timestamp || 0) > questions[qKey].last_timestamp) {
+      questions[qKey].last_timestamp = attempt.timestamp || 0;
+      questions[qKey].last_date = d;
+    }
+    questions[qKey].attempts.push(attempt);
 
     // Day aggregation
     if (!days[d]) {
@@ -314,12 +358,55 @@ async function getLocalAnalytics() {
         avg_time: 0,
         slow_count: 0,
         total_time: 0,
+        questions: {},
       };
+    }
+    if (!patterns[patId].questions) {
+      patterns[patId].questions = {};
     }
     patterns[patId].total++;
     if (isCorrect) patterns[patId].correct++;
     patterns[patId].total_time += timeTaken;
     if (isSlow) patterns[patId].slow_count++;
+
+    if (!patterns[patId].questions[qKey]) {
+      patterns[patId].questions[qKey] = {
+        question_text: qRaw,
+        options: Array.isArray(attempt.options) ? attempt.options : [],
+        correct_answer: attempt.correct_answer !== undefined ? attempt.correct_answer : null,
+        correct_option_index: attempt.correct_option_index,
+        explanation: attempt.explanation || "",
+        total_seen: 0,
+        correct_count: 0,
+        wrong_count: 0,
+        timeout_count: 0,
+        slow_count: 0,
+        total_time: 0,
+        avg_time: 0,
+        accuracy: 0,
+        last_date: d,
+        last_timestamp: attempt.timestamp || 0,
+        attempts: [],
+      };
+    }
+    patterns[patId].questions[qKey].total_seen++;
+    if (isCorrect) patterns[patId].questions[qKey].correct_count++;
+    else patterns[patId].questions[qKey].wrong_count++;
+    if (attempt.is_timeout) patterns[patId].questions[qKey].timeout_count++;
+    if (isSlow) patterns[patId].questions[qKey].slow_count++;
+    patterns[patId].questions[qKey].total_time += timeTaken;
+    if ((attempt.timestamp || 0) > patterns[patId].questions[qKey].last_timestamp) {
+      patterns[patId].questions[qKey].last_timestamp = attempt.timestamp || 0;
+      patterns[patId].questions[qKey].last_date = d;
+    }
+    patterns[patId].questions[qKey].attempts.push(attempt);
+  });
+
+  // Calculate averages and accuracies for global questions
+  Object.values(questions).forEach((qItem) => {
+    qItem.accuracy = qItem.total_seen > 0 ? Math.round((qItem.correct_count / qItem.total_seen) * 100) : 0;
+    qItem.avg_time = qItem.total_seen > 0 ? Number((qItem.total_time / qItem.total_seen).toFixed(1)) : 0;
+    delete qItem.total_time;
   });
 
   // Calculate averages and accuracies for days
@@ -353,7 +440,17 @@ async function getLocalAnalytics() {
     patItem.accuracy = patItem.total > 0 ? Math.round((patItem.correct / patItem.total) * 100) : 0;
     patItem.avg_time = patItem.total > 0 ? Number((patItem.total_time / patItem.total).toFixed(1)) : 0;
     delete patItem.total_time;
+
+    Object.values(patItem.questions || {}).forEach((qItem) => {
+      qItem.accuracy = qItem.total_seen > 0 ? Math.round((qItem.correct_count / qItem.total_seen) * 100) : 0;
+      qItem.avg_time = qItem.total_seen > 0 ? Number((qItem.total_time / qItem.total_seen).toFixed(1)) : 0;
+      delete qItem.total_time;
+    });
+    patItem.question_list = Object.values(patItem.questions || {}).sort((a, b) => b.total_seen - a.total_seen);
+    patItem.unique_questions_count = patItem.question_list.length;
   });
+
+  const question_list = Object.values(questions).sort((a, b) => b.total_seen - a.total_seen);
 
   return {
     totals: {
@@ -361,10 +458,13 @@ async function getLocalAnalytics() {
       total_correct,
       accuracy: overallAccuracy,
       avg_time: overallAvgTime,
+      total_unique_questions: question_list.length,
     },
     days,
     categories,
     patterns,
+    questions,
+    question_list,
   };
 }
 
@@ -727,18 +827,23 @@ async function getAdvancedLocalAnalytics() {
     days: basic.days,
     categories: basic.categories,
     patterns: basic.patterns,
+    questions: basic.questions,
+    question_list: basic.question_list,
+    sessions,
   };
 }
 
 async function exportLocalDataJSON() {
   const attempts = await getAllLocalAttempts();
   const sessions = await getAllLocalSessions();
+  const analytics = await getLocalAnalytics();
 
   const exportPayload = {
     exported_at: new Date().toISOString(),
     version: 1,
     sessions,
     attempts,
+    question_summary: analytics.question_list || [],
   };
 
   const jsonString = JSON.stringify(exportPayload, null, 2);
@@ -821,6 +926,53 @@ async function exportLocalDataCSV() {
   return csvContent;
 }
 
+async function exportQuestionStatsCSV() {
+  const analytics = await getLocalAnalytics();
+  const qList = analytics.question_list || [];
+
+  const headers = [
+    "Question",
+    "SubTopic_Pattern",
+    "Topic",
+    "Category",
+    "Times_Seen",
+    "Times_Correct",
+    "Times_Wrong",
+    "Timeouts",
+    "Accuracy_Pct",
+    "Avg_Time_Seconds",
+    "Last_Practiced_Date",
+  ];
+
+  const lines = [headers.join(",")];
+
+  qList.forEach((q) => {
+    const row = [
+      escapeCSVField(q.question_text),
+      escapeCSVField(q.pattern_name),
+      escapeCSVField(q.topic_name),
+      escapeCSVField(q.category_name),
+      escapeCSVField(q.total_seen),
+      escapeCSVField(q.correct_count),
+      escapeCSVField(q.wrong_count),
+      escapeCSVField(q.timeout_count),
+      escapeCSVField(`${q.accuracy}%`),
+      escapeCSVField(q.avg_time),
+      escapeCSVField(q.last_date),
+    ];
+    lines.push(row.join(","));
+  });
+
+  const csvContent = lines.join("\r\n");
+  if (typeof Blob !== "undefined") {
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const filename = `aptitude_question_frequency_${getBackupTimestamp()}.csv`;
+    triggerBrowserDownload(blob, filename);
+  }
+
+  return csvContent;
+}
+
 async function importLocalDataJSON(jsonStringOrObject) {
   let data;
   if (typeof jsonStringOrObject === "string") {
@@ -885,6 +1037,7 @@ const AptitudeLocalDB = {
   getAdvancedLocalAnalytics,
   exportLocalDataJSON,
   exportLocalDataCSV,
+  exportQuestionStatsCSV,
   importLocalDataJSON,
 };
 
@@ -899,6 +1052,7 @@ if (typeof window !== "undefined") {
   window.getAdvancedLocalAnalytics = getAdvancedLocalAnalytics;
   window.exportLocalDataJSON = exportLocalDataJSON;
   window.exportLocalDataCSV = exportLocalDataCSV;
+  window.exportQuestionStatsCSV = exportQuestionStatsCSV;
   window.importLocalDataJSON = importLocalDataJSON;
 }
 
