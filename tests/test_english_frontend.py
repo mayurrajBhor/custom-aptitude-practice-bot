@@ -137,6 +137,76 @@ class EnglishFrontendIntegrationTests(unittest.TestCase):
         self.assertIn("FlashcardUI", text)
         self.assertIn("recordVocabCardReview", text)
 
+    def test_practice_overlay_in_index_html(self):
+        # Verify dedicated full-screen overlay structure in index.html
+        self.assertIn('id="englishPracticeOverlay"', self.html)
+        self.assertIn('id="englishPracticeBackdrop"', self.html)
+        self.assertIn('id="englishPracticeModal"', self.html)
+        self.assertIn('id="englishPracticeView"', self.html)
+
+    def test_practice_overlay_and_panels_in_css(self):
+        css_res = self.client.get("/static/english.css")
+        self.assertEqual(css_res.status_code, 200)
+        css = css_res.text
+        self.assertIn(".english-practice-overlay", css)
+        self.assertIn(".english-practice-modal", css)
+        self.assertIn("body.english-overlay-locked", css)
+        self.assertIn(".english-overlay-loading-card", css)
+        self.assertIn(".english-completion-card", css)
+        self.assertIn(".english-confirm-dialog-overlay", css)
+        self.assertIn(".english-onboarding-panel", css)
+        self.assertIn(".english-daily-plan-panel", css)
+
+    def test_overlay_manager_and_zero_alert_in_app(self):
+        app_res = self.client.get("/static/english_app.js")
+        self.assertEqual(app_res.status_code, 200)
+        text = app_res.text
+        # Verify EnglishOverlayManager exists and is exported
+        self.assertIn("EnglishOverlayManager", text)
+        self.assertIn("window.EnglishOverlayManager = EnglishOverlayManager", text)
+        # Verify zero alert() calls exist in english_app.js
+        self.assertNotIn("alert(", text, "english_app.js must not contain any alert() calls")
+        # Verify zero confirm() calls exist in english_app.js
+        self.assertNotIn("confirm(", text, "english_app.js must not contain any native confirm() calls")
+
+    def test_segregated_readiness_and_100_day_plan_in_db(self):
+        db_res = self.client.get("/static/english_db.js")
+        self.assertEqual(db_res.status_code, 200)
+        text = db_res.text
+        # Verify STUDY_PLAN store
+        self.assertIn('STUDY_PLAN: "english_study_plan"', text)
+        # Verify 100-day plan and onboarding APIs
+        self.assertIn("generateDefault100DayPlan", text)
+        self.assertIn("get100DayPlan", text)
+        self.assertIn("save100DayPlan", text)
+        self.assertIn("updateDailyTaskStatus", text)
+        self.assertIn("recalculateStudySchedule", text)
+        self.assertIn("getBeginnerProfile", text)
+        self.assertIn("saveBeginnerProfile", text)
+        # Verify clearAllEnglishData clears STUDY_PLAN
+        self.assertIn("STORES.STUDY_PLAN", text)
+        # Verify decoupled readiness
+        self.assertIn("foundation_readiness", text)
+        self.assertIn("verbal_readiness", text)
+        self.assertIn("confidence_bands", text)
+
+    def test_onboarding_and_100_day_plan_in_app(self):
+        app_res = self.client.get("/static/english_app.js")
+        self.assertEqual(app_res.status_code, 200)
+        text = app_res.text
+        # Verify Beginner Onboarding
+        self.assertIn("Target 700+ GMAT Pathway (100 Days)", text)
+        self.assertIn("Start from Your Current Level", text)
+        self.assertIn("beginner_absolute", text)
+        self.assertIn("quant_ready", text)
+        self.assertIn("intermediate_brushup", text)
+        self.assertIn("advanced_speed", text)
+        # Verify Daily 100-Day Study Plan Panel
+        self.assertIn("What should I do today? (Day", text)
+        self.assertIn("daily-task-action-btn", text)
+        self.assertIn("engAdjustScheduleBtn", text)
+
 
 if __name__ == "__main__":
     unittest.main()
+

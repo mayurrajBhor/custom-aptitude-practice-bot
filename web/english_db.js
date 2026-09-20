@@ -7,13 +7,14 @@
  */
 
 const DB_NAME = "AptitudeEnglishDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
   ATTEMPTS: "english_attempts",
   SESSIONS: "english_sessions",
   ACTIVE_SESSION: "english_active_session",
   VOCAB_SRS: "english_vocab_srs",
+  STUDY_PLAN: "english_study_plan",
 };
 
 const ACTIVE_SESSION_KEY = "current_active_session";
@@ -161,6 +162,11 @@ function initEnglishDB() {
         vocabStore.createIndex("next_review_date", "next_review_date", { unique: false });
         vocabStore.createIndex("retention_score", "retention_score", { unique: false });
         vocabStore.createIndex("user_rating", "user_rating", { unique: false });
+      }
+
+      // 5. Store: english_study_plan (Stores 100-day plan state & onboarding profile)
+      if (!db.objectStoreNames.contains(STORES.STUDY_PLAN)) {
+        db.createObjectStore(STORES.STUDY_PLAN, { keyPath: "id" });
       }
     };
 
@@ -648,73 +654,128 @@ async function getEnglishOverview() {
   });
   weakTopics.sort((a, b) => a.accuracy - b.accuracy);
 
-  // Estimated Verbal Readiness Score (0-100 index)
-  // Components:
-  // 1. CR Accuracy: up to 35 points
-  // 2. RC Accuracy: up to 35 points
-  // 3. Pacing Management: up to 15 points (Target: CR 80-120s, RC 60-100s)
-  // 4. Coverage / Volume: up to 15 points (Scales with question diversity and volume up to 40 attempts)
+  // -------------------------------------------------------------------------
+  // 1. GMAT Verbal Readiness (CR + RC only - zero foundation leakage)
+  // -------------------------------------------------------------------------
+  const hasVerbalAttempts = crAttempts.length > 0 || rcAttempts.length > 0;
   let crPoints = 0;
   if (crAttempts.length > 0) {
     const crAcc = crAttempts.filter((a) => a.is_correct).length / crAttempts.length;
     crPoints = roundDecimals(crAcc * 35, 1);
-  } else if (foundationAttempts.length > 0) {
-    // If no CR yet, give credit from foundation grammar/vocab
-    const foundAcc = foundationAttempts.filter((a) => a.is_correct).length / foundationAttempts.length;
-    crPoints = roundDecimals(foundAcc * 20, 1);
   }
 
   let rcPoints = 0;
   if (rcAttempts.length > 0) {
     const rcAcc = rcAttempts.filter((a) => a.is_correct).length / rcAttempts.length;
     rcPoints = roundDecimals(rcAcc * 35, 1);
-  } else if (foundationAttempts.length > 0) {
-    const foundAcc = foundationAttempts.filter((a) => a.is_correct).length / foundationAttempts.length;
-    rcPoints = roundDecimals(foundAcc * 15, 1);
   }
 
-  // Pace score calculation:
-  // Benchmark: CR between 70s and 125s, RC question between 60s and 95s
+  // Pace score calculation for Verbal:
   let pacePoints = 15;
-  if (crTimes.length > 0) {
-    if (crAvgTime > 120) {
-      const penalty = Math.min(7.5, (crAvgTime - 120) / 10);
-      pacePoints -= penalty;
-    }
+  if (crTimes.length > 0 && crAvgTime > 120) {
+    pacePoints -= Math.min(7.5, (crAvgTime - 120) / 10);
   }
-  if (rcQuestionTimes.length > 0) {
-    if (rcAvgQuestionTime > 95) {
-      const penalty = Math.min(7.5, (rcAvgQuestionTime - 95) / 10);
-      pacePoints -= penalty;
-    }
+  if (rcQuestionTimes.length > 0 && rcAvgQuestionTime > 95) {
+    pacePoints -= Math.min(7.5, (rcAvgQuestionTime - 95) / 10);
   }
   pacePoints = Math.max(0, roundDecimals(pacePoints, 1));
 
-  // Coverage score calculation:
-  // Scales up to 40 questions and diverse types
-  const uniqueTypes = new Set(attempts.map((a) => a.question_type).filter(Boolean));
-  const volumeFactor = Math.min(10, (totalAttempts / 40) * 10);
-  const varietyFactor = Math.min(5, (uniqueTypes.size / 6) * 5);
+  // Verbal coverage score:
+  const verbalAttemptsCount = crAttempts.length + rcAttempts.length;
+  const uniqueVerbalTypes = new Set(
+    attempts.filter((a) => a.mode === "gmat_verbal" || a.verbal_type).map((a) => a.question_type).filter(Boolean)
+  );
+  const volumeFactor = Math.min(10, (verbalAttemptsCount / 35) * 10);
+  const varietyFactor = Math.min(5, (uniqueVerbalTypes.size / 6) * 5);
   const coveragePoints = roundDecimals(volumeFactor + varietyFactor, 1);
 
-  const rawReadiness = crPoints + rcPoints + pacePoints + coveragePoints;
-  const readinessScore = Math.min(100, Math.max(0, Math.round(rawReadiness)));
+  let readinessScore = 0;
+  let readinessTier = "Not Established";
+  let readinessDescription = "Verbal readiness not established yet. Complete the Verbal diagnostic.";
 
-  let readinessTier = "Diagnostic Stage";
-  let readinessDescription = "Early practice; continue with foundational and targeted question sets.";
-  if (readinessScore >= 90) {
-    readinessTier = "GMAT Ready (Target 85th+ percentile)";
-    readinessDescription = "Excellent verbal command across CR argument structure and RC synthesis.";
-  } else if (readinessScore >= 75) {
-    readinessTier = "Advanced Competency";
-    readinessDescription = "Strong accuracy and pace; fine-tune trap answer elimination on 700+ level questions.";
-  } else if (readinessScore >= 60) {
-    readinessTier = "Developing Competency";
-    readinessDescription = "Solid foundation; focus on reducing slow/overtime questions and mastering assumption negation.";
-  } else if (readinessScore >= 40) {
-    readinessTier = "Foundation Building";
-    readinessDescription = "Good baseline; bridge grammar and vocabulary mastery into complex CR and RC passages.";
+  if (hasVerbalAttempts) {
+    const rawReadiness = crPoints + rcPoints + pacePoints + coveragePoints;
+    readinessScore = Math.min(100, Math.max(0, Math.round(rawReadiness)));
+
+    if (readinessScore >= 90) {
+      readinessTier = "GMAT Ready (Target 85th+ percentile)";
+      readinessDescription = "Excellent verbal command across CR argument structure and RC synthesis.";
+    } else if (readinessScore >= 75) {
+      readinessTier = "Advanced Competency";
+      readinessDescription = "Strong accuracy and pace; fine-tune trap answer elimination on 700+ level questions.";
+    } else if (readinessScore >= 60) {
+      readinessTier = "Developing Competency";
+      readinessDescription = "Solid foundation; focus on reducing slow/overtime questions and mastering assumption negation.";
+    } else if (readinessScore >= 40) {
+      readinessTier = "Foundation Building";
+      readinessDescription = "Good baseline; bridge grammar and vocabulary mastery into complex CR and RC passages.";
+    } else {
+      readinessTier = "Diagnostic Stage";
+      readinessDescription = "Early practice; continue with foundational and targeted question sets.";
+    }
   }
+
+  // -------------------------------------------------------------------------
+  // 2. Foundation Readiness (Grammar + Vocabulary progression)
+  // -------------------------------------------------------------------------
+  const hasFoundation = foundationAttempts.length > 0;
+  let foundationScore = 0;
+  let foundationTier = "Not Started";
+  let foundationDescription = "Start Foundation Level 1 to build core sentence and grammar mastery.";
+
+  if (hasFoundation) {
+    const grammarList = foundationAttempts.filter((a) => a.foundation_type === "grammar" || a.type === "grammar");
+    const vocabList = foundationAttempts.filter((a) => a.foundation_type === "vocabulary" || a.type === "vocab");
+    
+    const grammarAcc = grammarList.length > 0 ? grammarList.filter((a) => a.is_correct).length / grammarList.length : 0;
+    const vocabAcc = vocabList.length > 0 ? vocabList.filter((a) => a.is_correct).length / vocabList.length : 0;
+    
+    const gPoints = grammarAcc * 60;
+    const vPoints = vocabAcc * 40;
+    foundationScore = Math.min(100, Math.round(gPoints + vPoints));
+
+    if (foundationScore >= 90) {
+      foundationTier = "Level 4: GMAT Bridge Ready";
+      foundationDescription = "Excellent structural foundation; ready for complex argument and passage analysis.";
+    } else if (foundationScore >= 75) {
+      foundationTier = "Level 3: Advanced Foundation";
+      foundationDescription = "Good sentence structure control; focus on modifier placement and parallelism.";
+    } else if (foundationScore >= 50) {
+      foundationTier = "Level 2: Intermediate English";
+      foundationDescription = "Solid sentence basics; develop clause boundaries and pronoun clarity.";
+    } else {
+      foundationTier = "Level 1: Basic English";
+      foundationDescription = "Work through core parts of speech and subject-verb agreement drills.";
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // 3. Overall GMAT Readiness & Target Gap Analytics (700+ Context)
+  // -------------------------------------------------------------------------
+  let confidenceBand = "Insufficient data";
+  if (verbalAttemptsCount >= 40) {
+    confidenceBand = "Stable estimate";
+  } else if (verbalAttemptsCount >= 15) {
+    confidenceBand = "Developing estimate";
+  } else if (verbalAttemptsCount > 0) {
+    confidenceBand = "Early estimate";
+  }
+
+  const targetGaps = [];
+  if (!hasVerbalAttempts) {
+    targetGaps.push("Complete Verbal Diagnostic to establish baseline readiness.");
+  } else {
+    if (crAttempts.length > 0) {
+      const crAcc = (crAttempts.filter(a => a.is_correct).length / crAttempts.length) * 100;
+      if (crAcc < 75) targetGaps.push(`+${Math.round(75 - crAcc)}% Critical Reasoning accuracy needed for competitive verbal standing.`);
+    } else {
+      targetGaps.push("Practice Critical Reasoning to build argument evaluation skills.");
+    }
+    if (rcQuestionTimes.length > 0 && rcAvgQuestionTime > 90) {
+      targetGaps.push(`Pacing adjustment needed on RC questions (~${Math.round(rcAvgQuestionTime - 85)}s faster per question).`);
+    }
+  }
+  targetGaps.push("A 700+ target requires balanced preparation across Quant, Verbal, and Data Insights.");
 
   return {
     total_attempts: totalAttempts,
@@ -732,8 +793,11 @@ async function getEnglishOverview() {
     weak_topics_count: weakTopics.length,
     weak_topics: weakTopics,
     last_practice_date: lastPracticeDate,
+    readiness_score: readinessScore,
+    readiness_tier: readinessTier,
     verbal_readiness: {
-      score: readinessScore,
+      established: hasVerbalAttempts,
+      score: hasVerbalAttempts ? readinessScore : null,
       tier: readinessTier,
       description: readinessDescription,
       breakdown: {
@@ -742,6 +806,24 @@ async function getEnglishOverview() {
         pace_points: pacePoints,
         coverage_points: coveragePoints,
       },
+    },
+    foundation_readiness: {
+      established: hasFoundation,
+      score: foundationScore,
+      tier: foundationTier,
+      description: foundationDescription,
+    },
+    overall_readiness: {
+      confidence_band: confidenceBand,
+      confidence_bands: {
+        quantitative: "Tracked in Quantitative",
+        verbal: confidenceBand,
+        data_insights: "Separate Section",
+        composite: confidenceBand,
+      },
+      target_gaps: targetGaps,
+      verbal_score: hasVerbalAttempts ? readinessScore : null,
+      foundation_score: foundationScore,
     },
   };
 }
@@ -1619,6 +1701,15 @@ async function exportEnglishDataJSON(triggerDownload = false) {
   const activeSession = await getActiveEnglishSession();
   const vocabCards = await getAllVocabCards();
 
+  let studyPlan = null;
+  let beginnerProfile = null;
+  try {
+    studyPlan = await get100DayPlan();
+    beginnerProfile = await getBeginnerProfile();
+  } catch (e) {
+    // Ignore if not present
+  }
+
   const exportPayload = {
     export_timestamp: new Date().toISOString(),
     version: DB_VERSION,
@@ -1633,6 +1724,8 @@ async function exportEnglishDataJSON(triggerDownload = false) {
     sessions: sessions,
     active_session: activeSession,
     vocab_srs: vocabCards,
+    study_plan: studyPlan,
+    beginner_profile: beginnerProfile,
   };
 
   const jsonString = JSON.stringify(exportPayload, null, 2);
@@ -1737,12 +1830,494 @@ async function importEnglishDataJSON(payload) {
     activeSessionRestored = true;
   }
 
+  // 5. Restore study plan & beginner profile if present
+  let studyPlanRestored = false;
+  if (data.study_plan && typeof data.study_plan === "object") {
+    await save100DayPlan(data.study_plan);
+    studyPlanRestored = true;
+  }
+  if (data.beginner_profile && typeof data.beginner_profile === "object") {
+    await saveBeginnerProfile(data.beginner_profile);
+  }
+
   return {
     attemptsImported,
     sessionsImported,
     vocabCardsImported,
     activeSessionRestored,
+    studyPlanRestored,
   };
+}
+
+/**
+ * Generates the full 100-day structured GMAT study plan across 6 phases.
+ * Phase 1: Days 1-15 (Grammar & Sentence Mechanics Foundation)
+ * Phase 2: Days 16-30 (Vocabulary & Core Reading Stamina)
+ * Phase 3: Days 31-50 (Critical Reasoning Argument Architecture)
+ * Phase 4: Days 51-70 (Advanced CR Fallacies & RC Multi-Paragraph Inference)
+ * Phase 5: Days 71-85 (Sectional Verbal Timing & Mixed Sets)
+ * Phase 6: Days 86-100 (Full 23-Question Simulation & Error Elimination)
+ * @param {string} [startDateStr] Optional YYYY-MM-DD starting date (defaults to today)
+ * @returns {Object} Complete 100-day plan object
+ */
+function generateDefault100DayPlan(startDateStr) {
+  const startDate = startDateStr ? new Date(startDateStr) : new Date();
+  startDate.setHours(0, 0, 0, 0);
+
+  const days = [];
+
+  const phase1Topics = [
+    "Subject-Verb Agreement",
+    "Pronoun Reference & Agreement",
+    "Modifiers & Dangling Modifiers",
+    "Parallelism & Lists",
+    "Verb Tense & Mood",
+    "Comparisons & As/Like",
+    "Idioms & Prepositions",
+    "Sentence Fragments & Run-ons",
+    "Clause Structure & Conjunctions",
+    "Punctuation & Relative Clauses",
+    "Subject-Verb Agreement (Complex/Inverted)",
+    "Parallelism (Correlative Conjunctions)",
+    "Modifiers (Participial & Absolute Phrases)",
+    "Foundation Grammar Comprehensive Review",
+    "Phase 1 Foundation Mastery Diagnostic"
+  ];
+
+  const phase2Topics = [
+    "Reading Stamina & Paragraph Mapping",
+    "Primary Purpose & Main Idea Identification",
+    "Supporting Details vs Extraneous Context",
+    "Inference Basics: Finding Unstated Facts",
+    "Author's Tone & Attitude Indicators",
+    "Passage Structure: Contrasts & Pivots",
+    "Science & Technology Dense Passages",
+    "Economics & Business Dense Passages",
+    "Humanities & Art History Passages",
+    "Social Science & History Passages",
+    "Active Reading & Annotation Strategy",
+    "Recognizing Out-of-Scope Trap Answers",
+    "Recognizing Extreme Word Traps",
+    "Phase 2 Reading Stamina Benchmark",
+    "Phase 2 Diagnostic & Vocab Synthesis"
+  ];
+
+  const phase3Topics = [
+    "Conclusion vs Premise Identification",
+    "Assumption: The Negation Technique",
+    "Assumption: Necessary vs Sufficient",
+    "Strengthen: Validating Hidden Assumptions",
+    "Strengthen: Introducing New Supporting Facts",
+    "Weaken: Exposing Alternative Explanations",
+    "Weaken: Disproving Causation Leaps",
+    "Evaluate the Argument: Variance Test",
+    "Evaluate the Argument: Binary Outcomes",
+    "Resolve the Paradox / Discrepancy",
+    "Explain the Unexpected Finding",
+    "Recognizing Half-Right Trap Answers",
+    "Recognizing Opposite Direction Traps",
+    "Recognizing Scope Shift Traps",
+    "Timed CR Drill: Assumption Focus",
+    "Timed CR Drill: Strengthen Focus",
+    "Timed CR Drill: Weaken Focus",
+    "Timed CR Drill: Mixed Argument Types",
+    "Error Log Consolidation & Review",
+    "Phase 3 Argument Architecture Benchmark"
+  ];
+
+  const phase4Topics = [
+    "Bold Face: Identifying Argument Roles",
+    "Bold Face: Premises vs Counter-Premises",
+    "Flaw: Confusing Correlation with Causation",
+    "Flaw: False Dilemma & Sampling Biases",
+    "Flaw: Shifting Definitions & Equivocation",
+    "RC Inference: Fact-Bound Deductions",
+    "RC Function: Why the Author Included Line X",
+    "RC Multi-Paragraph Argument Synthesis",
+    "RC Handling Complex Comparative Viewpoints",
+    "Mixed CR & RC: Scientific Studies Drill",
+    "Mixed CR & RC: Economic Models Drill",
+    "Mixed CR & RC: Historical Debates Drill",
+    "Pacing Optimization: 1.8 min Benchmark Drill",
+    "Pacing Optimization: Identifying Guess-and-Move On Items",
+    "CR Advanced Trap Analysis (Distortions)",
+    "RC Advanced Trap Analysis (Too Broad / Too Narrow)",
+    "Timed Mixed Set: 12 Questions (6 CR + 6 RC)",
+    "Timed Mixed Set: 14 Questions (7 CR + 7 RC)",
+    "Error Log Deep-Dive: Reasoning Blindspots",
+    "Phase 4 Diagnostic: Advanced Reasoning Mastery"
+  ];
+
+  const phase5Topics = [
+    "Timed Section: 15 Questions (CR + RC, 30 Mins)",
+    "Error Log Analysis: Reviewing Timed Section 1",
+    "Timed Section: 16 Questions (CR + RC, 31 Mins)",
+    "Targeted Drill: Weakest CR Subtypes",
+    "Timed Section: 18 Questions (CR + RC, 35 Mins)",
+    "Targeted Drill: Weakest RC Question Types",
+    "Timed Section: 18 Questions (CR + RC, 35 Mins)",
+    "Pacing Audit: Sub-2-Minute Strategy Refinement",
+    "Timed Section: 20 Questions (CR + RC, 39 Mins)",
+    "Error Log Analysis: Systematic Trap Avoidance",
+    "Timed Section: 20 Questions (CR + RC, 39 Mins)",
+    "Speed vs Accuracy Trade-off Conditioning",
+    "Timed Mixed Drill: Hard-Difficulty Focus",
+    "Comprehensive Verbal Stamina Drill",
+    "Phase 5 Pacing & Sectional Readiness Benchmark"
+  ];
+
+  const phase6Topics = [
+    "Full GMAT Verbal Simulation 1 (23 Questions, 45 Mins)",
+    "Simulation 1 Post-Exam Review & Deep Error Categorization",
+    "Targeted Remediation Drill: Top 2 Error Traps",
+    "Full GMAT Verbal Simulation 2 (23 Questions, 45 Mins)",
+    "Simulation 2 Post-Exam Review & Pacing Adjustments",
+    "Targeted Remediation Drill: High-Difficulty CR",
+    "Full GMAT Verbal Simulation 3 (23 Questions, 45 Mins)",
+    "Simulation 3 Post-Exam Review & Stamina Audit",
+    "Targeted Remediation Drill: Complex RC Passages",
+    "Full GMAT Verbal Simulation 4 (23 Questions, 45 Mins)",
+    "Simulation 4 Post-Exam Review & Confidence Check",
+    "GMAT Test-Day Strategy & Time Management Protocol",
+    "Final Error Log Sweep: Reviewing All Hard Fallacies",
+    "Light Review & Mindset Conditioning (Zero Burnout)",
+    "Final GMAT Verbal Readiness Assessment & Launch"
+  ];
+
+  for (let dayNum = 1; dayNum <= 100; dayNum++) {
+    const dayDate = new Date(startDate.getTime() + (dayNum - 1) * 86400000);
+    const dateStr = dayDate.toISOString().slice(0, 10);
+
+    let phase = 1;
+    let phaseName = "Phase 1: Grammar & Sentence Mechanics Foundation";
+    let phaseDay = dayNum;
+    let title = "";
+    let description = "";
+    let tasks = [];
+
+    if (dayNum <= 15) {
+      phase = 1;
+      phaseName = "Phase 1: Grammar & Sentence Mechanics Foundation";
+      phaseDay = dayNum;
+      const topic = phase1Topics[dayNum - 1] || "Sentence Mechanics";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Master essential sentence mechanics and grammar rules. Complete structured learn/practice items and review vocabulary.`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: `Grammar Practice: ${topic}`,
+          type: "grammar",
+          target: 10,
+          completed: false,
+          action: { mode: "foundation_grammar", topic: topic, question_count: 10 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Vocabulary SRS Review (10 cards)",
+          type: "vocab",
+          target: 10,
+          completed: false,
+          action: { mode: "vocab_srs", count: 10 }
+        }
+      ];
+    } else if (dayNum <= 30) {
+      phase = 2;
+      phaseName = "Phase 2: Vocabulary & Core Reading Stamina";
+      phaseDay = dayNum - 15;
+      const topic = phase2Topics[phaseDay - 1] || "Reading Comprehension Basics";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Build academic vocabulary and reading stamina with focused RC passages and paragraph mapping.`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: `RC Passage Drill: ${topic}`,
+          type: "rc",
+          target: 8,
+          completed: false,
+          action: { mode: "gmat_verbal", verbal_type: "rc", topic: topic, question_count: 8 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Vocabulary SRS Review (15 cards)",
+          type: "vocab",
+          target: 15,
+          completed: false,
+          action: { mode: "vocab_srs", count: 15 }
+        },
+        {
+          id: `d${dayNum}_t3`,
+          title: "Grammar Reinforcement Drill",
+          type: "grammar",
+          target: 5,
+          completed: false,
+          action: { mode: "foundation_grammar", question_count: 5 }
+        }
+      ];
+    } else if (dayNum <= 50) {
+      phase = 3;
+      phaseName = "Phase 3: Critical Reasoning Argument Architecture";
+      phaseDay = dayNum - 30;
+      const topic = phase3Topics[phaseDay - 1] || "Critical Reasoning Foundations";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Deconstruct arguments into premises, conclusions, and unstated assumptions. Apply the Negation Technique.`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: `CR Argument Drill: ${topic}`,
+          type: "cr",
+          target: 10,
+          completed: false,
+          action: { mode: "gmat_verbal", verbal_type: "cr", topic: topic, question_count: 10 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Vocabulary SRS Review (15 cards)",
+          type: "vocab",
+          target: 15,
+          completed: false,
+          action: { mode: "vocab_srs", count: 15 }
+        }
+      ];
+    } else if (dayNum <= 70) {
+      phase = 4;
+      phaseName = "Phase 4: Advanced CR Fallacies & RC Multi-Paragraph Inference";
+      phaseDay = dayNum - 50;
+      const topic = phase4Topics[phaseDay - 1] || "Advanced Reasoning";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Tackle complex reasoning fallacies, Bold Face questions, and multi-paragraph RC passages under 1.8m pacing.`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: `Advanced Verbal Drill: ${topic}`,
+          type: "mixed",
+          target: 12,
+          completed: false,
+          action: { mode: "gmat_verbal", topic: topic, question_count: 12 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Error Log & Trap Analysis",
+          type: "review",
+          target: 1,
+          completed: false,
+          action: { mode: "error_log" }
+        },
+        {
+          id: `d${dayNum}_t3`,
+          title: "Vocabulary SRS Maintenance",
+          type: "vocab",
+          target: 10,
+          completed: false,
+          action: { mode: "vocab_srs", count: 10 }
+        }
+      ];
+    } else if (dayNum <= 85) {
+      phase = 5;
+      phaseName = "Phase 5: Sectional Verbal Timing & Mixed Sets";
+      phaseDay = dayNum - 70;
+      const topic = phase5Topics[phaseDay - 1] || "Timed Mixed Sets";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Internalize GMAT Verbal pacing with timed mixed sets (CR 1.5-1.8m, RC 1.8-2.2m per question).`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: `Timed Sectional Drill: ${topic}`,
+          type: "timed_section",
+          target: 16,
+          completed: false,
+          action: { mode: "gmat_verbal", question_count: 16, time_limit_minutes: 32 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Pacing & Error Log Review",
+          type: "review",
+          target: 1,
+          completed: false,
+          action: { mode: "error_log" }
+        }
+      ];
+    } else {
+      phase = 6;
+      phaseName = "Phase 6: Full 23-Question Simulation & Error Elimination";
+      phaseDay = dayNum - 85;
+      const topic = phase6Topics[phaseDay - 1] || "Full Exam Simulation";
+      title = `Day ${dayNum}: ${topic}`;
+      description = `Execute full 23-question 45-minute GMAT Verbal sections and eliminate final reasoning errors.`;
+      tasks = [
+        {
+          id: `d${dayNum}_t1`,
+          title: topic.includes("Simulation") ? "Full GMAT Verbal Section (23 Qs, 45m)" : `Targeted Drill: ${topic}`,
+          type: topic.includes("Simulation") ? "full_simulation" : "targeted_drill",
+          target: topic.includes("Simulation") ? 23 : 12,
+          completed: false,
+          action: topic.includes("Simulation")
+            ? { mode: "gmat_verbal", question_count: 23, time_limit_minutes: 45, is_mock: true }
+            : { mode: "gmat_verbal", topic: topic, question_count: 12 }
+        },
+        {
+          id: `d${dayNum}_t2`,
+          title: "Exam Condition Review & Strategy Notes",
+          type: "review",
+          target: 1,
+          completed: false,
+          action: { mode: "error_log" }
+        }
+      ];
+    }
+
+    days.push({
+      day: dayNum,
+      phase,
+      phase_name: phaseName,
+      phase_day: phaseDay,
+      title,
+      description,
+      scheduled_date: dateStr,
+      completed: false,
+      tasks
+    });
+  }
+
+  return {
+    id: "current_plan",
+    created_at: new Date().toISOString(),
+    start_date: startDate.toISOString().slice(0, 10),
+    total_days: 100,
+    completed_days: 0,
+    completion_rate: 0,
+    current_day: 1,
+    days
+  };
+}
+
+/**
+ * Retrieve the current 100-day study plan from STORES.STUDY_PLAN.
+ * If none exists, creates and stores the default plan.
+ * @returns {Promise<Object>}
+ */
+async function get100DayPlan() {
+  const db = await initEnglishDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.STUDY_PLAN, "readonly");
+    const store = tx.objectStore(STORES.STUDY_PLAN);
+    const req = store.get("current_plan");
+    req.onsuccess = async () => {
+      if (req.result) {
+        resolve(req.result);
+      } else {
+        const defaultPlan = generateDefault100DayPlan();
+        try {
+          await save100DayPlan(defaultPlan);
+          resolve(defaultPlan);
+        } catch (e) {
+          resolve(defaultPlan);
+        }
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Save or update the 100-day study plan.
+ * @param {Object} plan
+ * @returns {Promise<Object>}
+ */
+async function save100DayPlan(plan) {
+  const db = await initEnglishDB();
+  plan.id = "current_plan";
+  plan.updated_at = new Date().toISOString();
+  const completedDays = (plan.days || []).filter((d) => d.completed).length;
+  plan.completed_days = completedDays;
+  plan.completion_rate = roundDecimals((completedDays / (plan.days ? plan.days.length : 100)) * 100, 1);
+
+  // Set current_day as the first incomplete day (or 100 if all done)
+  const firstIncomplete = (plan.days || []).find((d) => !d.completed);
+  plan.current_day = firstIncomplete ? firstIncomplete.day : 100;
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.STUDY_PLAN, "readwrite");
+    const store = tx.objectStore(STORES.STUDY_PLAN);
+    const req = store.put(plan);
+    req.onsuccess = () => resolve(plan);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Update the completion status of a daily task.
+ * @param {number} dayNumber
+ * @param {string} taskId
+ * @param {boolean} isCompleted
+ * @returns {Promise<Object>} Updated plan
+ */
+async function updateDailyTaskStatus(dayNumber, taskId, isCompleted = true) {
+  const plan = await get100DayPlan();
+  const day = (plan.days || []).find((d) => d.day === Number(dayNumber));
+  if (!day) return plan;
+
+  const task = (day.tasks || []).find((t) => t.id === taskId);
+  if (task) {
+    task.completed = Boolean(isCompleted);
+  }
+  day.completed = Array.isArray(day.tasks) && day.tasks.length > 0 && day.tasks.every((t) => t.completed);
+  return await save100DayPlan(plan);
+}
+
+/**
+ * Recalculate scheduled calendar dates for the 100-day plan without losing completed history.
+ * @param {string} [startDateStr]
+ * @returns {Promise<Object>}
+ */
+async function recalculateStudySchedule(startDateStr) {
+  const plan = await get100DayPlan();
+  const baseDate = startDateStr ? new Date(startDateStr) : new Date();
+  baseDate.setHours(0, 0, 0, 0);
+
+  if (Array.isArray(plan.days)) {
+    plan.days.forEach((day, index) => {
+      const d = new Date(baseDate.getTime() + index * 86400000);
+      day.scheduled_date = d.toISOString().slice(0, 10);
+    });
+  }
+  plan.start_date = baseDate.toISOString().slice(0, 10);
+  return await save100DayPlan(plan);
+}
+
+/**
+ * Get beginner onboarding profile from STORES.STUDY_PLAN.
+ * @returns {Promise<Object|null>}
+ */
+async function getBeginnerProfile() {
+  const db = await initEnglishDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.STUDY_PLAN, "readonly");
+    const store = tx.objectStore(STORES.STUDY_PLAN);
+    const req = store.get("beginner_profile");
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Save beginner onboarding profile into STORES.STUDY_PLAN.
+ * @param {Object} profile
+ * @returns {Promise<Object>}
+ */
+async function saveBeginnerProfile(profile) {
+  const db = await initEnglishDB();
+  const record = {
+    ...profile,
+    id: "beginner_profile",
+    updated_at: new Date().toISOString(),
+  };
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES.STUDY_PLAN, "readwrite");
+    const store = tx.objectStore(STORES.STUDY_PLAN);
+    const req = store.put(record);
+    req.onsuccess = () => resolve(record);
+    req.onerror = (e) => reject(e.target.error);
+  });
 }
 
 /**
@@ -1768,7 +2343,13 @@ async function deleteEnglishAttempt(attemptId) {
  */
 async function clearAllEnglishData() {
   const db = await initEnglishDB();
-  const stores = [STORES.ATTEMPTS, STORES.SESSIONS, STORES.ACTIVE_SESSION, STORES.VOCAB_SRS];
+  const stores = [
+    STORES.ATTEMPTS,
+    STORES.SESSIONS,
+    STORES.ACTIVE_SESSION,
+    STORES.VOCAB_SRS,
+    STORES.STUDY_PLAN
+  ];
 
   await new Promise((resolve, reject) => {
     const tx = db.transaction(stores, "readwrite");
@@ -1816,6 +2397,15 @@ const AptitudeEnglishDB = {
   seedDefaultVocabCards,
   getVocabStats,
 
+  // 100-Day Study Plan & Onboarding APIs
+  generateDefault100DayPlan,
+  get100DayPlan,
+  save100DayPlan,
+  updateDailyTaskStatus,
+  recalculateStudySchedule,
+  getBeginnerProfile,
+  saveBeginnerProfile,
+
   // Backup & Export
   exportEnglishDataJSON,
   importEnglishDataJSON,
@@ -1846,6 +2436,13 @@ if (typeof window !== "undefined") {
   window.getAllVocabCards = getAllVocabCards;
   window.seedDefaultVocabCards = seedDefaultVocabCards;
   window.getVocabStats = getVocabStats;
+  window.generateDefault100DayPlan = generateDefault100DayPlan;
+  window.get100DayPlan = get100DayPlan;
+  window.save100DayPlan = save100DayPlan;
+  window.updateDailyTaskStatus = updateDailyTaskStatus;
+  window.recalculateStudySchedule = recalculateStudySchedule;
+  window.getBeginnerProfile = getBeginnerProfile;
+  window.saveBeginnerProfile = saveBeginnerProfile;
   window.exportEnglishDataJSON = exportEnglishDataJSON;
   window.importEnglishDataJSON = importEnglishDataJSON;
 }

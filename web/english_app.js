@@ -330,6 +330,275 @@
   ];
 
   // =========================================================================
+  // English Overlay Manager
+  // Handles the full-screen modal practice overlay (#englishPracticeOverlay),
+  // backdrop clicks, body scrolling lock, focus trapping, Escape safety,
+  // animated loading card with cancellation, in-overlay completion screen,
+  // and in-overlay confirmation modal (replacing browser alerts and confirms).
+  // =========================================================================
+  const EnglishOverlayManager = {
+    overlayEl: null,
+    backdropEl: null,
+    modalEl: null,
+    viewEl: null,
+    previousFocusedEl: null,
+    _keyHandler: null,
+    _cancelCallback: null,
+
+    init: function () {
+      this.overlayEl = document.getElementById("englishPracticeOverlay");
+      this.backdropEl = document.getElementById("englishPracticeBackdrop");
+      this.modalEl = document.getElementById("englishPracticeModal");
+      this.viewEl = document.getElementById("englishPracticeView");
+
+      if (this.backdropEl && !this.backdropEl._hasBackdropListener) {
+        this.backdropEl.addEventListener("click", () => {
+          this.confirmExit();
+        });
+        this.backdropEl._hasBackdropListener = true;
+      }
+    },
+
+    open: function () {
+      this.init();
+      if (!this.overlayEl) return;
+      this.previousFocusedEl = document.activeElement;
+      this.overlayEl.hidden = false;
+      this.overlayEl.style.display = "flex";
+      document.body.classList.add("english-overlay-locked");
+
+      this._setupKeyboardTrap();
+    },
+
+    close: function () {
+      if (this._keyHandler) {
+        document.removeEventListener("keydown", this._keyHandler);
+        this._keyHandler = null;
+      }
+      this._cancelCallback = null;
+
+      // Remove any lingering confirm dialogs
+      const confirmDialog = document.getElementById("engExitConfirmDialog");
+      if (confirmDialog && confirmDialog.parentNode) {
+        confirmDialog.parentNode.removeChild(confirmDialog);
+      }
+
+      if (this.overlayEl) {
+        this.overlayEl.hidden = true;
+        this.overlayEl.style.display = "none";
+      }
+      document.body.classList.remove("english-overlay-locked");
+
+      if (this.viewEl) {
+        this.viewEl.innerHTML = "";
+      }
+
+      if (this.previousFocusedEl && typeof this.previousFocusedEl.focus === "function") {
+        try {
+          this.previousFocusedEl.focus();
+        } catch (e) {}
+      }
+    },
+
+    getViewContainer: function () {
+      this.init();
+      return this.viewEl || document.getElementById("englishQuestionView") || document.querySelector("main");
+    },
+
+    showLoading: function (options = {}) {
+      this.open();
+      const container = this.getViewContainer();
+      if (!container) return;
+
+      const title = options.title || "Preparing Practice Session";
+      const subtitle = options.subtitle || "Synthesizing and calibrating questions...";
+      const section = options.section || "GMAT Verbal Preparation";
+      const detailBadge = options.detailBadge || "";
+      const onCancel = options.onCancel;
+      this._cancelCallback = onCancel;
+
+      container.innerHTML = `
+        <div class="english-overlay-loading" role="status" aria-live="polite">
+          <div class="english-overlay-loading-card">
+            <div class="english-overlay-loading-spinner"></div>
+            <span class="english-badge" style="margin-bottom: 8px;">${section}</span>
+            <h3 style="margin: 8px 0 4px; font-size: 20px; font-weight: 700; color: #1e3a5f;">${title}</h3>
+            <p style="margin: 0 0 16px; color: #64748b; font-size: 14px; max-width: 400px; line-height: 1.5;">${subtitle}</p>
+            <div class="english-overlay-loading-progress-track">
+              <div class="english-overlay-loading-progress-bar"></div>
+            </div>
+            ${detailBadge ? `<span style="display: inline-block; font-size: 12px; color: #1e40af; background: #eff6ff; padding: 3px 10px; border-radius: 12px; font-weight: 600; margin-bottom: 16px; border: 1px solid #bfdbfe;">${detailBadge}</span>` : ''}
+            <button class="english-btn english-btn-outline" id="engCancelLoadingBtn" type="button" style="margin-top: 6px;">
+              ✕ Cancel
+            </button>
+          </div>
+        </div>
+      `;
+
+      const cancelBtn = container.querySelector("#engCancelLoadingBtn");
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+          if (typeof onCancel === "function") {
+            onCancel();
+          }
+          this.close();
+          window.EnglishApp?.init();
+        });
+      }
+    },
+
+    confirmExit: function (onConfirm) {
+      if (document.getElementById("engExitConfirmDialog")) return;
+
+      const dialog = document.createElement("div");
+      dialog.id = "engExitConfirmDialog";
+      dialog.className = "english-confirm-dialog-overlay";
+      dialog.innerHTML = `
+        <div class="english-confirm-dialog-card" role="dialog" aria-labelledby="engExitTitle" aria-modal="true">
+          <div style="font-size: 36px; margin-bottom: 8px;">⏸️</div>
+          <h3 id="engExitTitle" style="margin: 0 0 8px; font-size: 18px; font-weight: 800; color: #1e3a5f;">Exit Practice Session?</h3>
+          <p style="margin: 0 0 20px; color: #64748b; font-size: 13.5px; line-height: 1.5;">
+            Your answers and progress are saved in your local session. You can resume at any time from the English practice hub.
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+            <button class="english-btn english-btn-outline" id="engResumePracticeBtn" type="button">
+              Resume Practice
+            </button>
+            <button class="english-btn english-btn-primary" id="engConfirmExitBtn" type="button" style="background: #dc2626; border-color: #dc2626;">
+              Exit to Dashboard
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(dialog);
+
+      const resumeBtn = dialog.querySelector("#engResumePracticeBtn");
+      const confirmBtn = dialog.querySelector("#engConfirmExitBtn");
+
+      const cleanup = () => {
+        if (dialog.parentNode) dialog.parentNode.removeChild(dialog);
+      };
+
+      if (resumeBtn) {
+        resumeBtn.addEventListener("click", cleanup);
+      }
+      if (confirmBtn) {
+        confirmBtn.addEventListener("click", () => {
+          cleanup();
+          if (typeof onConfirm === "function") {
+            onConfirm();
+          } else {
+            this.close();
+            window.EnglishApp?.init();
+          }
+        });
+      }
+    },
+
+    showCompletion: function (session, onDone) {
+      this.open();
+      const container = this.getViewContainer();
+      if (!container) return;
+
+      const total = session.totalQuestions || (session.questions ? session.questions.length : 0);
+      const userSelections = session.userSelections || (window.EnglishQuestionRunner ? window.EnglishQuestionRunner.userSelections : {});
+      let correct = 0;
+
+      if (session.questions) {
+        session.questions.forEach((q, idx) => {
+          if (userSelections[idx] === q.correct_option_index) {
+            correct++;
+          }
+        });
+      } else if (typeof session.score === "number") {
+        correct = session.score;
+      }
+
+      const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
+      const modeLabel = session.isSimulation
+        ? "45-Minute GMAT Verbal Simulation"
+        : (session.mode === "drill" ? "Verbal Drill" : (session.mode === "vocab_srs" ? "Vocabulary SRS Review" : "Practice Session"));
+
+      container.innerHTML = `
+        <div class="english-completion-card" role="dialog" aria-labelledby="engCompTitle" aria-modal="true">
+          <div class="english-completion-inner">
+            <div class="english-completion-hero">
+              <div style="font-size: 40px; margin-bottom: 8px;">🎯</div>
+              <span class="english-badge" style="background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.4); margin-bottom: 8px;">Session Complete</span>
+              <h2 id="engCompTitle" style="margin: 8px 0 4px; font-size: 24px; font-weight: 800; color: #ffffff;">${modeLabel}</h2>
+              <p style="margin: 0; opacity: 0.9; font-size: 14px;">Results recorded to your on-device analytics.</p>
+            </div>
+            <div class="english-completion-stats-grid">
+              <div class="english-completion-stat-box">
+                <div style="font-size: 26px; font-weight: 800; color: #1e3a5f;">${correct} / ${total}</div>
+                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Score</div>
+              </div>
+              <div class="english-completion-stat-box">
+                <div style="font-size: 26px; font-weight: 800; color: ${accuracy >= 70 ? '#059669' : (accuracy >= 50 ? '#d97706' : '#dc2626')};">${accuracy}%</div>
+                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Accuracy</div>
+              </div>
+              <div class="english-completion-stat-box">
+                <div style="font-size: 26px; font-weight: 800; color: #2563eb;">${session.subsection || "Verbal"}</div>
+                <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700; margin-top: 4px;">Focus Area</div>
+              </div>
+            </div>
+            <div class="english-completion-actions">
+              <button class="english-btn english-btn-outline" id="engCompReviewBtn" type="button">
+                📋 Error Log & Mistakes
+              </button>
+              <button class="english-btn english-btn-primary" id="engCompDoneBtn" type="button">
+                Return to English Hub →
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const reviewBtn = container.querySelector("#engCompReviewBtn");
+      const doneBtn = container.querySelector("#engCompDoneBtn");
+
+      if (reviewBtn) {
+        reviewBtn.addEventListener("click", () => {
+          this.close();
+          if (window.EnglishApp) {
+            window.EnglishApp.activeSubtab = "progress";
+            window.EnglishApp.init();
+          }
+        });
+      }
+
+      if (doneBtn) {
+        doneBtn.addEventListener("click", () => {
+          this.close();
+          if (typeof onDone === "function") {
+            onDone();
+          } else if (window.EnglishApp) {
+            window.EnglishApp.init();
+          }
+        });
+      }
+    },
+
+    _setupKeyboardTrap: function () {
+      if (this._keyHandler) {
+        document.removeEventListener("keydown", this._keyHandler);
+      }
+      this._keyHandler = (e) => {
+        if (e.key === "Escape") {
+          const confirmDialog = document.getElementById("engExitConfirmDialog");
+          if (confirmDialog) {
+            if (confirmDialog.parentNode) confirmDialog.parentNode.removeChild(confirmDialog);
+          } else {
+            this.confirmExit();
+          }
+        }
+      };
+      document.addEventListener("keydown", this._keyHandler);
+    }
+  };
+
+  // =========================================================================
   // Question Runner Module
   // =========================================================================
   const QuestionRunner = {
@@ -438,12 +707,7 @@
       this.markedForReview = new Set();
       this.passageScrollPositions = {};
 
-      let mountTarget = config.container;
-      if (!mountTarget) {
-        mountTarget = document.getElementById("englishQuestionView") ||
-                      document.getElementById("questionScreen") ||
-                      document.querySelector("main");
-      }
+      let mountTarget = config.container || EnglishOverlayManager.getViewContainer();
       this.container = mountTarget;
 
       if (this.session.isSimulation) {
@@ -927,9 +1191,9 @@
       const exitBtn = container.querySelector("#engExitBtn");
       if (exitBtn) {
         exitBtn.addEventListener("click", () => {
-          if (confirm("Return to English dashboard? Current progress will be saved.")) {
+          EnglishOverlayManager.confirmExit(() => {
             self.exitSession();
-          }
+          });
         });
       }
 
@@ -1125,7 +1389,6 @@
 
         if (rem <= 0) {
           clearInterval(self.simInterval);
-          alert("Time is up! Your 45-minute verbal simulation has completed.");
           self.finishSession();
         }
       }, 1000);
@@ -1299,8 +1562,9 @@
       if (typeof this.session.onFinish === "function") {
         this.session.onFinish(this.session);
       } else {
-        alert("Session completed! Great work on your Verbal practice.");
-        this.exitSession();
+        EnglishOverlayManager.showCompletion(this.session, () => {
+          this.exitSession();
+        });
       }
     },
 
@@ -1308,6 +1572,8 @@
       this.clearTimers();
       if (this.simInterval) clearInterval(this.simInterval);
       if (this._keyHandler) document.removeEventListener("keydown", this._keyHandler);
+
+      EnglishOverlayManager.close();
 
       if (typeof this.session.onExit === "function") {
         this.session.onExit();
@@ -1644,7 +1910,7 @@
         ? config.deck
         : BUILTIN_FLASHCARDS;
       this.currentIndex = 0;
-      this.container = config.container || document.getElementById("englishFlashcardView") || document.getElementById("englishQuestionView");
+      this.container = config.container || EnglishOverlayManager.getViewContainer();
       this.onComplete = config.onComplete || null;
       this.isFlipped = false;
 
@@ -1667,7 +1933,9 @@
         <div class="flashcard-wrapper" id="engFlashcardWrapper">
           <div class="flashcard-hud">
             <span>Vocabulary Deck (${index + 1} of ${total})</span>
-            <span>Spaced Repetition Practice</span>
+            <button class="english-btn english-btn-ghost" id="engCardCloseBtn" type="button" style="padding: 4px 10px; font-size: 12px; color: #64748b;">
+              ✕ Exit Deck
+            </button>
           </div>
 
           <div class="flashcard-card-3d" id="engFlashcard3D" tabindex="0" role="button" aria-label="Flashcard for ${card.word}. Click or press space to flip.">
@@ -1784,6 +2052,16 @@
         });
       }
 
+      const closeBtn = this.container.querySelector("#engCardCloseBtn");
+      if (closeBtn) {
+        closeBtn.addEventListener("click", () => {
+          EnglishOverlayManager.confirmExit(() => {
+            EnglishOverlayManager.close();
+            window.EnglishApp?.init();
+          });
+        });
+      }
+
       this.container.querySelectorAll(".srs-rate-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
           const rating = this.getAttribute("data-srs-rating");
@@ -1837,17 +2115,16 @@
       }
       if (typeof this.onComplete === "function") {
         this.onComplete();
-      } else if (this.container) {
-        this.container.innerHTML = `
-          <div class="flashcard-wrapper" style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 48px;">🎉</div>
-            <h2>Vocabulary Flashcards Completed!</h2>
-            <p style="color: #64748b;">You have reviewed all cards in this deck. Repetitions have been recorded into your spaced repetition system.</p>
-            <button class="english-btn english-btn-primary" onclick="window.EnglishFlashcardUI.startDeck({});" type="button">
-              Review Deck Again
-            </button>
-          </div>
-        `;
+      } else {
+        EnglishOverlayManager.showCompletion({
+          totalQuestions: this.deck.length,
+          score: this.deck.length,
+          subsection: "Vocabulary Flashcards",
+          mode: "vocab_srs"
+        }, () => {
+          EnglishOverlayManager.close();
+          window.EnglishApp?.init();
+        });
       }
     },
   };
@@ -1881,11 +2158,22 @@
         rc_avg_question_time: 0,
         current_streak: 0,
         weak_topics_count: 0,
+        verbal_readiness: 0,
+        foundation_readiness: 0,
+        overall_readiness: 0,
+        confidence_bands: {
+          quantitative: "N/A",
+          verbal: "Baseline Diagnostic Needed",
+          data_insights: "N/A",
+          composite: "Diagnostic Needed",
+        },
         readiness_score: 0,
         readiness_tier: "Diagnostic Phase",
       };
 
       let activeSession = null;
+      let studyPlan = null;
+      let beginnerProfile = null;
 
       if (window.AptitudeEnglishDB) {
         try {
@@ -1898,20 +2186,32 @@
         } catch (e) {
           console.warn("Could not check active English session:", e);
         }
+        try {
+          studyPlan = await window.AptitudeEnglishDB.get100DayPlan();
+        } catch (e) {
+          console.warn("Could not load 100-day plan:", e);
+        }
+        try {
+          beginnerProfile = await window.AptitudeEnglishDB.getBeginnerProfile();
+        } catch (e) {
+          console.warn("Could not load beginner profile:", e);
+        }
       }
 
-      this.renderMainLayout(screen, overview, activeSession);
+      this.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
     },
 
-    renderMainLayout: function (screen, overview, activeSession) {
+    renderMainLayout: function (screen, overview, activeSession, studyPlan, beginnerProfile) {
       const self = this;
-      const readinessScore = overview.readiness_score || 0;
-      const readinessTier = overview.readiness_tier || "Diagnostic Phase";
+      const verbalReadiness = overview.verbal_readiness || overview.readiness_score || 0;
+      const verbalTier = overview.verbal_tier || overview.readiness_tier || "Diagnostic Phase";
+      const foundationReadiness = overview.foundation_readiness || 0;
+      const foundationTier = overview.foundation_tier || "Beginner";
+      const compositeBand = (overview.confidence_bands && overview.confidence_bands.composite) || "Baseline";
       const crAvg = overview.cr_avg_time ? `${overview.cr_avg_time}s` : "--";
       const rcAvg = overview.rc_avg_question_time ? `${overview.rc_avg_question_time}s` : "--";
       const streak = overview.current_streak ? `${overview.current_streak}d` : "0d";
       const accuracy = overview.accuracy ? `${overview.accuracy}%` : "0%";
-      const totalSolved = overview.total_attempts || 0;
 
       let resumeBannerHtml = "";
       if (activeSession && activeSession.questions && activeSession.questions.length > 0) {
@@ -1937,9 +2237,136 @@
         `;
       }
 
+      // Beginner Onboarding Welcome Panel
+      const currentLevelKey = (beginnerProfile && beginnerProfile.level) || "beginner_absolute";
+      const onboardingHtml = `
+        <section class="english-onboarding-panel" aria-labelledby="engOnboardingTitle">
+          <div class="english-onboarding-header">
+            <div>
+              <span class="english-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">Target 700+ GMAT Pathway (100 Days)</span>
+              <h3 id="engOnboardingTitle" class="english-onboarding-title">Start from Your Current Level</h3>
+            </div>
+            <span style="font-size: 12px; color: #64748b;">Click a level to calibrate your daily study recommendations</span>
+          </div>
+
+          <div class="english-levels-grid">
+            <div class="english-level-card ${currentLevelKey === 'beginner_absolute' ? 'is-active' : ''}" data-level="beginner_absolute">
+              ${currentLevelKey === 'beginner_absolute' ? '<span class="english-level-active-check">✓</span>' : ''}
+              <span class="english-level-card-badge">Level 1</span>
+              <h4 class="english-level-card-name">Complete Beginner</h4>
+              <p class="english-level-card-desc">Grammar rules, sentence mechanics, and vocabulary foundation before verbal reasoning.</p>
+            </div>
+
+            <div class="english-level-card ${currentLevelKey === 'quant_ready' ? 'is-active' : ''}" data-level="quant_ready">
+              ${currentLevelKey === 'quant_ready' ? '<span class="english-level-active-check">✓</span>' : ''}
+              <span class="english-level-card-badge">Level 2</span>
+              <h4 class="english-level-card-name">Quant Ready, English Starter</h4>
+              <p class="english-level-card-desc">Strong in Math. Fast-track foundation rules and focus on GMAT CR argument logic.</p>
+            </div>
+
+            <div class="english-level-card ${currentLevelKey === 'intermediate_brushup' ? 'is-active' : ''}" data-level="intermediate_brushup">
+              ${currentLevelKey === 'intermediate_brushup' ? '<span class="english-level-active-check">✓</span>' : ''}
+              <span class="english-level-card-badge">Level 3</span>
+              <h4 class="english-level-card-name">Intermediate Brush-Up</h4>
+              <p class="english-level-card-desc">Grammar comfortable. Focus on Critical Reasoning negation and RC multi-paragraph inference.</p>
+            </div>
+
+            <div class="english-level-card ${currentLevelKey === 'advanced_speed' ? 'is-active' : ''}" data-level="advanced_speed">
+              ${currentLevelKey === 'advanced_speed' ? '<span class="english-level-active-check">✓</span>' : ''}
+              <span class="english-level-card-badge">Level 4</span>
+              <h4 class="english-level-card-name">Advanced / Speed Optimization</h4>
+              <p class="english-level-card-desc">Targeting 700+ pacing (1.8m/q), high-difficulty trap evasion, and 23-question 45m simulations.</p>
+            </div>
+          </div>
+        </section>
+      `;
+
+      // 100-Day Preparation Plan Panel ("What should I do today?")
+      let dailyPlanHtml = "";
+      if (studyPlan && Array.isArray(studyPlan.days) && studyPlan.days.length > 0) {
+        const currentDayNum = studyPlan.current_day || 1;
+        const today = studyPlan.days.find(d => d.day === currentDayNum) || studyPlan.days[0];
+        const daysRemaining = 100 - (studyPlan.completed_days || 0);
+
+        let tasksHtml = "";
+        (today.tasks || []).forEach(task => {
+          const isCompleted = Boolean(task.completed);
+          tasksHtml += `
+            <div class="daily-task-item ${isCompleted ? 'is-completed' : ''}">
+              <div class="daily-task-left">
+                <span class="daily-task-chip ${isCompleted ? 'completed' : 'pending'}">
+                  ${isCompleted ? '✓ Completed' : 'Pending'}
+                </span>
+                <div>
+                  <div class="daily-task-title">${task.title}</div>
+                  <div class="daily-task-target">Target: ${task.target} questions/cards</div>
+                </div>
+              </div>
+              <div>
+                <button class="english-btn ${isCompleted ? 'english-btn-outline' : 'english-btn-primary'} daily-task-action-btn"
+                  type="button"
+                  data-action-type="${task.type}"
+                  data-day="${today.day}"
+                  data-task-id="${task.id}"
+                  style="font-size: 13px; padding: 6px 14px;">
+                  ${isCompleted ? 'Redo Task' : (task.type === 'vocab' ? '🗂️ Review Vocab' : '▶ Start Task')}
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        dailyPlanHtml = `
+          <section class="english-daily-plan-panel" aria-labelledby="engDailyPlanTitle">
+            <div class="daily-plan-header">
+              <div>
+                <div class="daily-plan-meta">
+                  <span class="english-badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">
+                    ${today.phase_name}
+                  </span>
+                  <span style="font-size: 12px; color: #64748b; font-weight: 600;">
+                    Scheduled: ${today.scheduled_date}
+                  </span>
+                </div>
+                <h3 id="engDailyPlanTitle" style="margin: 8px 0 4px; font-size: 18px; font-weight: 800; color: #1e3a5f;">
+                  📅 What should I do today? (Day ${today.day} of 100)
+                </h3>
+                <p style="margin: 0; font-size: 13.5px; color: #475569; max-width: 680px; line-height: 1.5;">
+                  ${today.description}
+                </p>
+              </div>
+
+              <div style="text-align: right;">
+                <div class="daily-plan-progress" style="justify-content: flex-end; margin-bottom: 4px;">
+                  <span style="font-size: 12px; font-weight: 700; color: #0f766e;">
+                    ${studyPlan.completed_days || 0} / 100 Days (${studyPlan.completion_rate || 0}%)
+                  </span>
+                  <div class="daily-plan-progress-bar">
+                    <div class="daily-plan-progress-fill" style="width: ${studyPlan.completion_rate || 0}%;"></div>
+                  </div>
+                </div>
+                <span style="font-size: 11px; color: #64748b;">
+                  ${daysRemaining} days remaining
+                </span>
+              </div>
+            </div>
+
+            <div class="daily-task-list">
+              ${tasksHtml}
+            </div>
+
+            <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+              <button class="english-btn english-btn-ghost" id="engAdjustScheduleBtn" type="button" style="font-size: 12px; color: #64748b;">
+                📅 Missed days? Re-anchor schedule forward
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
       screen.innerHTML = `
         <div class="english-container" style="padding: 16px 0 40px;">
-          <!-- Top HUD Strip -->
+          <!-- Top HUD Strip with Segregated Readiness -->
           <header class="english-hud-bar" style="margin-bottom: 16px;">
             <div>
               <span class="english-badge">GMAT Verbal Reasoning & English</span>
@@ -1948,9 +2375,19 @@
               </h2>
             </div>
             <div style="display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
-              <div style="text-align: center;">
+              <div style="text-align: center;" title="Segregated GMAT Verbal Readiness (CR + RC)">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Verbal Readiness</span>
-                <div style="font-size: 18px; font-weight: 800; color: #0f766e;">${readinessScore}/100 <small style="font-size: 11px; color: #64748b;">(${readinessTier})</small></div>
+                <div style="font-size: 18px; font-weight: 800; color: #0f766e;">${verbalReadiness}/100 <small style="font-size: 11px; color: #64748b;">(${verbalTier})</small></div>
+              </div>
+              <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
+              <div style="text-align: center;" title="Segregated Foundation Readiness (Grammar + Vocab)">
+                <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Foundation</span>
+                <div style="font-size: 18px; font-weight: 800; color: #0891b2;">${foundationReadiness}/100 <small style="font-size: 11px; color: #64748b;">(${foundationTier})</small></div>
+              </div>
+              <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
+              <div style="text-align: center;" title="Estimated Overall Readiness Band">
+                <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Estimated Band</span>
+                <div style="font-size: 14px; font-weight: 800; color: #4338ca;">${compositeBand}</div>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
@@ -1977,6 +2414,10 @@
 
           ${resumeBannerHtml}
 
+          ${onboardingHtml}
+
+          ${dailyPlanHtml}
+
           <!-- 3 Subtabs Navigation -->
           <nav class="english-subtabs" style="display: flex; gap: 8px; border-bottom: 2px solid #e2e8f0; margin-bottom: 24px;">
             <button class="english-subtab-btn ${this.activeSubtab === 'gmat_verbal' ? 'is-active' : ''}" data-subtab="gmat_verbal" type="button" style="padding: 10px 18px; font-weight: 700; font-size: 14px; background: none; border: none; border-bottom: 3px solid ${this.activeSubtab === 'gmat_verbal' ? '#1e3a5f' : 'transparent'}; color: ${this.activeSubtab === 'gmat_verbal' ? '#1e3a5f' : '#64748b'}; cursor: pointer;">
@@ -1998,11 +2439,11 @@
         </div>
       `;
 
-      // Event listener for subtabs
+      // Subtab clicks
       screen.querySelectorAll(".english-subtab-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
           self.activeSubtab = btn.dataset.subtab;
-          self.renderMainLayout(screen, overview, activeSession);
+          self.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
         });
       });
 
@@ -2016,12 +2457,65 @@
       const discardBtn = screen.querySelector("#engDiscardBtn");
       if (discardBtn) {
         discardBtn.addEventListener("click", async () => {
-          if (confirm("Are you sure you want to discard your saved session?")) {
+          EnglishOverlayManager.confirmExit(async () => {
             if (window.AptitudeEnglishDB) {
               await window.AptitudeEnglishDB.clearActiveEnglishSession();
             }
             self.init();
+          });
+        });
+      }
+
+      // Onboarding level card clicks
+      screen.querySelectorAll(".english-level-card").forEach((card) => {
+        card.addEventListener("click", async () => {
+          const levelKey = card.dataset.level;
+          if (window.AptitudeEnglishDB) {
+            await window.AptitudeEnglishDB.saveBeginnerProfile({
+              level: levelKey,
+              updated_at: new Date().toISOString(),
+            });
           }
+          self.init();
+        });
+      });
+
+      // Daily task action buttons
+      screen.querySelectorAll(".daily-task-action-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const actionType = btn.dataset.actionType;
+          const dayNum = Number(btn.dataset.day);
+          const taskId = btn.dataset.taskId;
+          const today = (studyPlan && studyPlan.days) ? studyPlan.days.find(d => d.day === dayNum) : null;
+          const task = today ? (today.tasks || []).find(t => t.id === taskId) : null;
+
+          if (actionType === "vocab") {
+            self.startFlashcards({
+              day_number: dayNum,
+              task_id: taskId,
+              count: (task && task.target) || 10
+            });
+          } else {
+            const taskAction = (task && task.action) || {};
+            self.startPracticeSession({
+              ...taskAction,
+              day_number: dayNum,
+              task_id: taskId,
+            });
+          }
+        });
+      });
+
+      // Schedule adjust button
+      const adjustBtn = screen.querySelector("#engAdjustScheduleBtn");
+      if (adjustBtn) {
+        adjustBtn.addEventListener("click", async () => {
+          EnglishOverlayManager.confirmExit(async () => {
+            if (window.AptitudeEnglishDB) {
+              await window.AptitudeEnglishDB.recalculateStudySchedule(new Date().toISOString().slice(0, 10));
+            }
+            self.init();
+          });
         });
       }
 
@@ -2672,18 +3166,21 @@
     // -----------------------------------------------------------------------
     resumeActiveSession: function (activeSession) {
       if (!activeSession || !activeSession.questions) return;
-      const qView = document.getElementById("englishQuestionView") || document.querySelector("main");
+      EnglishOverlayManager.open();
+      const view = EnglishOverlayManager.getViewContainer();
       QuestionRunner.startSession({
         sessionId: activeSession.session_id,
         mode: activeSession.mode,
         questions: activeSession.questions,
         timeLimitSeconds: activeSession.time_remaining_seconds,
-        container: qView,
-        onFinish: () => {
-          alert("Session finished! Returning to English Dashboard.");
-          EnglishApp.init();
+        container: view,
+        onFinish: (sess) => {
+          EnglishOverlayManager.showCompletion(sess, () => {
+            EnglishApp.init();
+          });
         },
         onExit: () => {
+          EnglishOverlayManager.close();
           EnglishApp.init();
         },
       });
@@ -2695,7 +3192,8 @@
 
     startPracticeSession: async function (config = {}) {
       const self = this;
-      const qView = document.getElementById("englishQuestionView") || document.querySelector("main");
+      EnglishOverlayManager.open();
+      const view = EnglishOverlayManager.getViewContainer();
       let selectedQuestions = [];
       let isAiGenerated = false;
 
@@ -2775,22 +3273,25 @@
         else if (config.subsection === "Reading Comprehension") drillMode = "rc";
         else if (config.subsection === "Grammar") drillMode = "grammar";
 
-        // Render generation state
-        if (qView) {
-          qView.innerHTML = `
-            <div style="min-height: 380px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; background: #fff; border-radius: 12px; margin: 20px auto; max-width: 560px; box-shadow: 0 4px 14px rgba(0,0,0,0.06); border: 1px solid #e2e8f0;">
-              <div style="font-size: 40px; margin-bottom: 14px; animation: engBounce 1s infinite alternate;">🤖</div>
-              <h3 style="margin: 0 0 8px; color: #1e3a5f; font-size: 20px; font-weight: 700;">Adaptive AI Question Generator</h3>
-              <div style="display: inline-flex; align-items: center; gap: 6px; background: #eff6ff; color: #1d4ed8; padding: 4px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; margin-bottom: 14px;">
-                <span>Target Difficulty: Level ${targetDifficulty} / 5</span>
-              </div>
-              <p style="margin: 0 0 18px; color: #64748b; font-size: 13.5px; max-width: 420px; line-height: 1.5;">
-                Synthesizing non-repeating ${config.subsection || "Verbal"} questions calibrated to your accuracy trajectory...
-              </p>
-              <div style="width: 32px; height: 32px; border: 3px solid #e2e8f0; border-top-color: #2563eb; border-radius: 50%; animation: engSpin 0.8s linear infinite;"></div>
-            </div>
-          `;
-        }
+        // Show animated overlay loading card with cancellation
+        let isCancelled = false;
+        const controller = new AbortController();
+
+        EnglishOverlayManager.showLoading({
+          title: "Adaptive AI Question Generator",
+          subtitle: `Calibrating non-repeating ${config.subsection || "Verbal"} questions (Target Difficulty: Level ${targetDifficulty}/5)...`,
+          section: config.subsection === "Grammar" ? "English Foundation" : "GMAT Verbal Reasoning",
+          detailBadge: `Difficulty Level ${targetDifficulty}/5`,
+          onCancel: () => {
+            isCancelled = true;
+            controller.abort();
+          }
+        });
+
+        // 10-second timeout handling with automatic fallback to curated bank
+        const timeoutId = setTimeout(() => {
+          controller.abort();
+        }, 10000);
 
         try {
           const resp = await fetch("/api/english/generate/drill", {
@@ -2802,7 +3303,9 @@
               target_difficulty: targetDifficulty,
               avoid_questions: avoidQuestions,
             }),
+            signal: controller.signal
           });
+          clearTimeout(timeoutId);
 
           if (resp.ok) {
             const data = await resp.json();
@@ -2815,8 +3318,11 @@
             }
           }
         } catch (fetchErr) {
-          console.warn("AI drill generation fetch error, falling back to curated bank:", fetchErr);
+          clearTimeout(timeoutId);
+          console.warn("AI drill generation fetch error or timeout, falling back to curated bank:", fetchErr);
         }
+
+        if (isCancelled) return;
 
         // Fallback to local questions if fetch was unsuccessful
         if (!selectedQuestions || selectedQuestions.length === 0) {
@@ -2842,31 +3348,49 @@
         ...config,
         questions: selectedQuestions,
         is_ai_generated: isAiGenerated,
-        container: qView,
-        onFinish: () => {
-          alert("Session finished! Returning to English Dashboard.");
-          EnglishApp.init();
+        container: view,
+        onFinish: (sess) => {
+          if (config.day_number && config.task_id && window.AptitudeEnglishDB) {
+            window.AptitudeEnglishDB.updateDailyTaskStatus(config.day_number, config.task_id, true).catch(() => {});
+          }
+          EnglishOverlayManager.showCompletion(sess, () => {
+            EnglishApp.init();
+          });
         },
         onExit: () => {
+          EnglishOverlayManager.close();
           EnglishApp.init();
         },
       });
     },
 
     startFlashcards: function (config = {}) {
-      const qView = document.getElementById("englishQuestionView") || document.querySelector("main");
+      const self = this;
+      EnglishOverlayManager.open();
+      const view = EnglishOverlayManager.getViewContainer();
       FlashcardUI.startDeck({
         ...config,
-        container: qView,
+        container: view,
         onComplete: () => {
-          alert("Flashcard deck complete!");
-          EnglishApp.init();
+          if (config.day_number && config.task_id && window.AptitudeEnglishDB) {
+            window.AptitudeEnglishDB.updateDailyTaskStatus(config.day_number, config.task_id, true).catch(() => {});
+          }
+          EnglishOverlayManager.showCompletion({
+            totalQuestions: (config.deck && config.deck.length) || 10,
+            score: (config.deck && config.deck.length) || 10,
+            subsection: "Vocabulary SRS",
+            mode: "vocab_srs"
+          }, () => {
+            EnglishOverlayManager.close();
+            self.init();
+          });
         },
       });
     },
   };
 
   // Global exports
+  window.EnglishOverlayManager = EnglishOverlayManager;
   window.EnglishQuestionRunner = QuestionRunner;
   window.EnglishReviewUI = ReviewUI;
   window.EnglishFlashcardUI = FlashcardUI;
