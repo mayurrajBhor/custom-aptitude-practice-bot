@@ -70,6 +70,13 @@ def seed_gmat_data():
         ("Cubes and Cube Roots", "Cube and cube-root drills covering cube values, perfect cube roots, nearest cube roots, and unit digit patterns.", 1),
         ("Divisibility Rules", "Divisibility-rule drills for 3, 4, 8, 9, 11, and combined aptitude checks.", 1),
         ("Approximation and Number Sense", "Speed estimation drills using compatible numbers, rounded products, rounded division, and benchmark percentages.", 1),
+        ("Odd/even", "Properties of odd and even numbers, parity arithmetic, algebraic parity, consecutive integer parity, and power rules.", 2),
+        ("Prime/composite", "Prime identification, coprime pairs, prime ranges and counting, composite number properties, and twin primes.", 2),
+        ("Factors", "Total number of factors, sum of factors, odd and even factor counts, factor pairs, and perfect square factor counts.", 2),
+        ("Multiples", "Counting multiples in range, common multiples of two or more numbers, either/or sets, and consecutive multiple sums.", 2),
+        ("Prime factorization", "Canonical prime decomposition, highest power of prime dividing factorials, missing factors for perfect powers, and distinct prime factors.", 2),
+        ("HCF/GCD", "Highest Common Factor via Euclidean algorithm, prime factor powers, HCF of fractions, remainder constraints, and tiling word problems.", 2),
+        ("LCM", "Least Common Multiple using prime powers, LCM of fractions, product formula relation (HCF x LCM = a x b), remainder cases, and bell tolling cycles.", 2),
     ]
 
     for name, desc, difficulty in vedic_patterns:
@@ -97,30 +104,6 @@ def seed_gmat_data():
         (quant_id, topic_id, [name.lower() for name in legacy_percentage_topics])
     )
 
-    # Quant - Number Properties
-    db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (quant_id, "Number properties"))
-    res = db.execute_query("SELECT id FROM topics WHERE category_id = %s AND name = %s", (quant_id, "Number properties"))
-    num_prop_topic_id = res[0]['id']
-    num_prop_patterns = [
-        ("Odd/even", "Properties of odd and even numbers, parity arithmetic, algebraic parity, consecutive integer parity, and power rules.", 2),
-        ("Prime/composite", "Prime identification, coprime pairs, prime ranges and counting, composite number properties, and twin primes.", 2),
-    ]
-    for name, desc, difficulty in num_prop_patterns:
-        db.add_pattern(num_prop_topic_id, name, desc, difficulty)
-
-    # Quant - Factors & Multiples
-    db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (quant_id, "Factors & multiples"))
-    res = db.execute_query("SELECT id FROM topics WHERE category_id = %s AND name = %s", (quant_id, "Factors & multiples"))
-    factors_topic_id = res[0]['id']
-    factors_patterns = [
-        ("Factors", "Total number of factors, sum of factors, odd and even factor counts, factor pairs, and perfect square factor counts.", 2),
-        ("Multiples", "Counting multiples in range, common multiples of two or more numbers, either/or sets, and consecutive multiple sums.", 2),
-        ("Prime factorization", "Canonical prime decomposition, highest power of prime dividing factorials, missing factors for perfect powers, and distinct prime factors.", 2),
-        ("HCF/GCD", "Highest Common Factor via Euclidean algorithm, prime factor powers, HCF of fractions, remainder constraints, and tiling word problems.", 2),
-        ("LCM", "Least Common Multiple using prime powers, LCM of fractions, product formula relation (HCF x LCM = a x b), remainder cases, and bell tolling cycles.", 2),
-    ]
-    for name, desc, difficulty in factors_patterns:
-        db.add_pattern(factors_topic_id, name, desc, difficulty)
 
     # Reasoning - Direction and Distance
     reasoning_id = cat_map['Reasoning']

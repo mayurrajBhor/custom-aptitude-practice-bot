@@ -106,45 +106,38 @@ VEDIC_MATH_PATTERNS = [
         "Approximation and Number Sense",
         "Speed estimation drills using compatible numbers, rounded products, rounded division, and benchmark percentages.",
     ),
-]
-
-
-NUMBER_PROPERTIES_PATTERNS = [
     (
-        4001,
+        3010,
         "Odd/even",
         "Properties of odd and even numbers, parity arithmetic, algebraic parity, consecutive integer parity, and power rules.",
     ),
     (
-        4002,
+        3011,
         "Prime/composite",
         "Prime identification, coprime pairs, prime ranges and counting, composite number properties, and twin primes.",
     ),
-]
-
-FACTORS_MULTIPLES_PATTERNS = [
     (
-        4003,
+        3012,
         "Factors",
         "Total number of factors, sum of factors, odd and even factor counts, factor pairs, and perfect square factor counts.",
     ),
     (
-        4004,
+        3013,
         "Multiples",
         "Counting multiples in range, common multiples of two or more numbers, either/or sets, and consecutive multiple sums.",
     ),
     (
-        4005,
+        3014,
         "Prime factorization",
         "Canonical prime decomposition, highest power of prime dividing factorials, missing factors for perfect powers, and distinct prime factors.",
     ),
     (
-        4006,
+        3015,
         "HCF/GCD",
         "Highest Common Factor via Euclidean algorithm, prime factor powers, HCF of fractions, remainder constraints, and tiling word problems.",
     ),
     (
-        4007,
+        3016,
         "LCM",
         "Least Common Multiple using prime powers, LCM of fractions, product formula relation (HCF x LCM = a x b), remainder cases, and bell tolling cycles.",
     ),
@@ -179,39 +172,31 @@ LOCAL_PATTERNS.update(
 )
 LOCAL_PATTERNS.update(
     {
-        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description, difficulty=1)
+        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description, difficulty=1 if pattern_id <= 3009 else 2)
         for pattern_id, name, description in VEDIC_MATH_PATTERNS
     }
 )
-LOCAL_PATTERNS.update(
-    {
-        pattern_id: _pattern(pattern_id, 103, "Number properties", name, description, difficulty=2)
-        for pattern_id, name, description in NUMBER_PROPERTIES_PATTERNS
-    }
-)
-LOCAL_PATTERNS.update(
-    {
-        pattern_id: _pattern(pattern_id, 104, "Factors & multiples", name, description, difficulty=2)
-        for pattern_id, name, description in FACTORS_MULTIPLES_PATTERNS
-    }
-)
+
+# Support compatibility for IDs 4001-4007
+ID_MAP_4000 = {
+    4001: 3010,
+    4002: 3011,
+    4003: 3012,
+    4004: 3013,
+    4005: 3014,
+    4006: 3015,
+    4007: 3016,
+}
+for legacy_id, new_id in ID_MAP_4000.items():
+    if new_id in LOCAL_PATTERNS:
+        pat_copy = deepcopy(LOCAL_PATTERNS[new_id])
+        pat_copy["id"] = legacy_id
+        LOCAL_PATTERNS[legacy_id] = pat_copy
 
 
 LOCAL_TOPICS = {
     101: {"id": 101, "category_id": 1, "name": "Percentages", "pattern_ids": [item[0] for item in PERCENTAGE_PATTERNS]},
     102: {"id": 102, "category_id": 1, "name": "Vedic Math", "pattern_ids": [item[0] for item in VEDIC_MATH_PATTERNS]},
-    103: {
-        "id": 103,
-        "category_id": 1,
-        "name": "Number properties",
-        "pattern_ids": [item[0] for item in NUMBER_PROPERTIES_PATTERNS],
-    },
-    104: {
-        "id": 104,
-        "category_id": 1,
-        "name": "Factors & multiples",
-        "pattern_ids": [item[0] for item in FACTORS_MULTIPLES_PATTERNS],
-    },
     201: {
         "id": 201,
         "category_id": 2,
@@ -221,7 +206,7 @@ LOCAL_TOPICS = {
 }
 
 LOCAL_CATEGORIES = [
-    {"id": 1, "name": "Quant", "topic_ids": [101, 102, 103, 104]},
+    {"id": 1, "name": "Quant", "topic_ids": [101, 102]},
     {"id": 2, "name": "Reasoning", "topic_ids": [201]},
 ]
 

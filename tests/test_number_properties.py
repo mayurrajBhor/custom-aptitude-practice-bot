@@ -14,31 +14,41 @@ class NumberPropertiesAndFactorsTests(unittest.TestCase):
         web_app.SESSIONS.clear()
         self.client = TestClient(web_app.app)
 
-    def test_catalog_contains_number_properties_and_factors_topics(self):
+    def test_catalog_contains_patterns_under_vedic_math(self):
         catalog = get_local_catalog_payload()
         quant_cat = next((c for c in catalog if c["name"] == "Quant"), None)
         self.assertIsNotNone(quant_cat, "Quant category missing from local catalog")
 
         topic_names = [t["name"] for t in quant_cat["topics"]]
-        self.assertIn("Number properties", topic_names)
-        self.assertIn("Factors & multiples", topic_names)
+        self.assertIn("Percentages", topic_names)
+        self.assertIn("Vedic Math", topic_names)
 
-        num_prop = next(t for t in quant_cat["topics"] if t["name"] == "Number properties")
-        factors_topic = next(t for t in quant_cat["topics"] if t["name"] == "Factors & multiples")
+        vedic_topic = next(t for t in quant_cat["topics"] if t["name"] == "Vedic Math")
+        self.assertEqual(len(vedic_topic["patterns"]), 16)
 
-        self.assertEqual(len(num_prop["patterns"]), 2)
-        self.assertEqual(len(factors_topic["patterns"]), 5)
-
-        pattern_ids = [p["id"] for p in num_prop["patterns"]] + [p["id"] for p in factors_topic["patterns"]]
-        expected_ids = [4001, 4002, 4003, 4004, 4005, 4006, 4007]
-        self.assertEqual(pattern_ids, expected_ids)
-
-        for pat in num_prop["patterns"] + factors_topic["patterns"]:
+        pattern_names = [p["name"] for p in vedic_topic["patterns"]]
+        new_names = [
+            "Odd/even",
+            "Prime/composite",
+            "Factors",
+            "Multiples",
+            "Prime factorization",
+            "HCF/GCD",
+            "LCM",
+        ]
+        for name in new_names:
+            self.assertIn(name, pattern_names)
+            pat = next(p for p in vedic_topic["patterns"] if p["name"] == name)
             self.assertEqual(pat["variant_count"], 5)
             self.assertEqual(len(pat["variant_names"]), 5)
             self.assertTrue(is_local_pattern_id(pat["id"]))
 
-    def test_fast_catalog_api_exposes_new_patterns(self):
+        # Verify ID compatibility for both 3010-3016 and 4001-4007
+        for pid in [3010, 3011, 3012, 3013, 3014, 3015, 3016, 4001, 4002, 4003, 4004, 4005, 4006, 4007]:
+            self.assertTrue(is_local_pattern_id(pid))
+            self.assertIsNotNone(get_local_pattern(pid))
+
+    def test_fast_catalog_api_exposes_patterns_under_vedic_math(self):
         response = self.client.get("/api/catalog/fast")
         self.assertEqual(response.status_code, 200)
         payload = response.json()
@@ -46,19 +56,16 @@ class NumberPropertiesAndFactorsTests(unittest.TestCase):
         self.assertIsNotNone(quant)
 
         topics_by_name = {t["name"]: t for t in quant["topics"]}
-        self.assertIn("Number properties", topics_by_name)
-        self.assertIn("Factors & multiples", topics_by_name)
+        self.assertIn("Vedic Math", topics_by_name)
 
-        np_patterns = {p["name"]: p for p in topics_by_name["Number properties"]["patterns"]}
-        fm_patterns = {p["name"]: p for p in topics_by_name["Factors & multiples"]["patterns"]}
-
-        self.assertIn("Odd/even", np_patterns)
-        self.assertIn("Prime/composite", np_patterns)
-        self.assertIn("Factors", fm_patterns)
-        self.assertIn("Multiples", fm_patterns)
-        self.assertIn("Prime factorization", fm_patterns)
-        self.assertIn("HCF/GCD", fm_patterns)
-        self.assertIn("LCM", fm_patterns)
+        vm_patterns = {p["name"]: p for p in topics_by_name["Vedic Math"]["patterns"]}
+        self.assertIn("Odd/even", vm_patterns)
+        self.assertIn("Prime/composite", vm_patterns)
+        self.assertIn("Factors", vm_patterns)
+        self.assertIn("Multiples", vm_patterns)
+        self.assertIn("Prime factorization", vm_patterns)
+        self.assertIn("HCF/GCD", vm_patterns)
+        self.assertIn("LCM", vm_patterns)
 
     def test_pattern_name_mapping_in_generator(self):
         expected_mappings = {
@@ -204,3 +211,4 @@ class NumberPropertiesAndFactorsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
