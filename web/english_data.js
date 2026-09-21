@@ -3834,757 +3834,3384 @@ window.ENGLISH_DATA = {
     }
   ],
   "VOCABULARY_ITEMS": [
-    {
-      "id": "v-001",
-      "word": "mitigate",
-      "part_of_speech": "verb",
-      "definition": "To make less severe or intense; to moderate.",
-      "contextual_meaning": "To reduce the impact of a negative outcome.",
-      "example_sentence": "The company implemented controls to mitigate financial risk.",
-      "business_example": "Diversification can mitigate portfolio volatility.",
-      "synonyms": [
-        "alleviate",
-        "reduce",
-        "lessen",
-        "diminish"
-      ],
-      "antonyms": [
-        "aggravate",
-        "intensify",
-        "worsen"
-      ],
-      "root_prefix_suffix": "Latin 'mitigare' (to soften)",
-      "common_confusion": "Mitigate does not mean to eliminate completely.",
-      "memory_aid": "MITIgate \u2192 MITI(gation) makes things MILDER.",
-      "level": 2,
-      "difficulty": 3
-    },
-    {
-      "id": "v-002",
-      "word": "proliferate",
-      "part_of_speech": "verb",
-      "definition": "To increase rapidly in number; to multiply.",
-      "contextual_meaning": "To spread or grow quickly.",
-      "example_sentence": "Startups have proliferated in the technology sector.",
-      "business_example": "Digital payment methods have proliferated across developing economies.",
-      "synonyms": [
-        "multiply",
-        "spread",
-        "expand",
-        "burgeon"
-      ],
-      "antonyms": [
-        "decline",
-        "decrease",
-        "diminish"
-      ],
-      "root_prefix_suffix": "Latin 'proles' (offspring) + 'ferre' (to bear)",
-      "common_confusion": "Proliferate implies rapid, widespread increase, not just gradual growth.",
-      "memory_aid": "PROLIFIC + RATE = things appearing at a prolific rate.",
-      "level": 2,
-      "difficulty": 3
-    },
-    {
-      "id": "v-003",
-      "word": "exacerbate",
-      "part_of_speech": "verb",
-      "definition": "To make a problem, situation, or negative feeling worse.",
-      "contextual_meaning": "To intensify or aggravate an existing issue.",
-      "example_sentence": "The drought exacerbated the water shortage.",
-      "business_example": "Supply chain disruptions exacerbated inflationary pressures.",
-      "synonyms": [
-        "worsen",
-        "aggravate",
-        "intensify",
-        "compound"
-      ],
-      "antonyms": [
-        "alleviate",
-        "mitigate",
-        "ameliorate"
-      ],
-      "root_prefix_suffix": "Latin 'exacerbare' (to irritate)",
-      "common_confusion": "Exacerbate means to make worse, not to cause; the problem must already exist.",
-      "memory_aid": "EX-AGGRAVATE \u2192 makes things WORSE.",
-      "level": 2,
-      "difficulty": 3
-    },
-    {
-      "id": "v-004",
-      "word": "ubiquitous",
-      "part_of_speech": "adjective",
-      "definition": "Present, appearing, or found everywhere.",
-      "contextual_meaning": "So common that it seems to be everywhere.",
-      "example_sentence": "Smartphones have become ubiquitous in modern society.",
-      "business_example": "Cloud computing has become ubiquitous in enterprise infrastructure.",
-      "synonyms": [
-        "omnipresent",
-        "pervasive",
-        "universal",
-        "widespread"
-      ],
-      "antonyms": [
-        "rare",
-        "scarce",
-        "uncommon"
-      ],
-      "root_prefix_suffix": "Latin 'ubique' (everywhere)",
-      "common_confusion": "Ubiquitous implies presence everywhere, not just common.",
-      "memory_aid": "U-BIG-uitous: so BIG it's everywhere.",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-005",
-      "word": "pragmatic",
-      "part_of_speech": "adjective",
-      "definition": "Dealing with things sensibly and realistically; practical rather than theoretical.",
-      "contextual_meaning": "Focused on practical outcomes rather than ideals.",
-      "example_sentence": "The CEO took a pragmatic approach to the restructuring.",
-      "business_example": "A pragmatic negotiation strategy focuses on achievable concessions.",
-      "synonyms": [
-        "practical",
-        "realistic",
-        "sensible",
-        "utilitarian"
-      ],
-      "antonyms": [
-        "idealistic",
-        "theoretical",
-        "impractical"
-      ],
-      "root_prefix_suffix": "Greek 'pragma' (deed, act)",
-      "common_confusion": "Pragmatic is not negative\u2014it simply means practical, not cynical.",
-      "memory_aid": "PRAGmatic \u2192 PRACTical.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-006",
-      "word": "dichotomy",
-      "part_of_speech": "noun",
-      "definition": "A division or contrast between two things that are opposed or entirely different.",
-      "contextual_meaning": "A clear division into two contradictory groups or ideas.",
-      "example_sentence": "The dichotomy between rich and poor is growing.",
-      "business_example": "The dichotomy between short-term profits and long-term sustainability presents a governance challenge.",
-      "synonyms": [
-        "divide",
-        "split",
-        "contrast",
-        "polarity"
-      ],
-      "antonyms": [
-        "unity",
-        "convergence",
-        "similarity"
-      ],
-      "root_prefix_suffix": "Greek 'dicha' (in two) + 'tomos' (cutting)",
-      "common_confusion": "A dichotomy is a sharp division, not a mild difference.",
-      "memory_aid": "DI (two) + CUT = cutting into TWO.",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-007",
-      "word": "inherent",
-      "part_of_speech": "adjective",
-      "definition": "Existing as a permanent, essential, or characteristic attribute.",
-      "contextual_meaning": "Built-in or natural; not added from outside.",
-      "example_sentence": "There are inherent risks in any investment.",
-      "business_example": "The inherent volatility of emerging markets requires careful risk management.",
-      "synonyms": [
-        "intrinsic",
-        "innate",
-        "built-in",
-        "fundamental"
-      ],
-      "antonyms": [
-        "extrinsic",
-        "acquired",
-        "external"
-      ],
-      "root_prefix_suffix": "Latin 'inhaerere' (to stick in)",
-      "common_confusion": "Inherent means naturally part of something, not just associated with it.",
-      "memory_aid": "IN-HERE-nt: the quality is IN HERE, built right in.",
-      "level": 2,
-      "difficulty": 3
-    },
-    {
-      "id": "v-008",
-      "word": "empirical",
-      "part_of_speech": "adjective",
-      "definition": "Based on observation or experience rather than theory or pure logic.",
-      "contextual_meaning": "Derived from real-world data and evidence.",
-      "example_sentence": "The theory lacks empirical support.",
-      "business_example": "Empirical evidence suggests that diverse teams outperform homogeneous ones.",
-      "synonyms": [
-        "observational",
-        "experiential",
-        "evidence-based",
-        "practical"
-      ],
-      "antonyms": [
-        "theoretical",
-        "hypothetical",
-        "speculative"
-      ],
-      "root_prefix_suffix": "Greek 'empeiria' (experience)",
-      "common_confusion": "Empirical does not mean 'proven'\u2014it means based on observation.",
-      "memory_aid": "EMPIRical \u2192 like an EMPIRE built on real experience.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-009",
-      "word": "corroborate",
-      "part_of_speech": "verb",
-      "definition": "To confirm or give support to a statement, theory, or finding.",
-      "contextual_meaning": "To provide additional evidence that supports a claim.",
-      "example_sentence": "The witness corroborated the defendant's alibi.",
-      "business_example": "Independent auditors corroborated the company's financial statements.",
-      "synonyms": [
-        "confirm",
-        "verify",
-        "substantiate",
-        "validate"
-      ],
-      "antonyms": [
-        "contradict",
-        "refute",
-        "disprove"
-      ],
-      "root_prefix_suffix": "Latin 'corroborare' (to strengthen)",
-      "common_confusion": "Corroborate means to support with additional evidence, not to originate the claim.",
-      "memory_aid": "CO-ROBUST-ate: make an argument more ROBUST.",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-010",
-      "word": "anomaly",
-      "part_of_speech": "noun",
-      "definition": "Something that deviates from what is standard, normal, or expected.",
-      "contextual_meaning": "An unusual occurrence or irregularity.",
-      "example_sentence": "The warm winter was an anomaly in the region's weather patterns.",
-      "business_example": "The quarterly earnings spike was an anomaly driven by a one-time asset sale.",
-      "synonyms": [
-        "irregularity",
-        "deviation",
-        "aberration",
-        "outlier"
-      ],
-      "antonyms": [
-        "norm",
-        "regularity",
-        "standard"
-      ],
-      "root_prefix_suffix": "Greek 'anomalos' (uneven, irregular)",
-      "common_confusion": "An anomaly is not necessarily negative; it simply deviates from the norm.",
-      "memory_aid": "A-NORMAL-y: NOT normal.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-011",
-      "word": "precipitate",
-      "part_of_speech": "verb",
-      "definition": "To cause something to happen suddenly, unexpectedly, or prematurely.",
-      "contextual_meaning": "To trigger or bring about rapidly.",
-      "example_sentence": "The scandal precipitated the CEO's resignation.",
-      "business_example": "A credit downgrade can precipitate a liquidity crisis.",
-      "synonyms": [
-        "trigger",
-        "spark",
-        "hasten",
-        "accelerate"
-      ],
-      "antonyms": [
-        "prevent",
-        "delay",
-        "hinder"
-      ],
-      "root_prefix_suffix": "Latin 'praecipitare' (to throw headlong)",
-      "common_confusion": "Precipitate (verb) means to cause suddenly; precipitate (adjective) means hasty.",
-      "memory_aid": "PRECIPICE + ATE: like falling off a precipice\u2014sudden and dramatic.",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-012",
-      "word": "commensurate",
-      "part_of_speech": "adjective",
-      "definition": "Corresponding in size, extent, or degree; proportionate.",
-      "contextual_meaning": "Matching or in proportion to something.",
-      "example_sentence": "The salary is commensurate with experience.",
-      "business_example": "Returns should be commensurate with the level of risk assumed.",
-      "synonyms": [
-        "proportionate",
-        "corresponding",
-        "equivalent",
-        "appropriate"
-      ],
-      "antonyms": [
-        "disproportionate",
-        "inadequate",
-        "excessive"
-      ],
-      "root_prefix_suffix": "Latin 'com-' (together) + 'mensurare' (to measure)",
-      "common_confusion": "Commensurate means proportional, not equal.",
-      "memory_aid": "CO-MEASURE-ate: measured TOGETHER to match.",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-013",
-      "word": "disparate",
-      "part_of_speech": "adjective",
-      "definition": "Essentially different in kind; not able to be compared.",
-      "contextual_meaning": "So different that comparison is difficult or inappropriate.",
-      "example_sentence": "The two proposals address disparate issues.",
-      "business_example": "The merger brought together disparate corporate cultures.",
-      "synonyms": [
-        "different",
-        "dissimilar",
-        "distinct",
-        "divergent"
-      ],
-      "antonyms": [
-        "similar",
-        "comparable",
-        "alike"
-      ],
-      "root_prefix_suffix": "Latin 'disparatus' (separated)",
-      "common_confusion": "Disparate means fundamentally different, not just slightly different. Do not confuse with 'desperate.'",
-      "memory_aid": "DIS-PAIR-ate: things that don't PAIR well because they're too different.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-014",
-      "word": "paradigm",
-      "part_of_speech": "noun",
-      "definition": "A typical example or pattern of something; a model or framework.",
-      "contextual_meaning": "A dominant way of thinking or a standard framework.",
-      "example_sentence": "The shift from print to digital represented a paradigm shift in media.",
-      "business_example": "Agile development represents a new paradigm for software engineering.",
-      "synonyms": [
-        "model",
-        "framework",
-        "pattern",
-        "archetype"
-      ],
-      "antonyms": [
-        "anomaly",
-        "deviation"
-      ],
-      "root_prefix_suffix": "Greek 'paradeigma' (pattern, example)",
-      "common_confusion": "A paradigm is the entire framework of assumptions, not just a single example.",
-      "memory_aid": "PARA-DIME: a dime is a model coin\u2014paradigm is the model framework.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-015",
-      "word": "catalyst",
-      "part_of_speech": "noun",
-      "definition": "A person or thing that precipitates an event or change.",
-      "contextual_meaning": "Something that triggers or accelerates change without being consumed by it.",
-      "example_sentence": "The new CEO served as a catalyst for organizational transformation.",
-      "business_example": "Low interest rates acted as a catalyst for the housing market boom.",
-      "synonyms": [
-        "trigger",
-        "stimulus",
-        "impetus",
-        "spark"
-      ],
-      "antonyms": [
-        "inhibitor",
-        "deterrent",
-        "obstacle"
-      ],
-      "root_prefix_suffix": "Greek 'katalysis' (dissolution)",
-      "common_confusion": "In business context, a catalyst initiates change; in chemistry, it speeds up a reaction.",
-      "memory_aid": "CAT-a-LYST: the CAT knocked something over and started a chain reaction.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-016",
-      "word": "tenuous",
-      "part_of_speech": "adjective",
-      "definition": "Very weak or slight; lacking substance or firmness.",
-      "contextual_meaning": "Barely adequate or supported; fragile.",
-      "example_sentence": "The connection between the two events is tenuous at best.",
-      "business_example": "The company's claim to market leadership rests on tenuous evidence.",
-      "synonyms": [
-        "weak",
-        "flimsy",
-        "fragile",
-        "insubstantial"
-      ],
-      "antonyms": [
-        "strong",
-        "substantial",
-        "robust"
-      ],
-      "root_prefix_suffix": "Latin 'tenuis' (thin, slight)",
-      "common_confusion": "Tenuous implies weakness or fragility, not necessarily falsity.",
-      "memory_aid": "TEN-U-ous: as thin as a TENDON stretched too far.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-017",
-      "word": "pertinent",
-      "part_of_speech": "adjective",
-      "definition": "Relevant or applicable to a particular matter; apposite.",
-      "contextual_meaning": "Directly related and useful to the topic at hand.",
-      "example_sentence": "The lawyer raised several pertinent objections.",
-      "business_example": "The consultant focused on the most pertinent market data.",
-      "synonyms": [
-        "relevant",
-        "applicable",
-        "appropriate",
-        "germane"
-      ],
-      "antonyms": [
-        "irrelevant",
-        "immaterial",
-        "extraneous"
-      ],
-      "root_prefix_suffix": "Latin 'pertinere' (to pertain to)",
-      "common_confusion": "Pertinent is stronger than 'related'\u2014it means directly relevant and important.",
-      "memory_aid": "PERTAIN-ent: it PERTAINS to the topic.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-018",
-      "word": "ambiguous",
-      "part_of_speech": "adjective",
-      "definition": "Open to more than one interpretation; unclear or inexact.",
-      "contextual_meaning": "Having multiple possible meanings; not definitive.",
-      "example_sentence": "The contract language was deliberately ambiguous.",
-      "business_example": "Ambiguous regulatory guidelines create compliance uncertainty.",
-      "synonyms": [
-        "vague",
-        "unclear",
-        "equivocal",
-        "indeterminate"
-      ],
-      "antonyms": [
-        "clear",
-        "unambiguous",
-        "definitive",
-        "explicit"
-      ],
-      "root_prefix_suffix": "Latin 'ambiguus' (having two meanings, from 'ambi-' = both)",
-      "common_confusion": "Ambiguous (multiple meanings) vs. Ambivalent (mixed feelings).",
-      "memory_aid": "AMBI (both) + GUOUS: going BOTH ways in meaning.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-019",
-      "word": "circumvent",
-      "part_of_speech": "verb",
-      "definition": "To find a way around an obstacle or restriction.",
-      "contextual_meaning": "To avoid or bypass, especially cleverly.",
-      "example_sentence": "The company found ways to circumvent the trade restrictions.",
-      "business_example": "Some firms attempt to circumvent regulations through offshore subsidiaries.",
-      "synonyms": [
-        "bypass",
-        "evade",
-        "sidestep",
-        "avoid"
-      ],
-      "antonyms": [
-        "confront",
-        "comply",
-        "face"
-      ],
-      "root_prefix_suffix": "Latin 'circum' (around) + 'venire' (to come)",
-      "common_confusion": "Circumvent implies clever avoidance, not direct confrontation.",
-      "memory_aid": "CIRCUM (circle around) + VENT: go AROUND the obstacle.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-020",
-      "word": "substantiate",
-      "part_of_speech": "verb",
-      "definition": "To provide evidence to support or prove the truth of a claim.",
-      "contextual_meaning": "To back up with concrete proof.",
-      "example_sentence": "The researcher could not substantiate her claims with data.",
-      "business_example": "The plaintiff must substantiate damages with financial documentation.",
-      "synonyms": [
-        "verify",
-        "confirm",
-        "corroborate",
-        "validate"
-      ],
-      "antonyms": [
-        "disprove",
-        "refute",
-        "invalidate"
-      ],
-      "root_prefix_suffix": "Latin 'substantia' (substance, essence)",
-      "common_confusion": "Substantiate means to provide proof, not just to believe something.",
-      "memory_aid": "SUBSTANCE + ATE: give SUBSTANCE (proof) to a claim.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-021",
-      "word": "analogous",
-      "part_of_speech": "adjective",
-      "definition": "Comparable in certain respects; similar enough to allow comparison.",
-      "contextual_meaning": "Similar in relevant ways, allowing a useful comparison.",
-      "example_sentence": "The CEO drew an analogous comparison between the two market downturns.",
-      "business_example": "The current supply chain crisis is analogous to the disruptions of 2020.",
-      "synonyms": [
-        "comparable",
-        "similar",
-        "parallel",
-        "equivalent"
-      ],
-      "antonyms": [
-        "dissimilar",
-        "different",
-        "unrelated"
-      ],
-      "root_prefix_suffix": "Greek 'analogia' (proportion)",
-      "common_confusion": "Analogous means similar in certain respects, not identical.",
-      "memory_aid": "ANALOG-ous: like an ANALOGY\u2014similar but not the same.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-022",
-      "word": "preclude",
-      "part_of_speech": "verb",
-      "definition": "To prevent from happening; to make impossible.",
-      "contextual_meaning": "To rule out or make something impossible in advance.",
-      "example_sentence": "The heavy snowfall precluded any outdoor activities.",
-      "business_example": "The non-compete clause precludes former employees from joining rival firms.",
-      "synonyms": [
-        "prevent",
-        "rule out",
-        "exclude",
-        "prohibit"
-      ],
-      "antonyms": [
-        "allow",
-        "permit",
-        "enable"
-      ],
-      "root_prefix_suffix": "Latin 'praecludere' (to close off)",
-      "common_confusion": "Preclude means to make impossible, not just to discourage.",
-      "memory_aid": "PRE-CLUDE (close): CLOSE the door BEFORE something can happen.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-023",
-      "word": "volatile",
-      "part_of_speech": "adjective",
-      "definition": "Liable to change rapidly and unpredictably, especially for the worse.",
-      "contextual_meaning": "Subject to sudden, dramatic fluctuations.",
-      "example_sentence": "The stock market has been particularly volatile this quarter.",
-      "business_example": "Volatile commodity prices make budget forecasting challenging.",
-      "synonyms": [
-        "unstable",
-        "unpredictable",
-        "fluctuating",
-        "erratic"
-      ],
-      "antonyms": [
-        "stable",
-        "steady",
-        "predictable"
-      ],
-      "root_prefix_suffix": "Latin 'volatilis' (fleeting, from volare = to fly)",
-      "common_confusion": "Volatile doesn't always mean dangerous\u2014it means prone to rapid change.",
-      "memory_aid": "VOLATILE = VOL (fly) = changes that FLY up and down.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-024",
-      "word": "alleviate",
-      "part_of_speech": "verb",
-      "definition": "To make suffering, a problem, or a deficiency less severe.",
-      "contextual_meaning": "To partially reduce or relieve a negative condition.",
-      "example_sentence": "The new policy aims to alleviate poverty in rural areas.",
-      "business_example": "Automation can alleviate bottlenecks in the production process.",
-      "synonyms": [
-        "relieve",
-        "ease",
-        "mitigate",
-        "reduce"
-      ],
-      "antonyms": [
-        "aggravate",
-        "worsen",
-        "exacerbate"
-      ],
-      "root_prefix_suffix": "Latin 'alleviare' (to lighten)",
-      "common_confusion": "Alleviate means to reduce, not to eliminate completely.",
-      "memory_aid": "A-LEVER-iate: use a LEVER to LIGHTEN the burden.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-025",
-      "word": "conjecture",
-      "part_of_speech": "noun/verb",
-      "definition": "An opinion or conclusion formed on the basis of incomplete information; a guess.",
-      "contextual_meaning": "An educated guess without full evidence.",
-      "example_sentence": "The report is based on conjecture rather than facts.",
-      "business_example": "Analysts' earnings estimates are often conjecture disguised as precision.",
-      "synonyms": [
-        "speculation",
-        "hypothesis",
-        "supposition",
-        "guess"
-      ],
-      "antonyms": [
-        "fact",
-        "certainty",
-        "proof"
-      ],
-      "root_prefix_suffix": "Latin 'conjectura' (interpretation, from con- + jacere = to throw together)",
-      "common_confusion": "Conjecture is weaker than hypothesis\u2014it has even less evidence.",
-      "memory_aid": "CON-JECT-ure: THROW (ject) ideas TOGETHER to guess.",
-      "level": 3,
-      "difficulty": 3
-    },
-    {
-      "id": "v-026",
-      "word": "feasible",
-      "part_of_speech": "adjective",
-      "definition": "Possible and practical to do easily or conveniently.",
-      "contextual_meaning": "Capable of being accomplished; workable.",
-      "example_sentence": "The plan is technically feasible but financially challenging.",
-      "business_example": "A feasibility study determines whether the proposed expansion is feasible.",
-      "synonyms": [
-        "possible",
-        "practicable",
-        "viable",
-        "achievable"
-      ],
-      "antonyms": [
-        "impossible",
-        "impracticable",
-        "unfeasible"
-      ],
-      "root_prefix_suffix": "Latin 'facere' (to do, make)",
-      "common_confusion": "Feasible means possible and practical, not just theoretically possible.",
-      "memory_aid": "FEAS-ible = able to be DONE (facere).",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-027",
-      "word": "scrutinize",
-      "part_of_speech": "verb",
-      "definition": "To examine or inspect closely and thoroughly.",
-      "contextual_meaning": "To look at something with intense, critical attention.",
-      "example_sentence": "Investors scrutinized the company's quarterly earnings report.",
-      "business_example": "Regulators scrutinize merger proposals for antitrust concerns.",
-      "synonyms": [
-        "examine",
-        "inspect",
-        "analyze",
-        "investigate"
-      ],
-      "antonyms": [
-        "overlook",
-        "ignore",
-        "neglect"
-      ],
-      "root_prefix_suffix": "Latin 'scrutinium' (close search)",
-      "common_confusion": "Scrutinize implies careful, detailed examination\u2014not a casual glance.",
-      "memory_aid": "SCRUT-inize: look at something under a SCREW-tiny lens.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-028",
-      "word": "unprecedented",
-      "part_of_speech": "adjective",
-      "definition": "Never done or known before; without previous example.",
-      "contextual_meaning": "Completely new; no historical precedent exists.",
-      "example_sentence": "The pandemic caused unprecedented disruption to global supply chains.",
-      "business_example": "The central bank took unprecedented measures to stabilize markets.",
-      "synonyms": [
-        "unparalleled",
-        "unmatched",
-        "novel",
-        "extraordinary"
-      ],
-      "antonyms": [
-        "common",
-        "ordinary",
-        "precedented"
-      ],
-      "root_prefix_suffix": "un- (not) + precedent (previous example)",
-      "common_confusion": "Unprecedented means truly first-time, not just unusual or severe.",
-      "memory_aid": "UN-PRECEDENT-ed: no PRECEDENT (previous case) exists.",
-      "level": 2,
-      "difficulty": 2
-    },
-    {
-      "id": "v-029",
-      "word": "ameliorate",
-      "part_of_speech": "verb",
-      "definition": "To make something bad or unsatisfactory better; to improve.",
-      "contextual_meaning": "To improve a negative situation or condition.",
-      "example_sentence": "The new legislation aims to ameliorate working conditions in factories.",
-      "business_example": "The restructuring plan is designed to ameliorate the company's financial position.",
-      "synonyms": [
-        "improve",
-        "better",
-        "enhance",
-        "upgrade"
-      ],
-      "antonyms": [
-        "worsen",
-        "deteriorate",
-        "degrade"
-      ],
-      "root_prefix_suffix": "Latin 'melior' (better)",
-      "common_confusion": "Ameliorate specifically means to improve a bad situation, not just any improvement.",
-      "memory_aid": "A-MELIORATE = make things MELLOW (better).",
-      "level": 3,
-      "difficulty": 4
-    },
-    {
-      "id": "v-030",
-      "word": "cogent",
-      "part_of_speech": "adjective",
-      "definition": "Clear, logical, and convincing.",
-      "contextual_meaning": "Persuasive through clarity and strength of reasoning.",
-      "example_sentence": "She presented a cogent argument for increasing the marketing budget.",
-      "business_example": "The consultant delivered a cogent analysis that convinced the board to proceed.",
-      "synonyms": [
-        "convincing",
-        "compelling",
-        "persuasive",
-        "logical"
-      ],
-      "antonyms": [
-        "unconvincing",
-        "weak",
-        "illogical",
-        "vague"
-      ],
-      "root_prefix_suffix": "Latin 'cogere' (to compel, drive together)",
-      "common_confusion": "Cogent implies logical persuasiveness, not emotional appeal.",
-      "memory_aid": "CO-GENT: a GENT (gentleman) who argues with compelling logic.",
-      "level": 3,
-      "difficulty": 3
-    }
+        {
+            "word": "mitigate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make less severe, serious, or painful; to moderate.",
+            "contextual_meaning": "To reduce the negative severity of a risk, cost, or vulnerability.",
+            "example_sentence": "The central bank introduced liquidity buffers to mitigate systemic risks in the interbank lending market.",
+            "business_example": "Operational redundancy is essential to mitigate supply chain disruption risks.",
+            "synonyms": [
+                "alleviate",
+                "attenuate",
+                "palliate",
+                "moderate"
+            ],
+            "antonyms": [
+                "exacerbate",
+                "aggravate",
+                "intensify"
+            ],
+            "root_prefix_suffix": "Latin 'mitigare' (to soften)",
+            "common_confusion": "Mitigate does not mean eliminate entirely; it means to lessen severity.",
+            "memory_aid": "MITIgate -> make conditions MILDER.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-001"
+        },
+        {
+            "word": "proliferate",
+            "part_of_speech": "verb",
+            "category": "Business & Economics",
+            "definition": "To increase rapidly in number or multiply quickly.",
+            "contextual_meaning": "To spread rapidly across markets, organizations, or ecosystems.",
+            "example_sentence": "Fintech platforms proliferated rapidly once regulatory hurdles were lowered.",
+            "business_example": "Low barriers to entry caused direct-to-consumer cosmetic brands to proliferate.",
+            "synonyms": [
+                "burgeon",
+                "multiply",
+                "mushroom",
+                "escalate"
+            ],
+            "antonyms": [
+                "dwindle",
+                "diminish",
+                "contract"
+            ],
+            "root_prefix_suffix": "Latin 'proles' (offspring) + 'ferre' (to bear)",
+            "common_confusion": "Proliferate implies sudden rapid expansion, not gradual organic growth.",
+            "memory_aid": "PROLIFIC + RATE: multiplying at an extraordinary rate.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-002"
+        },
+        {
+            "word": "exacerbate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make a problem, situation, or negative feeling worse.",
+            "contextual_meaning": "To aggravate an already vulnerable or deteriorating condition.",
+            "example_sentence": "Tariffs on raw materials exacerbated the profit squeeze already troubling domestic manufacturers.",
+            "business_example": "Premature layoffs exacerbated employee turnover and lowered morale during the restructuring.",
+            "synonyms": [
+                "aggravate",
+                "compound",
+                "worsen",
+                "intensify"
+            ],
+            "antonyms": [
+                "alleviate",
+                "ameliorate",
+                "mitigate"
+            ],
+            "root_prefix_suffix": "Latin 'exacerbare' (to irritate, make harsh)",
+            "common_confusion": "Exacerbate means to make worse, not to create; an issue must already exist.",
+            "memory_aid": "EX-AGGRAVATE: compounds an existing wound.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-003"
+        },
+        {
+            "word": "ubiquitous",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Present, appearing, or found everywhere.",
+            "contextual_meaning": "Pervasive to the point of being standard infrastructure or common baseline.",
+            "example_sentence": "Subsidized broadband made digital commerce ubiquitous across metropolitan areas.",
+            "business_example": "Cloud-based collaboration suites have become ubiquitous in corporate workflows.",
+            "synonyms": [
+                "omnipresent",
+                "pervasive",
+                "universal",
+                "widespread"
+            ],
+            "antonyms": [
+                "rare",
+                "scarce",
+                "isolated"
+            ],
+            "root_prefix_suffix": "Latin 'ubique' (everywhere)",
+            "common_confusion": "Ubiquitous implies widespread presence, not necessarily universal approval.",
+            "memory_aid": "U-BIG-uitous: so big and widespread it's everywhere.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-004"
+        },
+        {
+            "word": "pragmatic",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Dealing with things sensibly and realistically based on practical considerations.",
+            "contextual_meaning": "Prioritizing empirical feasibility and workable outcomes over dogmatic ideology.",
+            "example_sentence": "The committee adopted a pragmatic timeline rather than pursuing an unfeasible deadline.",
+            "business_example": "A pragmatic restructuring balances cost reductions with preserving key revenue drivers.",
+            "synonyms": [
+                "utilitarian",
+                "expedient",
+                "sensible",
+                "down-to-earth"
+            ],
+            "antonyms": [
+                "idealistic",
+                "quixotic",
+                "dogmatic"
+            ],
+            "root_prefix_suffix": "Greek 'pragma' (deed, act)",
+            "common_confusion": "Pragmatic does not mean cynical; it simply denotes practical efficacy.",
+            "memory_aid": "PRAGmatic -> PRACTical.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-005"
+        },
+        {
+            "word": "dichotomy",
+            "part_of_speech": "noun",
+            "category": "Argumentation & Logic",
+            "definition": "A division or contrast between two things that are represented as being entirely opposed.",
+            "contextual_meaning": "A sharp conceptual split; often challenged on the GMAT as a false dilemma.",
+            "example_sentence": "The author rejects the conventional dichotomy between shareholder value and social responsibility.",
+            "business_example": "Modern strategy bridges the dichotomy between cost leadership and product differentiation.",
+            "synonyms": [
+                "bifurcation",
+                "polarity",
+                "schism",
+                "duality"
+            ],
+            "antonyms": [
+                "harmony",
+                "convergence",
+                "unity"
+            ],
+            "root_prefix_suffix": "Greek 'dicha' (in two) + 'tomos' (cutting)",
+            "common_confusion": "A dichotomy is a binary division, not a spectrum or minor variance.",
+            "memory_aid": "DI (two) + CUT: cutting reality into two opposing camps.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-006"
+        },
+        {
+            "word": "inherent",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Existing in something as a permanent, essential, or characteristic attribute.",
+            "contextual_meaning": "Intrinsic to an argument, system, or asset; cannot be separated from it.",
+            "example_sentence": "Volatility is inherent in emergent commodities markets.",
+            "business_example": "Credit default risks are inherent in unsecured peer-to-peer lending models.",
+            "synonyms": [
+                "intrinsic",
+                "innate",
+                "immanent",
+                "fundamental"
+            ],
+            "antonyms": [
+                "extrinsic",
+                "incidental",
+                "acquired"
+            ],
+            "root_prefix_suffix": "Latin 'inhaerere' (to adhere, stick in)",
+            "common_confusion": "Inherent describes essential nature, whereas accidental/extrinsic is external.",
+            "memory_aid": "IN-HERE: the quality lives IN HERE, naturally.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-007"
+        },
+        {
+            "word": "empirical",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Based on, concerned with, or verifiable by observation or experience rather than theory.",
+            "contextual_meaning": "Supported by observable data and measurable experiment.",
+            "example_sentence": "Economists tested the policy's efficacy against twenty years of empirical tax data.",
+            "business_example": "A/B testing provides empirical confirmation before a site-wide product release.",
+            "synonyms": [
+                "observational",
+                "experimental",
+                "evidence-based",
+                "factual"
+            ],
+            "antonyms": [
+                "conjectural",
+                "theoretical",
+                "speculative"
+            ],
+            "root_prefix_suffix": "Greek 'empeiria' (experience)",
+            "common_confusion": "Empirical means based on real data, not necessarily infallible proof.",
+            "memory_aid": "EMPIRICAL: built on observed reality, like an Empire on solid ground.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-008"
+        },
+        {
+            "word": "corroborate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To confirm or give support to a statement, theory, or finding with independent evidence.",
+            "contextual_meaning": "To strengthen a hypothesis by providing separate confirmatory data.",
+            "example_sentence": "Archaeological excavations corroborated the historical accounts recorded in the scrolls.",
+            "business_example": "Audited bank statements corroborated management's cash flow projections.",
+            "synonyms": [
+                "substantiate",
+                "authenticate",
+                "verify",
+                "validate"
+            ],
+            "antonyms": [
+                "refute",
+                "contradict",
+                "discredit"
+            ],
+            "root_prefix_suffix": "Latin 'corroborare' (to strengthen, from robur = oak/strength)",
+            "common_confusion": "Corroborate requires independent verification, not merely repeating an assertion.",
+            "memory_aid": "CO-ROBUST: makes an argument more robust with supporting facts.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-009"
+        },
+        {
+            "word": "anomaly",
+            "part_of_speech": "noun",
+            "category": "Argumentation & Logic",
+            "definition": "Something that deviates from what is standard, normal, or expected.",
+            "contextual_meaning": "An outlier datum or phenomenon that challenges a generalized rule.",
+            "example_sentence": "The sudden spike in third-quarter inventories was an anomaly caused by harbor strikes.",
+            "business_example": "Statistical arbitrage algorithms look for price anomalies across correlated equities.",
+            "synonyms": [
+                "aberration",
+                "outlier",
+                "irregularity",
+                "inconsistency"
+            ],
+            "antonyms": [
+                "norm",
+                "conformity",
+                "regularity"
+            ],
+            "root_prefix_suffix": "Greek 'anomalos' (irregular, uneven)",
+            "common_confusion": "An anomaly is a deviation from expectation, not necessarily an error.",
+            "memory_aid": "A-NORMAL-y: a deviation from normal.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-010"
+        },
+        {
+            "word": "precipitate",
+            "part_of_speech": "verb",
+            "category": "Business & Economics",
+            "definition": "To cause an event or situation to happen suddenly, unexpectedly, or prematurely.",
+            "contextual_meaning": "To trigger a rapid or destabilizing chain of events.",
+            "example_sentence": "The unexpected default of a major lender precipitated a credit freeze across the sector.",
+            "business_example": "Abrupt regulatory tariff shifts precipitated an industry-wide consolidation.",
+            "synonyms": [
+                "instigate",
+                "catalyze",
+                "spark",
+                "hasten"
+            ],
+            "antonyms": [
+                "forestall",
+                "delay",
+                "impede"
+            ],
+            "root_prefix_suffix": "Latin 'praecipitare' (to cast down headlong)",
+            "common_confusion": "As a verb: to trigger; as an adjective: hasty or rash. Both appear on GMAT.",
+            "memory_aid": "PRECIPICE: pushed over a precipice suddenly.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-011"
+        },
+        {
+            "word": "commensurate",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Corresponding in size, extent, amount, or degree; proportionate.",
+            "contextual_meaning": "Equitably balanced in proportion to input, effort, or risk.",
+            "example_sentence": "Executive bonuses should be commensurate with verifiable long-term value creation.",
+            "business_example": "High-yield bond yields must remain commensurate with their underlying default risk.",
+            "synonyms": [
+                "proportionate",
+                "equivalent",
+                "commensurable",
+                "consistent"
+            ],
+            "antonyms": [
+                "disproportionate",
+                "incommensurate",
+                "disparate"
+            ],
+            "root_prefix_suffix": "Latin 'com-' (with) + 'mensurare' (to measure)",
+            "common_confusion": "Commensurate means proportionate in scale, not identical in nature.",
+            "memory_aid": "CO-MEASURE: measured together so they correspond properly.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-012"
+        },
+        {
+            "word": "disparate",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Essentially different in kind; not allowing comparison.",
+            "contextual_meaning": "Divergent or fundamentally distinct components.",
+            "example_sentence": "The scholar synthesized disparate strands of sociological and economic research.",
+            "business_example": "Integrating the disparate IT architectures of the acquired subsidiaries took eighteen months.",
+            "synonyms": [
+                "divergent",
+                "heterogeneous",
+                "incompatible",
+                "distinct"
+            ],
+            "antonyms": [
+                "homogeneous",
+                "uniform",
+                "analogous"
+            ],
+            "root_prefix_suffix": "Latin 'disparatus' (separated)",
+            "common_confusion": "Do not confuse 'disparate' (different) with 'desperate' (hopeless).",
+            "memory_aid": "DIS-PAIR: items so different they cannot be paired together.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-013"
+        },
+        {
+            "word": "paradigm",
+            "part_of_speech": "noun",
+            "category": "Science & Methodology",
+            "definition": "A typical example, pattern, or overarching conceptual framework.",
+            "contextual_meaning": "The prevailing theoretical model that dictates how questions are framed.",
+            "example_sentence": "Kuhn argued that scientific revolutions occur when the reigning paradigm fails to explain persistent anomalies.",
+            "business_example": "Software-as-a-service established a recurring revenue paradigm that replaced perpetual licensing.",
+            "synonyms": [
+                "archetype",
+                "framework",
+                "prototype",
+                "benchmark"
+            ],
+            "antonyms": [
+                "aberration",
+                "deviation"
+            ],
+            "root_prefix_suffix": "Greek 'paradeigma' (pattern, exemplar)",
+            "common_confusion": "A paradigm is the complete interpretive model, not merely a single case study.",
+            "memory_aid": "PARA-DIME: the master mold/pattern for every dime.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-014"
+        },
+        {
+            "word": "catalyst",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A person or event that causes or accelerates change.",
+            "contextual_meaning": "An agent that initiates transformation without being exhausted in the process.",
+            "example_sentence": "Antitrust scrutiny proved to be the catalyst for the firm's strategic breakup.",
+            "business_example": "The introduction of generative AI acted as a catalyst for automated customer operations.",
+            "synonyms": [
+                "impetus",
+                "spark",
+                "stimulus",
+                "incitement"
+            ],
+            "antonyms": [
+                "deterrent",
+                "impediment",
+                "inhibitor"
+            ],
+            "root_prefix_suffix": "Greek 'katalyein' (to dissolve, loosen)",
+            "common_confusion": "In business passages, a catalyst prompts the event but doesn't necessarily dictate the final outcome.",
+            "memory_aid": "CATALYST: sparks the chemical reaction.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-015"
+        },
+        {
+            "word": "tenuous",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Very weak, slight, or flimsy; lacking a sound basis.",
+            "contextual_meaning": "Fragile causal link or questionable evidentiary foundation in an argument.",
+            "example_sentence": "The prosecution's argument relied on a tenuous link between the suspect and the offshore account.",
+            "business_example": "The startup's valuation rested on a tenuous assumption of 100% annual subscriber retention.",
+            "synonyms": [
+                "shaky",
+                "flimsy",
+                "fragile",
+                "insubstantial"
+            ],
+            "antonyms": [
+                "robust",
+                "substantive",
+                "unassailable"
+            ],
+            "root_prefix_suffix": "Latin 'tenuis' (thin, slender)",
+            "common_confusion": "Tenuous means weak/flimsy, not necessarily deliberate or deceptive.",
+            "memory_aid": "TEN-uous: stretched thin like a tendon to the breaking point.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-016"
+        },
+        {
+            "word": "pertinent",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Relevant or applicable to a particular matter; apposite.",
+            "contextual_meaning": "Material and directly germane to the conclusion under scrutiny.",
+            "example_sentence": "The auditor requested only documentation pertinent to the disputed tax filings.",
+            "business_example": "Due diligence teams filter out noise to isolate data pertinent to customer churn.",
+            "synonyms": [
+                "germane",
+                "apposite",
+                "material",
+                "relevant"
+            ],
+            "antonyms": [
+                "extraneous",
+                "immaterial",
+                "irrelevant"
+            ],
+            "root_prefix_suffix": "Latin 'pertinere' (to pertain, belong to)",
+            "common_confusion": "Pertinent means directly material; interesting background details are not pertinent.",
+            "memory_aid": "PERTAIN-ent: directly pertains to the question at hand.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-017"
+        },
+        {
+            "word": "ambiguous",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Open to more than one interpretation; having a double or unclear meaning.",
+            "contextual_meaning": "Lacking precision, leading to multiple divergent interpretations.",
+            "example_sentence": "The ambiguous survey question made it impossible to determine consumer preference.",
+            "business_example": "Ambiguous warranty provisions created extensive product liability exposure.",
+            "synonyms": [
+                "equivocal",
+                "vague",
+                "opaque",
+                "indeterminate"
+            ],
+            "antonyms": [
+                "unambiguous",
+                "lucid",
+                "unequivocal",
+                "explicit"
+            ],
+            "root_prefix_suffix": "Latin 'ambiguus' (doubtful, going two ways)",
+            "common_confusion": "Ambiguous means unclear in meaning; ambivalent means having conflicting feelings.",
+            "memory_aid": "AMBI (both): pointing in both directions at once.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-018"
+        },
+        {
+            "word": "circumvent",
+            "part_of_speech": "verb",
+            "category": "Business & Economics",
+            "definition": "To find a way around an obstacle or rule, especially by ingenuity or strategy.",
+            "contextual_meaning": "To bypass constraints through procedural loopholes rather than addressing them.",
+            "example_sentence": "Importers attempted to circumvent the tariff by routing shipments through third countries.",
+            "business_example": "Fintech lenders circumvented conventional capital reserve rules by partnering with community banks.",
+            "synonyms": [
+                "bypass",
+                "evade",
+                "sidestep",
+                "skirt"
+            ],
+            "antonyms": [
+                "confront",
+                "adhere",
+                "comply"
+            ],
+            "root_prefix_suffix": "Latin 'circum' (around) + 'venire' (to come)",
+            "common_confusion": "Circumvent implies clever avoidance, not open defiance or confrontation.",
+            "memory_aid": "CIRCUM-VENT: to circle around an obstacle.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-019"
+        },
+        {
+            "word": "substantiate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To provide evidence to support or prove the truth of a claim.",
+            "contextual_meaning": "To back up an assertion with solid facts, data, or documentation.",
+            "example_sentence": "The researcher failed to substantiate the assertion that the new drug reduced hospital stays.",
+            "business_example": "The marketing department must substantiate all claims regarding energy efficiency before ad publication.",
+            "synonyms": [
+                "corroborate",
+                "validate",
+                "authenticate",
+                "verify"
+            ],
+            "antonyms": [
+                "disprove",
+                "refute",
+                "undermine"
+            ],
+            "root_prefix_suffix": "Latin 'substantia' (substance, essence)",
+            "common_confusion": "An assertion without evidence is unproven; only evidence can substantiate it.",
+            "memory_aid": "SUBSTANCE-iate: give tangible substance to an argument.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-020"
+        },
+        {
+            "word": "analogous",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Comparable in certain respects, typically in a way that makes clearer the nature of the things compared.",
+            "contextual_meaning": "Displaying parallel functional relationships across different contexts.",
+            "example_sentence": "The brain's neural network is analogous to a distributed computational grid.",
+            "business_example": "The firm argued its ride-sharing service was analogous to software brokerage, not transport.",
+            "synonyms": [
+                "comparable",
+                "parallel",
+                "cognate",
+                "equivalent"
+            ],
+            "antonyms": [
+                "disparate",
+                "incommensurable",
+                "heterogeneous"
+            ],
+            "root_prefix_suffix": "Greek 'analogos' (proportionate)",
+            "common_confusion": "Analogous items share a structural parallel, but are not identical.",
+            "memory_aid": "ANALOGY: shares an underlying structural analogy.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-021"
+        },
+        {
+            "word": "preclude",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To prevent from happening; to make impossible.",
+            "contextual_meaning": "To definitively rule out an outcome or alternative explanation in advance.",
+            "example_sentence": "The existence of a signed non-disclosure agreement precluded the former executive from testifying.",
+            "business_example": "Exclusive supplier covenants preclude rivals from securing domestic titanium supplies.",
+            "synonyms": [
+                "forestall",
+                "prohibit",
+                "prevent",
+                "rule out"
+            ],
+            "antonyms": [
+                "facilitate",
+                "permit",
+                "enable"
+            ],
+            "root_prefix_suffix": "Latin 'praecludere' (to shut off in advance)",
+            "common_confusion": "Preclude means to make impossible, not merely to hinder or make difficult.",
+            "memory_aid": "PRE-CLOSE: to close the door in advance.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-022"
+        },
+        {
+            "word": "volatile",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Liable to change rapidly and unpredictably, especially for the worse.",
+            "contextual_meaning": "Subject to high-amplitude swings or precarious instability.",
+            "example_sentence": "Commodity markets grew increasingly volatile in response to geopolitical embargoes.",
+            "business_example": "Early-stage venture investments present volatile quarterly valuations.",
+            "synonyms": [
+                "erratic",
+                "capricious",
+                "turbulent",
+                "fluctuating"
+            ],
+            "antonyms": [
+                "stable",
+                "equable",
+                "constant"
+            ],
+            "root_prefix_suffix": "Latin 'volare' (to fly)",
+            "common_confusion": "Volatile describes instability and variability, not necessarily terminal decline.",
+            "memory_aid": "VOLATILE: prices fly up and down unpredictably.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-023"
+        },
+        {
+            "word": "alleviate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make suffering, a deficiency, or a problem less severe.",
+            "contextual_meaning": "To reduce the magnitude of a negative pressure.",
+            "example_sentence": "Tax abatements alleviated the financial strain facing nascent green-energy manufacturers.",
+            "business_example": "Implementing robotic automation alleviated severe labor shortages in warehousing.",
+            "synonyms": [
+                "assuage",
+                "palliate",
+                "mitigate",
+                "ease"
+            ],
+            "antonyms": [
+                "exacerbate",
+                "intensify",
+                "aggravate"
+            ],
+            "root_prefix_suffix": "Latin 'alleviare' (to lighten, from levis = light)",
+            "common_confusion": "Alleviate means to lighten a burden, not to eradicate the root cause completely.",
+            "memory_aid": "LEVITATE/LIGHTEN: lifts part of the heavy burden off.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-024"
+        },
+        {
+            "word": "conjecture",
+            "part_of_speech": "noun",
+            "category": "Argumentation & Logic",
+            "definition": "An opinion or conclusion formed on the basis of incomplete information.",
+            "contextual_meaning": "An unverified speculation or hypothesis lacking definitive evidence.",
+            "example_sentence": "Without primary documentation, the historian's attribution remains pure conjecture.",
+            "business_example": "Market forecasts regarding competitor product roadmaps are largely educated conjecture.",
+            "synonyms": [
+                "speculation",
+                "surmise",
+                "hypothesis",
+                "presumption"
+            ],
+            "antonyms": [
+                "fact",
+                "certainty",
+                "proof"
+            ],
+            "root_prefix_suffix": "Latin 'con-' (together) + 'jacere' (to throw)",
+            "common_confusion": "A conjecture is an unsubstantiated guess; a proven conclusion is substantiated.",
+            "memory_aid": "THROWN TOGETHER: throwing ideas together without evidence.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-025"
+        },
+        {
+            "word": "feasible",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Possible and practical to do easily or conveniently.",
+            "contextual_meaning": "Practically viable under existing technological, operational, or budget constraints.",
+            "example_sentence": "Engineers proved that carbon capture at scale is technically feasible with current scrubbers.",
+            "business_example": "The merger is commercially feasible only if regulatory divestitures remain modest.",
+            "synonyms": [
+                "viable",
+                "practicable",
+                "workable",
+                "achievable"
+            ],
+            "antonyms": [
+                "unfeasible",
+                "impracticable",
+                "quixotic"
+            ],
+            "root_prefix_suffix": "Latin 'facere' (to do, make)",
+            "common_confusion": "Feasible means practically achievable, not just conceptually conceivable.",
+            "memory_aid": "FEASIBLE: able to be realized (factum/facere).",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-026"
+        },
+        {
+            "word": "scrutinize",
+            "part_of_speech": "verb",
+            "category": "Author Tone & Attitude",
+            "definition": "To examine or inspect closely and thoroughly.",
+            "contextual_meaning": "To subject an argument, proposal, or dataset to rigorous critical testing.",
+            "example_sentence": "Peer reviewers scrutinized the clinical trial data for omitted secondary outcomes.",
+            "business_example": "Shareholder advisory firms scrutinized the compensation committee's incentive thresholds.",
+            "synonyms": [
+                "inspect",
+                "dissect",
+                "interrogate",
+                "audit"
+            ],
+            "antonyms": [
+                "skim",
+                "gloss over",
+                "disregard"
+            ],
+            "root_prefix_suffix": "Latin 'scrutinium' (search, inquiry)",
+            "common_confusion": "Scrutinize implies intense, thorough analysis, not mere casual inspection.",
+            "memory_aid": "SCRUTINY: putting under a microscope.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-027"
+        },
+        {
+            "word": "unprecedented",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Never done or known before; without previous example.",
+            "contextual_meaning": "Novel phenomenon with no established historical benchmark.",
+            "example_sentence": "The pandemic triggered an unprecedented cessation of international travel.",
+            "business_example": "The antitrust decree imposed unprecedented operational restrictions on the tech titan.",
+            "synonyms": [
+                "unparalleled",
+                "novel",
+                "unmatched",
+                "singular"
+            ],
+            "antonyms": [
+                "precedented",
+                "conventional",
+                "commonplace"
+            ],
+            "root_prefix_suffix": "Prefix 'un-' + 'precedent' (prior legal/historical case)",
+            "common_confusion": "Unprecedented means strictly without precedent, not just unusual or large.",
+            "memory_aid": "NO PRECEDENT: no historical example exists.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-028"
+        },
+        {
+            "word": "ameliorate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make something bad, unsatisfactory, or deficient better.",
+            "contextual_meaning": "To improve a negative status quo or remedy a flawed condition.",
+            "example_sentence": "Targeted microloans ameliorated poverty rates in rural provinces.",
+            "business_example": "Revising ergonomics in assembly plants ameliorated repetitive stress injuries.",
+            "synonyms": [
+                "improve",
+                "better",
+                "upgrade",
+                "remedy"
+            ],
+            "antonyms": [
+                "worsen",
+                "deteriorate",
+                "exacerbate"
+            ],
+            "root_prefix_suffix": "Latin 'melior' (better)",
+            "common_confusion": "Ameliorate applies specifically to improving something that is defective or painful.",
+            "memory_aid": "MELIOR = better (like Spanish 'mejor').",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-029"
+        },
+        {
+            "word": "cogent",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Clear, logical, and convincing.",
+            "contextual_meaning": "Possessing compelling rational validity and sound internal structure.",
+            "example_sentence": "The defense attorney constructed a cogent narrative explaining the defendant's absence.",
+            "business_example": "Management presented a cogent economic rationale for entering sovereign bond trading.",
+            "synonyms": [
+                "compelling",
+                "lucid",
+                "persuasive",
+                "unassailable"
+            ],
+            "antonyms": [
+                "specious",
+                "unconvincing",
+                "fallacious"
+            ],
+            "root_prefix_suffix": "Latin 'cogere' (to compel, drive together)",
+            "common_confusion": "Cogent implies persuasive through logic, not merely loud or passionate.",
+            "memory_aid": "COGENT: compels agreement through rigorous logic.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-030"
+        },
+        {
+            "word": "equivocal",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Open to more than one interpretation; ambiguous; uncertain.",
+            "contextual_meaning": "Deliberately vague or having dual meanings that weaken logical precision.",
+            "example_sentence": "The audit report contained equivocal assessments that neither confirmed nor refuted the allegations.",
+            "business_example": "The executive gave equivocal forward guidance, refusing to commit to margin targets.",
+            "synonyms": [
+                "ambiguous",
+                "evasive",
+                "indeterminate",
+                "opaque"
+            ],
+            "antonyms": [
+                "unequivocal",
+                "explicit",
+                "definitive"
+            ],
+            "root_prefix_suffix": "Latin 'aequus' (equal) + 'vox' (voice)",
+            "common_confusion": "GMAT trap: Equivocation fallacy is when a key term shifts meaning mid-argument.",
+            "memory_aid": "EQUAL VOICES: speaking with two equal, contradictory voices.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-031"
+        },
+        {
+            "word": "qualify",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make a statement or assertion less absolute; to add reservations or limits.",
+            "contextual_meaning": "CRUCIAL GMAT MEANING: To restrict, narrow, or soften an author's claim.",
+            "example_sentence": "The author qualifies her endorsement by noting that the policy succeeded only in small economies.",
+            "business_example": "The analyst qualified his revenue forecast by warning that raw material prices could spike.",
+            "synonyms": [
+                "restrict",
+                "limit",
+                "moderate",
+                "delimit"
+            ],
+            "antonyms": [
+                "state categorically",
+                "generalize",
+                "broaden"
+            ],
+            "root_prefix_suffix": "Latin 'qualis' (of what kind) + 'facere' (to make)",
+            "common_confusion": "GMAT TRAP: 'Qualify' does NOT mean 'meet requirements' here; it means 'to restrict a claim.'",
+            "memory_aid": "QUALIFY A CLAIM: adds a caveat so it isn't an absolute 100% assertion.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-032"
+        },
+        {
+            "word": "discount",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To regard a possibility, fact, or claim as being unworthy of consideration or exaggerated.",
+            "contextual_meaning": "CRUCIAL GMAT MEANING: To dismiss or disregard evidence as irrelevant or untrustworthy.",
+            "example_sentence": "The study discounted the initial clinical trials due to small cohort sizes.",
+            "business_example": "Institutional investors discounted the earnings beat because it came entirely from asset liquidations.",
+            "synonyms": [
+                "dismiss",
+                "disregard",
+                "reject",
+                "downplay"
+            ],
+            "antonyms": [
+                "credit",
+                "validate",
+                "account for"
+            ],
+            "root_prefix_suffix": "Prefix 'dis-' + 'count' (consider)",
+            "common_confusion": "GMAT TRAP: 'Discount' does NOT mean price reduction here; it means 'to dismiss or ignore.'",
+            "memory_aid": "DIS-COUNT: count it out, refuse to take it into account.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-033"
+        },
+        {
+            "word": "specious",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Superficially plausible, but actually wrong, deceptive, or fallacious.",
+            "contextual_meaning": "An argument that looks appealing on the surface but collapses under logical scrutiny.",
+            "example_sentence": "The economist exposed the specious reasoning linking currency depreciation to wage gains.",
+            "business_example": "The vendor's specious cost-benefit estimates ignored vital implementation overhead.",
+            "synonyms": [
+                "fallacious",
+                "spurious",
+                "misleading",
+                "sophistic"
+            ],
+            "antonyms": [
+                "cogent",
+                "sound",
+                "valid",
+                "rigorous"
+            ],
+            "root_prefix_suffix": "Latin 'species' (outward appearance)",
+            "common_confusion": "Specious arguments are attractive on the outside but logically flawed upon inspection.",
+            "memory_aid": "SPECIOUS: looks SUSPICIOUSLY appealing on the surface.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-034"
+        },
+        {
+            "word": "belie",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To fail to give a true notion or impression of; to disguise or contradict.",
+            "contextual_meaning": "To stand in direct contradiction with an outward appearance or stated claim.",
+            "example_sentence": "The firm's public optimism belied the internal crisis revealed in executive memos.",
+            "business_example": "Robust headline sales growth belied catastrophic declines in operating cash flows.",
+            "synonyms": [
+                "contradict",
+                "disprove",
+                "negate",
+                "unmask"
+            ],
+            "antonyms": [
+                "corroborate",
+                "affirm",
+                "attest"
+            ],
+            "root_prefix_suffix": "Old English 'beleogan' (to deceive by lies)",
+            "common_confusion": "Belie always signals a sharp contradiction between facade and reality.",
+            "memory_aid": "BE-LIE: reality gives the LIE to the facade.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-035"
+        },
+        {
+            "word": "untenable",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Not able to be maintained or defended against attack or objection.",
+            "contextual_meaning": "A position, hypothesis, or policy that has become impossible to justify.",
+            "example_sentence": "Once the third counterexample was published, the author's primary hypothesis became untenable.",
+            "business_example": "The firm's predatory pricing model proved untenable after regulatory antitrust injunctions.",
+            "synonyms": [
+                "indefensible",
+                "unsustainable",
+                "flawed",
+                "unjustifiable"
+            ],
+            "antonyms": [
+                "tenable",
+                "defensible",
+                "unassailable"
+            ],
+            "root_prefix_suffix": "Latin 'tenere' (to hold) + prefix 'un-'",
+            "common_confusion": "Untenable refers to the impossibility of defending an intellectual or strategic position.",
+            "memory_aid": "UN-TEN-ABLE: cannot be HELD (tenere) against scrutiny.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-036"
+        },
+        {
+            "word": "tacit",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Understood or implied without being stated directly.",
+            "contextual_meaning": "Unspoken premise or unstated assumption upon which a GMAT argument rests.",
+            "example_sentence": "The conclusion depends on the tacit assumption that commuter routes will remain unchanged.",
+            "business_example": "The airlines operated under a tacit understanding not to ignite price wars on hub routes.",
+            "synonyms": [
+                "implicit",
+                "unstated",
+                "inferred",
+                "unspoken"
+            ],
+            "antonyms": [
+                "explicit",
+                "stated",
+                "overt"
+            ],
+            "root_prefix_suffix": "Latin 'tacitus' (silent)",
+            "common_confusion": "Tacit assumptions are foundational to GMAT assumption questions; they must be true for conclusion to hold.",
+            "memory_aid": "TACIT = TACITURN = silent, unspoken.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-037"
+        },
+        {
+            "word": "vitiate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To spoil or impair the quality or efficiency of; to invalidate or make legally defective.",
+            "contextual_meaning": "To fatally undermine the validity of an argument or dataset.",
+            "example_sentence": "Self-selection bias vitiated the study's conclusions regarding the efficacy of wellness programs.",
+            "business_example": "Failing to disclose conflicting board interests vitiated the shareholder proxy agreement.",
+            "synonyms": [
+                "invalidate",
+                "undermine",
+                "nullify",
+                "corrupt"
+            ],
+            "antonyms": [
+                "validate",
+                "substantiate",
+                "strengthen"
+            ],
+            "root_prefix_suffix": "Latin 'vitium' (fault, vice)",
+            "common_confusion": "Vitiate means to fatally taint or invalidate, not merely to weaken slightly.",
+            "memory_aid": "VITIATE: infects with a vice that destroys validity.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-038"
+        },
+        {
+            "word": "postulate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To suggest or assume the existence, fact, or truth of something as a basis for reasoning.",
+            "contextual_meaning": "To set forth a foundational premise without requiring empirical proof.",
+            "example_sentence": "Classical economic theory postulates that rational agents seek to maximize utility.",
+            "business_example": "The investment thesis postulates sustained secular growth in renewable storage technologies.",
+            "synonyms": [
+                "posit",
+                "hypothesize",
+                "premise",
+                "presuppose"
+            ],
+            "antonyms": [
+                "disprove",
+                "refute"
+            ],
+            "root_prefix_suffix": "Latin 'postulare' (to demand, claim)",
+            "common_confusion": "Postulate is a starting assumption, not an empirically observed fact.",
+            "memory_aid": "POSTULATE: to POSIT a foundational rule.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-039"
+        },
+        {
+            "word": "fallacious",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Based on a mistaken belief, unsound reasoning, or logical fallacy.",
+            "contextual_meaning": "Exhibiting an error in formal logic (e.g. confusing correlation with causation).",
+            "example_sentence": "The argument commits a fallacious leap by equating price with underlying manufacturing cost.",
+            "business_example": "The sunk cost fallacy leads managers to make fallacious capital allocation decisions.",
+            "synonyms": [
+                "illogical",
+                "specious",
+                "flawed",
+                "erroneous"
+            ],
+            "antonyms": [
+                "cogent",
+                "sound",
+                "valid"
+            ],
+            "root_prefix_suffix": "Latin 'fallacia' (deceit, trick)",
+            "common_confusion": "Fallacious refers to structural flaws in logic, even if the final statement happens to be true.",
+            "memory_aid": "FALLACY: an argument that FALLS down.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-040"
+        },
+        {
+            "word": "concede",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To admit that something is true or valid after first denying or resisting it.",
+            "contextual_meaning": "To grant a counterpoint or acknowledge an opponent's valid premise.",
+            "example_sentence": "The author concedes that the reform may generate short-term unemployment before creating new roles.",
+            "business_example": "Negotiators conceded on governance terms in exchange for favorable valuation ratios.",
+            "synonyms": [
+                "acknowledge",
+                "admit",
+                "grant",
+                "yield"
+            ],
+            "antonyms": [
+                "dispute",
+                "refute",
+                "deny"
+            ],
+            "root_prefix_suffix": "Latin 'concedere' (to yield, give way)",
+            "common_confusion": "Conceding a minor point does not mean abandoning the main conclusion.",
+            "memory_aid": "CONCESSION: yielding ground gracefully.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-041"
+        },
+        {
+            "word": "caveat",
+            "part_of_speech": "noun",
+            "category": "Argumentation & Logic",
+            "definition": "A warning or proviso of specific stipulations, conditions, or limitations.",
+            "contextual_meaning": "A critical qualification that restricts when a general rule or finding applies.",
+            "example_sentence": "The researchers endorsed the model with the caveat that it requires high-frequency data inputs.",
+            "business_example": "The buyout offer included the caveat that key engineering personnel must remain for two years.",
+            "synonyms": [
+                "stipulation",
+                "proviso",
+                "qualification",
+                "reservation"
+            ],
+            "antonyms": [
+                "blanket endorsement",
+                "unconditional guarantee"
+            ],
+            "root_prefix_suffix": "Latin 'cavere' (to beware)",
+            "common_confusion": "A caveat sets boundaries; it does not negate the finding entirely.",
+            "memory_aid": "CAVEAT EMPTOR: buyer beware; warning attached.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-042"
+        },
+        {
+            "word": "extrapolate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To extend the application of a conclusion or method to an unknown situation by assuming that existing trends will continue.",
+            "contextual_meaning": "To project a observed finding into a new domain; frequently flawed on the GMAT.",
+            "example_sentence": "The author inappropriately extrapolates findings from small laboratory rats to complex human societies.",
+            "business_example": "Extrapolating holiday quarterly sales across the entire fiscal year distorts budget forecasts.",
+            "synonyms": [
+                "project",
+                "deduce",
+                "generalize",
+                "infer"
+            ],
+            "antonyms": [
+                "isolate",
+                "delimit"
+            ],
+            "root_prefix_suffix": "Prefix 'extra-' (outside) + 'polare' (to smooth/project)",
+            "common_confusion": "Extrapolation often introduces logical vulnerabilities when context differs.",
+            "memory_aid": "EXTRA-POLATE: projecting outside the known data.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-043"
+        },
+        {
+            "word": "delineate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To describe or portray something precisely; to indicate the exact position of a border.",
+            "contextual_meaning": "To mark clear distinctions between categories, roles, or concepts.",
+            "example_sentence": "The first paragraph delineates the boundary between fiscal policy and monetary stimulus.",
+            "business_example": "The partnership agreement clearly delineates the operational authority of each founding partner.",
+            "synonyms": [
+                "demarcate",
+                "outline",
+                "define",
+                "detail"
+            ],
+            "antonyms": [
+                "conflate",
+                "blur",
+                "obscure"
+            ],
+            "root_prefix_suffix": "Latin 'delineare' (to sketch out, from linea = line)",
+            "common_confusion": "Delineating requires precise boundary-drawing, not vague summarization.",
+            "memory_aid": "DE-LINE-ATE: drawing exact lines.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-044"
+        },
+        {
+            "word": "nuance",
+            "part_of_speech": "noun",
+            "category": "Argumentation & Logic",
+            "definition": "A subtle distinction or variation in meaning, tone, or argument.",
+            "contextual_meaning": "A fine-grained distinction that separates a sophisticated argument from a blunt oversimplification.",
+            "example_sentence": "The critical review appreciates the nuance in the author's analysis of colonial trade tariffs.",
+            "business_example": "Global marketing campaigns must account for cultural nuances in brand perception.",
+            "synonyms": [
+                "subtlety",
+                "gradation",
+                "refinement",
+                "shade"
+            ],
+            "antonyms": [
+                "bluntness",
+                "oversimplification"
+            ],
+            "root_prefix_suffix": "French 'nuance' (shade of color, from nuer = to shade)",
+            "common_confusion": "GMAT correct answers frequently reward detecting nuance over extreme absolute statements.",
+            "memory_aid": "NUANCE: a delicate, subtle shade of meaning.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-045"
+        },
+        {
+            "word": "conflate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To combine two or more distinct concepts, texts, or ideas into one, often erroneously.",
+            "contextual_meaning": "To mistake two different things for the same phenomenon; a classic GMAT reasoning flaw.",
+            "example_sentence": "The argument conflates liquidity with long-term solvency.",
+            "business_example": "Marketing metrics often conflate customer website visits with authentic purchase intent.",
+            "synonyms": [
+                "confuse",
+                "merge",
+                "blend",
+                "amalgamate"
+            ],
+            "antonyms": [
+                "differentiate",
+                "distinguish",
+                "disentangle"
+            ],
+            "root_prefix_suffix": "Latin 'conflare' (to blow together, fuse)",
+            "common_confusion": "Conflating ideas means failing to recognize their critical legal or logical differences.",
+            "memory_aid": "CON-FLATE: blowing two things together into one messy balloon.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-046"
+        },
+        {
+            "word": "tautological",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Needlessly repetitive; involving circular reasoning where the premise assumes the conclusion.",
+            "contextual_meaning": "Circular reasoning that proves nothing because it restates the premise as the conclusion.",
+            "example_sentence": "The statement that 'free markets succeed because they are competitive' is essentially tautological.",
+            "business_example": "Defining a successful product as 'one that consumers desire' is a tautological market analysis.",
+            "synonyms": [
+                "circular",
+                "redundant",
+                "pleonastic",
+                "self-referential"
+            ],
+            "antonyms": [
+                "substantive",
+                "informative",
+                "deductive"
+            ],
+            "root_prefix_suffix": "Greek 'tauto' (the same) + 'logos' (word, reason)",
+            "common_confusion": "A tautology is circular and gives zero new proof; it simply rephrases itself.",
+            "memory_aid": "TAUTO-LOGICAL: the same thing repeated as logic.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-047"
+        },
+        {
+            "word": "reconcile",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To make two seemingly contradictory findings, statements, or beliefs consistent with each other.",
+            "contextual_meaning": "The core task in GMAT 'Resolve the Paradox' questions: finding an explanation that harmonizes two conflicting facts.",
+            "example_sentence": "The second paragraph attempts to reconcile declining retail sales with rising corporate profits.",
+            "business_example": "Auditors reconciled the discrepancy between the physical inventory count and ERP ledger records.",
+            "synonyms": [
+                "harmonize",
+                "accommodate",
+                "resolve",
+                "synthesize"
+            ],
+            "antonyms": [
+                "contradict",
+                "polarize",
+                "oppose"
+            ],
+            "root_prefix_suffix": "Latin 'reconciliare' (to bring back together)",
+            "common_confusion": "Reconciling does not mean proving one fact wrong; both facts remain true once reconciled.",
+            "memory_aid": "RECONCILE: bring two conflicting facts into peaceful agreement.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-048"
+        },
+        {
+            "word": "obviate",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To remove a need or difficulty; to make unnecessary.",
+            "contextual_meaning": "To render a procedural step, objection, or requirement completely superfluous.",
+            "example_sentence": "Direct API integration obviated the need for manual batch reconciliation.",
+            "business_example": "Pre-funded escrow accounts obviated counterparty risk during overseas acquisitions.",
+            "synonyms": [
+                "preclude",
+                "eliminate",
+                "render unnecessary",
+                "forestall"
+            ],
+            "antonyms": [
+                "necessitate",
+                "require",
+                "mandate"
+            ],
+            "root_prefix_suffix": "Latin 'obviare' (to act in opposition, meet in the way)",
+            "common_confusion": "Obviate means to eliminate the need for something, not to destroy it violently.",
+            "memory_aid": "OBVIATE: makes something unnecessary or obsolete.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-049"
+        },
+        {
+            "word": "preempt",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To take action in order to prevent an anticipated event from happening; forestall.",
+            "contextual_meaning": "To neutralize a counterargument or competitive threat before it occurs.",
+            "example_sentence": "The author preempts potential criticisms by acknowledging methodological limitations early.",
+            "business_example": "The brand preempted a rival's entry by locking down long-term retail exclusivity.",
+            "synonyms": [
+                "forestall",
+                "anticipate",
+                "head off",
+                "preclude"
+            ],
+            "antonyms": [
+                "react to",
+                "succumb to"
+            ],
+            "root_prefix_suffix": "Latin 'praeemere' (to buy beforehand)",
+            "common_confusion": "Preemption is proactive prevention; reaction happens after the event.",
+            "memory_aid": "PRE-EMPT: buying out the option early to forestall others.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-050"
+        },
+        {
+            "word": "contingent",
+            "part_of_speech": "adjective",
+            "category": "Argumentation & Logic",
+            "definition": "Subject to chance; dependent on conditions that are not yet certain.",
+            "contextual_meaning": "A conclusion or outcome that holds true only under specific stipulations.",
+            "example_sentence": "The success of the proposed tariff regime is contingent upon partner nations not retaliating.",
+            "business_example": "The payout structure is contingent on achieving a minimum 15% return on invested capital.",
+            "synonyms": [
+                "conditional",
+                "dependent",
+                "qualified",
+                "provisional"
+            ],
+            "antonyms": [
+                "unconditional",
+                "absolute",
+                "deterministic"
+            ],
+            "root_prefix_suffix": "Latin 'contingere' (to touch, happen)",
+            "common_confusion": "If a claim is contingent, treating it as absolute is a critical reasoning flaw.",
+            "memory_aid": "CONTINGENT: depends upon 'if-then' conditions.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-051"
+        },
+        {
+            "word": "bolster",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To support or strengthen; to prop up.",
+            "contextual_meaning": "To provide evidence that increases the plausibility of a conclusion (Strengthen question target).",
+            "example_sentence": "The newly discovered financial ledgers bolstered the argument that the company was solvent.",
+            "business_example": "Securing sovereign wealth fund backing bolstered investor confidence before the IPO.",
+            "synonyms": [
+                "buttress",
+                "reinforce",
+                "fortify",
+                "substantiate"
+            ],
+            "antonyms": [
+                "undermine",
+                "weaken",
+                "vitiate"
+            ],
+            "root_prefix_suffix": "Old English 'bolster' (cushion, support)",
+            "common_confusion": "Bolstering an argument does not make it 100% proven; it makes the conclusion more plausible.",
+            "memory_aid": "BOLSTER: like a supportive bolster cushion for an argument.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-052"
+        },
+        {
+            "word": "undermine",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To lessen the effectiveness, power, or ability of, especially gradually or insidiously.",
+            "contextual_meaning": "To introduce counter-evidence that exposes an unstated vulnerability (Weaken question target).",
+            "example_sentence": "The revelation of biased sampling undermined the credibility of the demographic study.",
+            "business_example": "Counterfeit products sold on unauthorized marketplaces undermined the brand's pricing power.",
+            "synonyms": [
+                "subvert",
+                "weaken",
+                "erode",
+                "compromise"
+            ],
+            "antonyms": [
+                "bolster",
+                "buttress",
+                "reinforce"
+            ],
+            "root_prefix_suffix": "Prefix 'under-' + 'mine' (to dig underneath)",
+            "common_confusion": "Undermining an argument means reducing its plausibility, not necessarily proving it totally impossible.",
+            "memory_aid": "UNDER-MINE: digging away the foundation underneath.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-053"
+        },
+        {
+            "word": "disparage",
+            "part_of_speech": "verb",
+            "category": "Author Tone & Attitude",
+            "definition": "To regard or represent as being of little worth; to belittle.",
+            "contextual_meaning": "Expressing contempt or dismissal toward a rival theory or school of thought.",
+            "example_sentence": "The classical economist disparaged behavioral models as irrational psychological novelties.",
+            "business_example": "Established telecom operators disparaged early VoIP technologies before adopting them.",
+            "synonyms": [
+                "belittle",
+                "denigrate",
+                "deprecate",
+                "deride"
+            ],
+            "antonyms": [
+                "extol",
+                "laud",
+                "praise",
+                "venerate"
+            ],
+            "root_prefix_suffix": "Old French 'desparagier' (to marry beneath one's rank)",
+            "common_confusion": "Disparaging is active belittling, stronger than merely disagreeing.",
+            "memory_aid": "DISPARAGE: treating with disdain and low regard.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-054"
+        },
+        {
+            "word": "rationalize",
+            "part_of_speech": "verb",
+            "category": "Argumentation & Logic",
+            "definition": "To attempt to explain or justify a behavior or attitude with logical reasons, even if these are not appropriate.",
+            "contextual_meaning": "Creating an ex-post logical defense for a flawed outcome; or streamlining operations in business.",
+            "example_sentence": "Management rationalized the market share loss by pointing to temporary macroeconomic tailwinds.",
+            "business_example": "The conglomerate rationalized its subsidiary portfolio by divesting non-core assets.",
+            "synonyms": [
+                "justify",
+                "defend",
+                "streamline",
+                "explain away"
+            ],
+            "antonyms": [
+                "admit fault",
+                "concede error"
+            ],
+            "root_prefix_suffix": "Latin 'rationalis' (of reason)",
+            "common_confusion": "In critical reasoning, rationalizing often describes defensive, motivated reasoning.",
+            "memory_aid": "RATIONALIZE: inventing 'rational' excuses.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-055"
+        },
+        {
+            "word": "ambivalent",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Having mixed feelings or contradictory ideas about something or someone.",
+            "contextual_meaning": "GMAT TONE FAVORITE: Recognizing both genuine merits and serious flaws simultaneously.",
+            "example_sentence": "The author remains ambivalent toward industrial automation, praising its output while decrying its labor displacements.",
+            "business_example": "Board members were ambivalent about the private equity takeover bid.",
+            "synonyms": [
+                "conflicted",
+                "equivocal",
+                "undecided",
+                "vacillating"
+            ],
+            "antonyms": [
+                "resolute",
+                "unequivocal",
+                "decisive"
+            ],
+            "root_prefix_suffix": "Latin 'ambi-' (both) + 'valere' (to be strong)",
+            "common_confusion": "Ambivalent means pulled strongly in both directions; indifferent means caring about neither.",
+            "memory_aid": "BOTH STRONG: both sides have strong emotional pull.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-056"
+        },
+        {
+            "word": "guarded",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Cautious and having possible reservations; not giving away much information.",
+            "contextual_meaning": "GMAT TONE FAVORITE: 'Guarded optimism' means hoping for success while maintaining strict caution.",
+            "example_sentence": "The author expresses guarded optimism regarding the experimental solar cells.",
+            "business_example": "The CFO provided guarded projections given ongoing currency volatility.",
+            "synonyms": [
+                "circumspect",
+                "cautious",
+                "tentative",
+                "hedged"
+            ],
+            "antonyms": [
+                "effusive",
+                "uninhibited",
+                "reckless"
+            ],
+            "root_prefix_suffix": "Old French 'garder' (to keep, preserve)",
+            "common_confusion": "Guarded is measured, balanced, and prudent; not entirely negative.",
+            "memory_aid": "GUARDED OPTIMISM: keeping your guard up even while hopeful.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-057"
+        },
+        {
+            "word": "skeptical",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Not easily convinced; having doubts or reservations.",
+            "contextual_meaning": "Demanding higher empirical standards before accepting a bold theoretical claim.",
+            "example_sentence": "The reviewer is skeptical of the claims that the new policy will eradicate income inequality.",
+            "business_example": "Venture partners remained skeptical of the founder's aggressive unit economics.",
+            "synonyms": [
+                "dubious",
+                "incredulous",
+                "disbelieving",
+                "scrutinizing"
+            ],
+            "antonyms": [
+                "credulous",
+                "convinced",
+                "gullible"
+            ],
+            "root_prefix_suffix": "Greek 'skeptikos' (inquiring, doubting)",
+            "common_confusion": "Skeptical authors demand better proof; cynical authors distrust all motives.",
+            "memory_aid": "SKEPTIC: needs to see the data first.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-058"
+        },
+        {
+            "word": "emphatic",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Expressing something forcibly and clearly.",
+            "contextual_meaning": "Unequivocal and strong conviction without hesitation.",
+            "example_sentence": "The scientist was emphatic that the fossil could not have originated in the Jurassic era.",
+            "business_example": "The chief executive issued an emphatic denial regarding rumors of an impending bankruptcy.",
+            "synonyms": [
+                "assertive",
+                "forceful",
+                "categorical",
+                "unequivocal"
+            ],
+            "antonyms": [
+                "tentative",
+                "hedged",
+                "equivocal"
+            ],
+            "root_prefix_suffix": "Greek 'emphase' (force of expression)",
+            "common_confusion": "GMAT tones are rarely purely emphatic unless the text uses unyielding categorical language.",
+            "memory_aid": "EMPHASIS: spoken with heavy, unambiguous emphasis.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-059"
+        },
+        {
+            "word": "indifferent",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Having no particular interest or sympathy; unconcerned.",
+            "contextual_meaning": "Neutral to the point of apathy; rarely the correct tone for an active academic passage.",
+            "example_sentence": "The regulatory agency remained indifferent to the complaints of small retailers.",
+            "business_example": "Consumers proved indifferent to the minor aesthetic packaging updates.",
+            "synonyms": [
+                "apathetic",
+                "unconcerned",
+                "nonchalant",
+                "disinterested"
+            ],
+            "antonyms": [
+                "passionate",
+                "concerned",
+                "invested"
+            ],
+            "root_prefix_suffix": "Prefix 'in-' (not) + 'different'",
+            "common_confusion": "GMAT trap: 'Indifferent' means not caring at all; 'disinterested' means impartial and unbiased.",
+            "memory_aid": "MAKES NO DIFFERENCE: the author doesn't care either way.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-060"
+        },
+        {
+            "word": "tentative",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Not certain or fixed; provisional; done without confidence.",
+            "contextual_meaning": "Advanced cautiously with the understanding that future evidence may alter the finding.",
+            "example_sentence": "The paleontologist offered a tentative classification pending genomic verification.",
+            "business_example": "The labor union and management reached a tentative agreement on pension indexing.",
+            "synonyms": [
+                "provisional",
+                "conjectural",
+                "exploratory",
+                "hedged"
+            ],
+            "antonyms": [
+                "definitive",
+                "conclusive",
+                "certain"
+            ],
+            "root_prefix_suffix": "Latin 'tentare' (to try, touch)",
+            "common_confusion": "Tentative conclusions are open to revision; they are not final declarations.",
+            "memory_aid": "TENTATIVE: like gingerly testing the temperature before stepping in.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-061"
+        },
+        {
+            "word": "candid",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Truthful and straightforward; frank.",
+            "contextual_meaning": "Direct and unvarnished appraisal without diplomatic evasion.",
+            "example_sentence": "The author provides a candid post-mortem of why the merger failed to achieve synergies.",
+            "business_example": "The chairman gave a candid assessment of the competitive headwinds facing the division.",
+            "synonyms": [
+                "frank",
+                "forthright",
+                "unfiltered",
+                "unreserved"
+            ],
+            "antonyms": [
+                "evasive",
+                "disingenuous",
+                "guarded"
+            ],
+            "root_prefix_suffix": "Latin 'candidus' (white, pure)",
+            "common_confusion": "Candid denotes honest clarity, not malice or cruelty.",
+            "memory_aid": "CANDID: pure, unvarnished honesty.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-062"
+        },
+        {
+            "word": "derisive",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Expressing contempt or ridicule; mocking.",
+            "contextual_meaning": "Contemptuous and dismissive; generally too extreme for scholarly GMAT authors.",
+            "example_sentence": "The editorial adopted a derisive tone toward claims that astrology could predict currency swings.",
+            "business_example": "The competitor made derisive remarks regarding the rival's delayed headset release.",
+            "synonyms": [
+                "scornful",
+                "mocking",
+                "disdainful",
+                "sarcastic"
+            ],
+            "antonyms": [
+                "respectful",
+                "deferential",
+                "reverent"
+            ],
+            "root_prefix_suffix": "Latin 'deridere' (to mock, laugh at)",
+            "common_confusion": "Derisive is harshly mocking. GMAT questions rarely have derisive authors unless explicitly satire.",
+            "memory_aid": "DERIDE: laughing down at someone with contempt.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-063"
+        },
+        {
+            "word": "deferential",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Showing humble submission and deep respect.",
+            "contextual_meaning": "Respectful of established intellectual authority or historical precedence.",
+            "example_sentence": "The young researcher was deferential toward the elder Nobel laureate's pioneering thesis.",
+            "business_example": "The foreign subsidiary was deferential to the parent board on capital expenditure decisions.",
+            "synonyms": [
+                "respectful",
+                "reverent",
+                "courteous",
+                "submissive"
+            ],
+            "antonyms": [
+                "insolent",
+                "disparaging",
+                "irreverent"
+            ],
+            "root_prefix_suffix": "Latin 'deferre' (to carry down, hand over)",
+            "common_confusion": "Deference implies respect, not intellectual cowardice.",
+            "memory_aid": "DEFER: deferring to someone's senior expertise.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-064"
+        },
+        {
+            "word": "prudent",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Acting with or showing care and thought for the future; discreet or cautious.",
+            "contextual_meaning": "GMAT FAVORITE: A measured, risk-aware perspective that avoids reckless over-commitment.",
+            "example_sentence": "The author concludes that a prudent approach requires phased implementation and active monitoring.",
+            "business_example": "Maintaining six months of operating runway proved a prudent liquidity strategy.",
+            "synonyms": [
+                "judicious",
+                "circumspect",
+                "sagacious",
+                "wary"
+            ],
+            "antonyms": [
+                "reckless",
+                "imprudent",
+                "rash"
+            ],
+            "root_prefix_suffix": "Latin 'prudens' (foresight, contraction of providens)",
+            "common_confusion": "Prudent does not mean fearful; it means rationally prepared for risks.",
+            "memory_aid": "PRUDENT: planned with foresight.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-065"
+        },
+        {
+            "word": "vehement",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Showing strong feeling; forceful, passionate, or intense.",
+            "contextual_meaning": "Impassioned and aggressive advocacy or denunciation; often an extreme trap choice in RC.",
+            "example_sentence": "The preservationist offered a vehement defense of the pristine wetlands.",
+            "business_example": "Shareholders lodged vehement objections to the dilutive executive stock grant.",
+            "synonyms": [
+                "fervent",
+                "passionate",
+                "forceful",
+                "strident"
+            ],
+            "antonyms": [
+                "apathetic",
+                "lukewarm",
+                "indifferent"
+            ],
+            "root_prefix_suffix": "Latin 'vehemens' (violent, eager)",
+            "common_confusion": "Be cautious selecting 'vehement' on the GMAT; academic passages are usually more restrained.",
+            "memory_aid": "VEHEMENT: intense emotional fire.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-066"
+        },
+        {
+            "word": "partisan",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Prejudiced in favor of a particular cause, faction, or political bias.",
+            "contextual_meaning": "One-sided advocacy lacking balanced scholarly objectivity.",
+            "example_sentence": "The essay was criticized for its partisan defense of agricultural subsidies.",
+            "business_example": "The lobbying brief presented a partisan interpretation of the proposed carbon tax.",
+            "synonyms": [
+                "biased",
+                "sectarian",
+                "prejudiced",
+                "fractional"
+            ],
+            "antonyms": [
+                "impartial",
+                "unbiased",
+                "dispassionate"
+            ],
+            "root_prefix_suffix": "French 'partisan' (zealous supporter of a party)",
+            "common_confusion": "A partisan perspective suppresses counterarguments in service of an agenda.",
+            "memory_aid": "PARTY-SAN: loyal to one party or faction only.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-067"
+        },
+        {
+            "word": "dispassionate",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Not influenced by strong emotion, and so able to be rational and impartial.",
+            "contextual_meaning": "GMAT SCHOLARLY GOLD STANDARD: Objective, calm, evidence-driven inquiry.",
+            "example_sentence": "The historian delivered a dispassionate accounting of the military campaign's blunders.",
+            "business_example": "A turnaround manager must conduct a dispassionate appraisal of executive redundancies.",
+            "synonyms": [
+                "impartial",
+                "unbiased",
+                "objective",
+                "detached"
+            ],
+            "antonyms": [
+                "impassioned",
+                "partisan",
+                "emotional"
+            ],
+            "root_prefix_suffix": "Prefix 'dis-' (away) + 'passionate'",
+            "common_confusion": "Dispassionate means objective and rational, not unfeeling or uncaring.",
+            "memory_aid": "NO EMOTIONAL PASSION: pure rational evaluation.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-068"
+        },
+        {
+            "word": "patronizing",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Treating someone with an apparent kindness that betrays a feeling of superiority; condescending.",
+            "contextual_meaning": "Looking down upon other researchers or historic figures from a haughty stance.",
+            "example_sentence": "The critic dismissed local craft traditions with a patronizing air of urban sophistication.",
+            "business_example": "Customer complaints mounted over the support team's patronizing explanations.",
+            "synonyms": [
+                "condescending",
+                "supercilious",
+                "disdainful",
+                "haughty"
+            ],
+            "antonyms": [
+                "humble",
+                "deferential",
+                "respectful"
+            ],
+            "root_prefix_suffix": "Latin 'patronus' (protector, father figure)",
+            "common_confusion": "Patronizing masks arrogance under an outward facade of helpfulness.",
+            "memory_aid": "TALKING DOWN: treating adults like children.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-069"
+        },
+        {
+            "word": "caustic",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Sarcastic in a scathing and bitter way; chemically able to burn or corrode.",
+            "contextual_meaning": "Sharply acidic and biting tone designed to sting an intellectual opponent.",
+            "example_sentence": "The reviewer penned a caustic rebuttal targeting the author's shoddy statistical controls.",
+            "business_example": "The activist investor wrote a caustic public letter urging the board to dismiss the CEO.",
+            "synonyms": [
+                "scathing",
+                "mordant",
+                "trenchant",
+                "acerbic"
+            ],
+            "antonyms": [
+                "conciliatory",
+                "laudatory",
+                "bland"
+            ],
+            "root_prefix_suffix": "Greek 'kaustikos' (burning)",
+            "common_confusion": "Caustic tone options are usually trap choices unless the passage is exceptionally harsh.",
+            "memory_aid": "CAUSTIC SODA: burns like acid.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-070"
+        },
+        {
+            "word": "nostalgic",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Characterized by or exhibiting a sentimental longing or wistful affection for the past.",
+            "contextual_meaning": "Longing for a perceived golden age; common in literature or history humanities passages.",
+            "example_sentence": "The passage strikes a nostalgic note when describing agrarian craft communities.",
+            "business_example": "The heritage luxury brand's advertising leverages nostalgic domestic imagery.",
+            "synonyms": [
+                "wistful",
+                "sentimental",
+                "retrospective",
+                "evocative"
+            ],
+            "antonyms": [
+                "forward-looking",
+                "modernist"
+            ],
+            "root_prefix_suffix": "Greek 'nostos' (return home) + 'algos' (pain)",
+            "common_confusion": "Nostalgic tone reflects emotional longing, not rigorous economic analysis.",
+            "memory_aid": "NOSTALGIA: homesickness for the past.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-071"
+        },
+        {
+            "word": "strident",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Loud, harsh, grating; presenting a controversial point of view in an unpleasantly forceful way.",
+            "contextual_meaning": "Shrill, dogmatic tone that brooks no dissent or counter-evidence.",
+            "example_sentence": "The lobbyist's strident rhetoric alienated moderate members of the senate committee.",
+            "business_example": "The brand avoided strident political stances to maintain broad mass-market appeal.",
+            "synonyms": [
+                "shrill",
+                "clamorous",
+                "vociferous",
+                "uncompromising"
+            ],
+            "antonyms": [
+                "dulcet",
+                "muted",
+                "conciliatory"
+            ],
+            "root_prefix_suffix": "Latin 'stridere' (to make a harsh noise)",
+            "common_confusion": "Strident is an extreme negative tone descriptor; verify passage severity before picking.",
+            "memory_aid": "STRIDENT: loud, screeching, and grating.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-072"
+        },
+        {
+            "word": "complacent",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Showing smug or uncritical satisfaction with oneself or one's achievements.",
+            "contextual_meaning": "Dangerously oblivious to impending competitive or structural disruptions.",
+            "example_sentence": "Incumbent firms grew complacent during their decade of monopoly pricing power.",
+            "business_example": "Complacent leadership failed to respond when agile digital startups commoditized retail banking.",
+            "synonyms": [
+                "self-satisfied",
+                "smug",
+                "heedless",
+                "unconcerned"
+            ],
+            "antonyms": [
+                "vigilant",
+                "proactive",
+                "circumspect"
+            ],
+            "root_prefix_suffix": "Latin 'complacere' (to please greatly)",
+            "common_confusion": "Complacent (smug/unaware) vs Complaisant (eager to please others).",
+            "memory_aid": "COM-PLACENT: too relaxed on a plateau.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-073"
+        },
+        {
+            "word": "incredulous",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Unwilling or unable to believe something; skeptical in disbelief.",
+            "contextual_meaning": "Expressing outright shock and rejection at an improbable factual claim.",
+            "example_sentence": "Scientists were incredulous when the laboratory claimed to produce room-temperature fusion.",
+            "business_example": "Analysts reacted with incredulous skepticism to the startup's claim of 90% gross margins.",
+            "synonyms": [
+                "disbelieving",
+                "distrustful",
+                "astonished",
+                "unconvinced"
+            ],
+            "antonyms": [
+                "credulous",
+                "gullible",
+                "trusting"
+            ],
+            "root_prefix_suffix": "Prefix 'in-' (not) + 'credere' (to believe)",
+            "common_confusion": "Incredulous (unable to believe) vs Incredible (hard to believe). The person is incredulous.",
+            "memory_aid": "NOT CREDIBLE: refusing to believe without extraordinary evidence.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-074"
+        },
+        {
+            "word": "amortize",
+            "part_of_speech": "verb",
+            "category": "Business & Economics",
+            "definition": "To gradually write off the initial cost of an asset or repay a debt over a period.",
+            "contextual_meaning": "Spreading major capital expenses over their operational lifetime for accurate accounting.",
+            "example_sentence": "The airline amortized the acquisition costs of its new fleet across fifteen years.",
+            "business_example": "Intangible assets like enterprise software licenses are amortized on a straight-line basis.",
+            "synonyms": [
+                "write off",
+                "depreciate",
+                "liquidate debt",
+                "expend over time"
+            ],
+            "antonyms": [
+                "expense upfront",
+                "capitalize permanently"
+            ],
+            "root_prefix_suffix": "Latin 'ad mortem' (toward death; killing off debt)",
+            "common_confusion": "Depreciation applies to tangible fixed assets; amortization applies to intangible assets and debt.",
+            "memory_aid": "A-MORT-IZE: killing off debt or cost month by month.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-075"
+        },
+        {
+            "word": "oligopoly",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A state of limited competition, in which a market is shared by a small number of producers.",
+            "contextual_meaning": "Market structure where strategic decisions of any one firm directly impact rivals.",
+            "example_sentence": "Commercial aircraft manufacturing is a duopoly, a specialized form of oligopoly.",
+            "business_example": "Wireless cellular service in North America functions as a disciplined oligopoly.",
+            "synonyms": [
+                "cartel",
+                "concentrated market",
+                "limited competition"
+            ],
+            "antonyms": [
+                "perfect competition",
+                "monopoly",
+                "atomistic market"
+            ],
+            "root_prefix_suffix": "Greek 'oligos' (few) + 'polein' (to sell)",
+            "common_confusion": "Monopoly = 1 seller; Duopoly = 2 sellers; Oligopoly = small group of sellers.",
+            "memory_aid": "OLIGO-POLY: few sellers controlling the board.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-076"
+        },
+        {
+            "word": "solvency",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The possession of assets in excess of liabilities; ability to pay one's long-term debts.",
+            "contextual_meaning": "Long-term financial viability and balance-sheet integrity.",
+            "example_sentence": "Mounting sovereign debt loads called into question the government's long-term solvency.",
+            "business_example": "Stress testing evaluates bank solvency under severe macroeconomic downturn simulations.",
+            "synonyms": [
+                "financial health",
+                "stability",
+                "creditworthiness"
+            ],
+            "antonyms": [
+                "insolvency",
+                "bankruptcy",
+                "default"
+            ],
+            "root_prefix_suffix": "Latin 'solvere' (to loosen, pay)",
+            "common_confusion": "Solvency = assets exceed debts; Liquidity = cash on hand to meet immediate payments.",
+            "memory_aid": "SOLVENT: holding enough assets to dissolve all obligations.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-077"
+        },
+        {
+            "word": "liquidity",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The availability of liquid assets to a market or company; ease of converting assets into cash.",
+            "contextual_meaning": "Speed and low friction with which an asset can be sold at fair market value.",
+            "example_sentence": "During the panic, trading volume collapsed and secondary market liquidity vanished.",
+            "business_example": "Treasury desks hold short-term commercial paper to guarantee immediate operating liquidity.",
+            "synonyms": [
+                "cash availability",
+                "convertibility",
+                "market depth"
+            ],
+            "antonyms": [
+                "illiquidity",
+                "capital lockup"
+            ],
+            "root_prefix_suffix": "Latin 'liquidus' (flowing, fluid)",
+            "common_confusion": "A firm can be solvent on paper (rich in factories) yet collapse from a sudden liquidity freeze.",
+            "memory_aid": "FLOWING CASH: money that flows quickly like water.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-078"
+        },
+        {
+            "word": "fiduciary",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Involving trust, especially regarding the relationship between a trustee and a beneficiary.",
+            "contextual_meaning": "Legal and ethical duty of the highest standard to act solely in the beneficiary's interest.",
+            "example_sentence": "Pension fund managers have a strict fiduciary duty to protect retiree assets.",
+            "business_example": "Corporate directors face derivative lawsuits when they breach their fiduciary duty of loyalty.",
+            "synonyms": [
+                "trustee",
+                "custodial",
+                "ethical obligation",
+                "fiduciary duty"
+            ],
+            "antonyms": [
+                "conflicted",
+                "adversarial",
+                "arm's-length"
+            ],
+            "root_prefix_suffix": "Latin 'fides' (faith, trust)",
+            "common_confusion": "A fiduciary must put the client's interests ahead of their own commission.",
+            "memory_aid": "FIDES = FAITH: acting in sacred good faith.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-079"
+        },
+        {
+            "word": "arbitrage",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The simultaneous purchase and sale of an asset in different markets to exploit price imbalances.",
+            "contextual_meaning": "Riskless or low-risk profit generated by pricing inefficiencies across venues.",
+            "example_sentence": "High-frequency hedge funds capitalize on microsecond arbitrage opportunities across international bourses.",
+            "business_example": "Merger arbitrageurs purchase stock of acquisition targets trading below the cash tender price.",
+            "synonyms": [
+                "price spread trading",
+                "market exploitation"
+            ],
+            "antonyms": [
+                "buy and hold",
+                "fundamental valuation"
+            ],
+            "root_prefix_suffix": "French 'arbitrage' (judgment, arbitration)",
+            "common_confusion": "Pure arbitrage carries near-zero market directional risk, unlike speculative investing.",
+            "memory_aid": "ARBITRAGE: buying low in Tokyo and selling high in London instantly.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-080"
+        },
+        {
+            "word": "fungible",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Able to replace or be replaced by another identical item; mutually interchangeable.",
+            "contextual_meaning": "Units of a commodity or currency that are completely standardized and identical.",
+            "example_sentence": "Crude oil of identical grade and sulfur content is completely fungible across refineries.",
+            "business_example": "Shares of common stock are fungible, whereas commercial real estate parcels are unique.",
+            "synonyms": [
+                "interchangeable",
+                "standardized",
+                "equivalent",
+                "commutable"
+            ],
+            "antonyms": [
+                "non-fungible",
+                "unique",
+                "differentiated"
+            ],
+            "root_prefix_suffix": "Latin 'fungi' (to perform, execute)",
+            "common_confusion": "Fungibility allows seamless commodity trading; differentiated luxury goods are non-fungible.",
+            "memory_aid": "FUN-GIBLE: interchangeable tokens in a machine.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-081"
+        },
+        {
+            "word": "hegemony",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "Leadership or dominance, especially by one country or social/economic group over others.",
+            "contextual_meaning": "Comprehensive structural control that establishes market or cultural norms.",
+            "example_sentence": "The software giant maintained its desktop OS hegemony through bundling proprietary browsers.",
+            "business_example": "Antitrust regulators challenged the semiconductor designer's technological hegemony.",
+            "synonyms": [
+                "dominance",
+                "supremacy",
+                "ascendancy",
+                "preponderance"
+            ],
+            "antonyms": [
+                "subservience",
+                "parity",
+                "pluralism"
+            ],
+            "root_prefix_suffix": "Greek 'hegemon' (leader, ruler)",
+            "common_confusion": "Hegemony denotes systemic supremacy, not just a momentary lead in market share.",
+            "memory_aid": "HEGEMONY: total command over the playing field.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-082"
+        },
+        {
+            "word": "equilibrium",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A state in which opposing forces or influences are balanced.",
+            "contextual_meaning": "Economic balance point where quantity supplied equals quantity demanded.",
+            "example_sentence": "When artificial price ceilings are removed, the market naturally clears at equilibrium price.",
+            "business_example": "Nash equilibrium models illustrate why competing retailers cluster along the same avenue.",
+            "synonyms": [
+                "balance",
+                "stasis",
+                "counterpoise",
+                "symmetry"
+            ],
+            "antonyms": [
+                "disequilibrium",
+                "imbalance",
+                "volatility"
+            ],
+            "root_prefix_suffix": "Latin 'aequus' (equal) + 'libra' (balance)",
+            "common_confusion": "Equilibrium does not mean static forever; an external shock will shift the equilibrium point.",
+            "memory_aid": "EQUAL LIBRA: equal weights on the scales of supply and demand.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-083"
+        },
+        {
+            "word": "leverage",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The ratio of debt to equity; or the power to influence a situation or people.",
+            "contextual_meaning": "Using borrowed capital to multiply potential investment returns (or strategic bargaining power).",
+            "example_sentence": "Excessive leverage forced the real estate conglomerate into emergency recapitalization.",
+            "business_example": "Exclusive manufacturing patents granted the biotech startup substantial negotiating leverage.",
+            "synonyms": [
+                "borrowed capital",
+                "gearing",
+                "bargaining power",
+                "advantage"
+            ],
+            "antonyms": [
+                "equity financing",
+                "powerlessness"
+            ],
+            "root_prefix_suffix": "Old French 'levier' (to lift, raise)",
+            "common_confusion": "Leverage magnifies both upward returns and downward losses equally.",
+            "memory_aid": "LEVER: mechanical advantage that can lift fortunes or crush capital.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-084"
+        },
+        {
+            "word": "remuneration",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "Money paid for work or a service.",
+            "contextual_meaning": "Comprehensive total compensation including salary, equity, and performance incentives.",
+            "example_sentence": "Shareholders voted against the executive remuneration package due to unaligned vesting schedules.",
+            "business_example": "Sales director remuneration was reweighted toward multi-year contract renewals.",
+            "synonyms": [
+                "compensation",
+                "stipend",
+                "emolument",
+                "salary"
+            ],
+            "antonyms": [
+                "penalty",
+                "forfeiture"
+            ],
+            "root_prefix_suffix": "Latin 'remunerari' (to reward, from munus = gift/duty)",
+            "common_confusion": "Remuneration encompasses all financial compensation, not just hourly base wages.",
+            "memory_aid": "RE-MONEY-RATION: handing out money for service rendered.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-085"
+        },
+        {
+            "word": "conglomerate",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A multi-industry company that combines multiple diverse business entities under one corporate structure.",
+            "contextual_meaning": "A diversified corporate empire spanning unrelated industrial sectors.",
+            "example_sentence": "The industrial conglomerate struggled with the 'conglomerate discount' on Wall Street.",
+            "business_example": "Activists pressured the legacy conglomerate to spin off its healthcare and aerospace divisions.",
+            "synonyms": [
+                "multinational",
+                "syndicate",
+                "consortium",
+                "corporation"
+            ],
+            "antonyms": [
+                "pure-play company",
+                "niche firm"
+            ],
+            "root_prefix_suffix": "Latin 'conglomerare' (to roll together into a ball)",
+            "common_confusion": "Conglomerates span unrelated sectors, unlike vertically integrated monopolies.",
+            "memory_aid": "ROLLED TOGETHER: rolled up from many separate businesses.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-086"
+        },
+        {
+            "word": "subsidy",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A sum of money granted by the state or a public body to help an industry or business keep prices low.",
+            "contextual_meaning": "Public financial assistance designed to alter market incentives or encourage consumption.",
+            "example_sentence": "Agricultural subsidies protect domestic grain growers against foreign import surges.",
+            "business_example": "Tax credit subsidies catalyzed rapid consumer adoption of residential heat pumps.",
+            "synonyms": [
+                "grant",
+                "subvention",
+                "allowance",
+                "bounty"
+            ],
+            "antonyms": [
+                "tariff",
+                "excise tax",
+                "levy"
+            ],
+            "root_prefix_suffix": "Latin 'subsidium' (reserve troops, support)",
+            "common_confusion": "Subsidies lower costs for recipients, but may distort wider market equilibrium.",
+            "memory_aid": "SUB-SIDE: government steps in on the side to prop up costs.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-087"
+        },
+        {
+            "word": "propensity",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "An inclination or natural tendency to behave in a particular way.",
+            "contextual_meaning": "Key GMAT economics concept: 'Marginal Propensity to Consume' (fraction of new income spent).",
+            "example_sentence": "Lower-income households exhibit a higher marginal propensity to consume than affluent households.",
+            "business_example": "Consumer propensity to switch cloud providers depends heavily on outbound data egress fees.",
+            "synonyms": [
+                "predisposition",
+                "proclivity",
+                "inclination",
+                "tendency"
+            ],
+            "antonyms": [
+                "aversion",
+                "disinclination"
+            ],
+            "root_prefix_suffix": "Latin 'propendere' (to lean forward, hang down)",
+            "common_confusion": "Propensity measures statistical behavioral inclination, not certainty.",
+            "memory_aid": "PROPENSITY: leaning forward toward an action.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-088"
+        },
+        {
+            "word": "austerity",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "Difficult economic conditions created by government policies aimed at reducing public spending.",
+            "contextual_meaning": "Fiscal belt-tightening and spending cuts enacted to service sovereign deficits.",
+            "example_sentence": "Post-crisis austerity policies sparked broad political debate regarding economic stagnation.",
+            "business_example": "The corporate austerity program eliminated travel budgets and deferred facility upgrades.",
+            "synonyms": [
+                "fiscal retrenchment",
+                "stringency",
+                "frugality",
+                "parsimony"
+            ],
+            "antonyms": [
+                "fiscal expansion",
+                "stimulus",
+                "profligacy"
+            ],
+            "root_prefix_suffix": "Greek 'austeros' (severe, harsh)",
+            "common_confusion": "Austerity reduces state budget deficits but can depress aggregate demand in the short run.",
+            "memory_aid": "AUSTERE: stark, severe belt-tightening.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-089"
+        },
+        {
+            "word": "externality",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A consequence of an industrial or commercial activity that affects other parties without being reflected in market cost.",
+            "contextual_meaning": "FOUNDATIONAL GMAT ECONOMICS CONCEPT: e.g. pollution (negative externality) or basic R&D (positive externality).",
+            "example_sentence": "Carbon pricing schemes force manufacturing firms to internalize the negative externalities of pollution.",
+            "business_example": "Workforce education provides positive externalities that benefit competitor employers throughout the region.",
+            "synonyms": [
+                "side effect",
+                "spillover effect",
+                "unpriced consequence"
+            ],
+            "antonyms": [
+                "internalized cost"
+            ],
+            "root_prefix_suffix": "Latin 'externus' (outside)",
+            "common_confusion": "Externalities cause market failures because market prices fail to reflect true social costs/benefits.",
+            "memory_aid": "EXTERNAL IMPACT: costs/benefits dumped on outside third parties.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-090"
+        },
+        {
+            "word": "rent-seeking",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The practice of manipulating public policy or economic conditions to increase one's wealth without creating new wealth.",
+            "contextual_meaning": "Economic lobbying to obtain monopolies, subsidies, or tariffs rather than innovating productive value.",
+            "example_sentence": "Economists criticize protective licensing regimes as pure rent-seeking that enriches incumbents.",
+            "business_example": "The taxi medallion system created decades of rent-seeking before rideshare disruption.",
+            "synonyms": [
+                "monopoly lobbying",
+                "regulatory capture",
+                "parasitic profit"
+            ],
+            "antonyms": [
+                "productive entrepreneurship",
+                "value creation"
+            ],
+            "root_prefix_suffix": "Economic term popularized by Anne Krueger and Gordon Tullock",
+            "common_confusion": "Rent-seeking does NOT mean collecting apartment rent; it means extracting wealth through uncompetitive privilege.",
+            "memory_aid": "SEEKING RENT: extracting tolls without adding any real value.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-091"
+        },
+        {
+            "word": "incumbent",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The holder of an office or post; or an established company currently holding dominant market share.",
+            "contextual_meaning": "Entrenched corporate market leader facing threat from innovative new entrants.",
+            "example_sentence": "Incumbent automakers struggled to pivot production lines toward battery electric vehicles.",
+            "business_example": "Incumbent retail banks rely on branch footprints that agile neo-banks bypass completely.",
+            "synonyms": [
+                "established leader",
+                "market titan",
+                "entrenched player"
+            ],
+            "antonyms": [
+                "challenger",
+                "new entrant",
+                "disruptor"
+            ],
+            "root_prefix_suffix": "Latin 'incumbere' (to lean or rest upon)",
+            "common_confusion": "Incumbents enjoy scale advantages and distribution networks, but suffer from organizational inertia.",
+            "memory_aid": "RESTING ON LAURELS: incumbent resting comfortably on top.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-092"
+        },
+        {
+            "word": "monopsony",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "A market situation in which there is only one buyer.",
+            "contextual_meaning": "A single buyer commanding pricing power over suppliers or labor (e.g. single employer in a company town).",
+            "example_sentence": "The defense contractor operates in a monopsony market where the sovereign government is the sole customer.",
+            "business_example": "Meatpackers exercised monopsony power over isolated livestock farmers across the Midwest.",
+            "synonyms": [
+                "single-buyer market",
+                "buyer monopoly"
+            ],
+            "antonyms": [
+                "monopoly (single seller)",
+                "competitive buyer market"
+            ],
+            "root_prefix_suffix": "Greek 'monos' (alone) + 'opsonia' (buying provisions)",
+            "common_confusion": "Monopoly = ONE SELLER; Monopsony = ONE BUYER dictating prices.",
+            "memory_aid": "MONO-BUYER: one buyer holding all the cards.",
+            "level": 3,
+            "difficulty": 5,
+            "id": "v-093"
+        },
+        {
+            "word": "divestiture",
+            "part_of_speech": "noun",
+            "category": "Business & Economics",
+            "definition": "The action or process of selling off subsidiary business interests or investments.",
+            "contextual_meaning": "Strategic spin-off or sale of non-core corporate assets to unlock shareholder value.",
+            "example_sentence": "Antitrust authorities conditioned the mega-merger upon the divestiture of thirty regional bottling plants.",
+            "business_example": "The conglomerate completed the divestiture of its oil exploration unit to focus on solar.",
+            "synonyms": [
+                "spin-off",
+                "liquidation",
+                "carve-out",
+                "disposal"
+            ],
+            "antonyms": [
+                "acquisition",
+                "merger",
+                "consolidation"
+            ],
+            "root_prefix_suffix": "Latin 'divestire' (to strip of clothes, dispose of)",
+            "common_confusion": "Divestiture is the voluntary or forced selling off of assets, opposite of acquisition.",
+            "memory_aid": "DIVEST: undressing the corporate portfolio of excess baggage.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-094"
+        },
+        {
+            "word": "spurious",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Not being what it purports to be; false or fake.",
+            "contextual_meaning": "GMAT CR FAVORITE: A 'spurious correlation' is a mathematical link between two variables caused by a hidden third factor.",
+            "example_sentence": "The correlation between ice cream consumption and drowning rates is spurious; both are caused by hot summer weather.",
+            "business_example": "The consulting report established that the link between executive golf outings and profit margins was spurious.",
+            "synonyms": [
+                "specious",
+                "bogus",
+                "unauthentic",
+                "illusory"
+            ],
+            "antonyms": [
+                "authentic",
+                "genuine",
+                "bona fide"
+            ],
+            "root_prefix_suffix": "Latin 'spurius' (illegitimate, false)",
+            "common_confusion": "Spurious correlations fool researchers who mistake correlation for genuine causation.",
+            "memory_aid": "SPURIOUS = FAKE CORRELATION.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-095"
+        },
+        {
+            "word": "causation",
+            "part_of_speech": "noun",
+            "category": "Science & Methodology",
+            "definition": "The action of causing something; the relationship between cause and effect.",
+            "contextual_meaning": "Establishing that variable X directly creates outcome Y, ruling out confounding variables.",
+            "example_sentence": "Epidemiologists established direct causation between asbestos inhalation and mesothelioma.",
+            "business_example": "Controlled experiments are required to prove advertising causation rather than mere seasonality correlation.",
+            "synonyms": [
+                "causality",
+                "etiology",
+                "origin",
+                "provocation"
+            ],
+            "antonyms": [
+                "coincidence",
+                "correlation"
+            ],
+            "root_prefix_suffix": "Latin 'causare' (to cause)",
+            "common_confusion": "The #1 flaw tested on the GMAT: assuming correlation automatically proves causation.",
+            "memory_aid": "CAUSE AND EFFECT: direct engine of outcome.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-096"
+        },
+        {
+            "word": "confounding",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "An extraneous variable in an experimental model that correlates with both the dependent and independent variables.",
+            "contextual_meaning": "A hidden third factor that distorts the apparent relationship between cause and effect.",
+            "example_sentence": "Patient socioeconomic background proved to be a confounding variable in the dietary longevity study.",
+            "business_example": "General economic expansion was a confounding factor that masked the inefficiency of the new marketing initiative.",
+            "synonyms": [
+                "confusing",
+                "distorting",
+                "lurking variable",
+                "extraneous"
+            ],
+            "antonyms": [
+                "isolated",
+                "controlled",
+                "orthogonal"
+            ],
+            "root_prefix_suffix": "Latin 'confundere' (to pour together, jumble)",
+            "common_confusion": "Confounding variables are the foundation of 'Alternative Cause' Weaken questions in Critical Reasoning.",
+            "memory_aid": "CONFUSED TOGETHER: a hidden variable that confuses the results.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-097"
+        },
+        {
+            "word": "heuristic",
+            "part_of_speech": "noun",
+            "category": "Science & Methodology",
+            "definition": "A mental shortcut or practical method that is not guaranteed to be optimal, but is sufficient for reaching an immediate goal.",
+            "contextual_meaning": "Cognitive rule of thumb used to make decisions quickly under uncertainty.",
+            "example_sentence": "Kahneman demonstrated that human judgment relies on availability heuristics rather than probability calculations.",
+            "business_example": "Venture partners use the founder pedigree heuristic to filter through thousands of inbound pitches.",
+            "synonyms": [
+                "rule of thumb",
+                "cognitive shortcut",
+                "practical method"
+            ],
+            "antonyms": [
+                "exhaustive algorithm",
+                "formal optimization"
+            ],
+            "root_prefix_suffix": "Greek 'heuriskein' (to find, discover)",
+            "common_confusion": "Heuristics speed up decisions, but regularly introduce systematic cognitive biases.",
+            "memory_aid": "HEURISTIC = EUREKA shortcut.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-098"
+        },
+        {
+            "word": "synthesize",
+            "part_of_speech": "verb",
+            "category": "Science & Methodology",
+            "definition": "To combine a number of things into a coherent whole.",
+            "contextual_meaning": "Integrating disparate empirical findings into an overarching conceptual thesis.",
+            "example_sentence": "The meta-analysis synthesized data from forty independent clinical trials.",
+            "business_example": "Strategic consulting requires synthesizing qualitative consumer feedback with quantitative econometric sales data.",
+            "synonyms": [
+                "amalgamate",
+                "integrate",
+                "harmonize",
+                "consolidate"
+            ],
+            "antonyms": [
+                "dissect",
+                "analyze",
+                "separate"
+            ],
+            "root_prefix_suffix": "Greek 'syn' (together) + 'tithenai' (to place)",
+            "common_confusion": "Analysis breaks a whole down into parts; synthesis builds parts up into a new whole.",
+            "memory_aid": "SYNTHESIS: putting parts together into a symphony.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-099"
+        },
+        {
+            "word": "pervasive",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Spreading widely throughout an area or a group of people.",
+            "contextual_meaning": "Deeply ingrained across an entire cultural, technological, or organizational system.",
+            "example_sentence": "The pervasive influence of algorithmic recommendations altered consumer buying patterns.",
+            "business_example": "Confirmation bias is a pervasive flaw during boardroom strategic acquisitions.",
+            "synonyms": [
+                "ubiquitous",
+                "omnipresent",
+                "permeating",
+                "prevalent"
+            ],
+            "antonyms": [
+                "isolated",
+                "confined",
+                "localized"
+            ],
+            "root_prefix_suffix": "Latin 'pervadere' (to go through, spread through)",
+            "common_confusion": "Pervasive implies spreading into every nook and cranny of a system.",
+            "memory_aid": "PERVADE: soak completely through like ink on paper.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-100"
+        },
+        {
+            "word": "endemic",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Regularly found among particular people or in a certain area; native or restricted.",
+            "contextual_meaning": "Characteristic of or native to a specific environment, ecosystem, or industry.",
+            "example_sentence": "The lemur is endemic to Madagascar and found in no natural continental habitat.",
+            "business_example": "Burnout has become endemic to junior investment banking teams during merger seasons.",
+            "synonyms": [
+                "indigenous",
+                "native",
+                "localized",
+                "characteristic"
+            ],
+            "antonyms": [
+                "epidemic",
+                "pandemic",
+                "exogenous",
+                "foreign"
+            ],
+            "root_prefix_suffix": "Greek 'en' (in) + 'demos' (people)",
+            "common_confusion": "Endemic = native and constantly present; Epidemic = sudden widespread outbreak.",
+            "memory_aid": "EN-DEM-ic: rooted IN the local people/place.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-101"
+        },
+        {
+            "word": "latent",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Existing but not yet developed or manifest; hidden or concealed.",
+            "contextual_meaning": "Present in an organism or market, waiting for a catalyst to emerge into active visibility.",
+            "example_sentence": "The tuberculosis infection remained latent in the host for three decades.",
+            "business_example": "The consumer survey revealed massive latent demand for subscription-based organic meal kits.",
+            "synonyms": [
+                "dormant",
+                "quiescent",
+                "unrealized",
+                "covert"
+            ],
+            "antonyms": [
+                "manifest",
+                "overt",
+                "active",
+                "patent"
+            ],
+            "root_prefix_suffix": "Latin 'latere' (to lie hidden)",
+            "common_confusion": "Latent power or demand exists fully formed, but has not yet broken into action.",
+            "memory_aid": "LATENT: lying hidden under the surface.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-102"
+        },
+        {
+            "word": "salient",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Most noticeable or important; prominent.",
+            "contextual_meaning": "Standing out as the primary explanatory driver among competing factors.",
+            "example_sentence": "The most salient feature of the fossil was its unexpectedly enlarged braincase.",
+            "business_example": "The executive summary highlighted only the three most salient risks to project completion.",
+            "synonyms": [
+                "conspicuous",
+                "prominent",
+                "cardinal",
+                "pivotal"
+            ],
+            "antonyms": [
+                "insignificant",
+                "inconspicuous",
+                "trivial"
+            ],
+            "root_prefix_suffix": "Latin 'salire' (to leap)",
+            "common_confusion": "A salient point leaps out to capture attention due to genuine substantive importance.",
+            "memory_aid": "SALIENT: leaps out at you.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-103"
+        },
+        {
+            "word": "ostensibly",
+            "part_of_speech": "adverb",
+            "category": "Argumentation & Logic",
+            "definition": "As appears or is stated to be true, though not necessarily so; apparently.",
+            "contextual_meaning": "Signaling an stated facade that conceals an ulterior or true underlying cause.",
+            "example_sentence": "The CEO traveled abroad ostensibly to inspect factories, but actually to meet buyout suitors.",
+            "business_example": "The company ostensibly championed data privacy, while monetizing user telemetry behind closed doors.",
+            "synonyms": [
+                "professedly",
+                "apparently",
+                "outwardly",
+                "purportedly"
+            ],
+            "antonyms": [
+                "genuinely",
+                "authentically",
+                "verifiably"
+            ],
+            "root_prefix_suffix": "Latin 'ostendere' (to stretch out, show)",
+            "common_confusion": "Whenever 'ostensibly' appears on the GMAT, expect the author to reveal the real truth next.",
+            "memory_aid": "OSTENSIBLY: so it is shown on the outside, but don't buy it.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-104"
+        },
+        {
+            "word": "deterministic",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Relating to the doctrine that all events are completely determined by previously existing causes.",
+            "contextual_meaning": "Predictable with 100% mechanical certainty without probabilistic randomness.",
+            "example_sentence": "Newtonian mechanics provides a deterministic model of celestial planetary orbits.",
+            "business_example": "Algorithmic execution in trading is deterministic, whereas retail human trading behavior is stochastic.",
+            "synonyms": [
+                "mechanistic",
+                "predetermined",
+                "inevitable",
+                "fated"
+            ],
+            "antonyms": [
+                "probabilistic",
+                "stochastic",
+                "random"
+            ],
+            "root_prefix_suffix": "Latin 'determinare' (to bound, limit)",
+            "common_confusion": "Deterministic models leave zero room for chance; economic markets are probabilistic.",
+            "memory_aid": "DETERMINED: every step is locked in and predetermined.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-105"
+        },
+        {
+            "word": "immutable",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Unchanging over time or unable to be changed.",
+            "contextual_meaning": "Permanent baseline law or condition that cannot be circumvented.",
+            "example_sentence": "Thermodynamic laws are immutable constraints on energy efficiency.",
+            "business_example": "Smart contracts on decentralized blockchains provide an immutable ledger of transactions.",
+            "synonyms": [
+                "unalterable",
+                "indelible",
+                "permanent",
+                "invariable"
+            ],
+            "antonyms": [
+                "mutable",
+                "flexible",
+                "variable"
+            ],
+            "root_prefix_suffix": "Latin 'in-' (not) + 'mutare' (to change)",
+            "common_confusion": "Immutable means completely unchangeable, not merely stubborn.",
+            "memory_aid": "IMMUTABLE: cannot MUTATE or change.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-106"
+        },
+        {
+            "word": "transient",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Lasting only for a short time; impermanent.",
+            "contextual_meaning": "Passing anomaly or fleeting trend that will not alter long-term structural trajectory.",
+            "example_sentence": "Central bankers argued that post-lockdown inflation was transient, driven by shipping bottlenecks.",
+            "business_example": "The hotel chain relies on transient business travelers rather than extended-stay vacationers.",
+            "synonyms": [
+                "ephemeral",
+                "fleeting",
+                "evanescent",
+                "fugitive"
+            ],
+            "antonyms": [
+                "permanent",
+                "durable",
+                "enduring"
+            ],
+            "root_prefix_suffix": "Latin 'transire' (to go across, pass over)",
+            "common_confusion": "Mistaking a permanent secular trend for a transient blip is a major corporate strategy error.",
+            "memory_aid": "TRANSIT: just passing through quickly.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-107"
+        },
+        {
+            "word": "nascent",
+            "part_of_speech": "adjective",
+            "category": "Business & Economics",
+            "definition": "Just coming into existence and beginning to display signs of future potential.",
+            "contextual_meaning": "Early-stage industry or technology that is undeveloped but rapidly budding.",
+            "example_sentence": "The government provided tax breaks to nurture the nascent offshore wind industry.",
+            "business_example": "Venture funds specialize in identifying nascent software sectors before incumbents take notice.",
+            "synonyms": [
+                "incipient",
+                "emerging",
+                "embryonic",
+                "fledgling"
+            ],
+            "antonyms": [
+                "mature",
+                "dying",
+                "senescent"
+            ],
+            "root_prefix_suffix": "Latin 'nasci' (to be born)",
+            "common_confusion": "Nascent means in the very earliest stages of birth and growth.",
+            "memory_aid": "NASCENT: newly born and taking initial steps.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-108"
+        },
+        {
+            "word": "coalesce",
+            "part_of_speech": "verb",
+            "category": "Science & Methodology",
+            "definition": "To come together to form one mass or whole.",
+            "contextual_meaning": "Separate elements, factions, or data points merging into a unified structure.",
+            "example_sentence": "Dust particles around the young star coalesced over millions of years to form protoplanets.",
+            "business_example": "Fragmented supplier networks coalesced into three dominant global contract manufacturers.",
+            "synonyms": [
+                "merge",
+                "consolidate",
+                "fuse",
+                "amalgamate"
+            ],
+            "antonyms": [
+                "fragment",
+                "disperse",
+                "dissolve"
+            ],
+            "root_prefix_suffix": "Latin 'co-' (together) + 'alescere' (to grow)",
+            "common_confusion": "Coalesce emphasizes organic coming together and mutual fusion.",
+            "memory_aid": "CO-ALESCE: growing together into one.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-109"
+        },
+        {
+            "word": "visceral",
+            "part_of_speech": "adjective",
+            "category": "Author Tone & Attitude",
+            "definition": "Relating to deep inward feelings rather than to the intellect.",
+            "contextual_meaning": "Instinctive, gut-level emotional reaction as opposed to reasoned calculation.",
+            "example_sentence": "The proposal provoked a visceral backlash among factory workers fearing wage cuts.",
+            "business_example": "Luxury automobile advertising aims for a visceral emotional desire rather than cost-benefit logic.",
+            "synonyms": [
+                "instinctive",
+                "gut-level",
+                "primal",
+                "non-rational"
+            ],
+            "antonyms": [
+                "cerebral",
+                "intellectual",
+                "rational"
+            ],
+            "root_prefix_suffix": "Latin 'viscera' (internal organs, entrails)",
+            "common_confusion": "Visceral reactions are deeply felt in the gut, unmediated by conscious analysis.",
+            "memory_aid": "VISCERA: from the internal organs/gut.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-110"
+        },
+        {
+            "word": "cognitive",
+            "part_of_speech": "adjective",
+            "category": "Science & Methodology",
+            "definition": "Relating to the mental action or process of acquiring knowledge and understanding through thought and experience.",
+            "contextual_meaning": "Relating to intellectual faculties (memory, perception, reasoning).",
+            "example_sentence": "Sleep deprivation causes measurable declines in cognitive performance and spatial awareness.",
+            "business_example": "Enterprise software design strives to minimize user cognitive load during checkout flows.",
+            "synonyms": [
+                "intellectual",
+                "mental",
+                "cerebral",
+                "rational"
+            ],
+            "antonyms": [
+                "affective",
+                "physiological"
+            ],
+            "root_prefix_suffix": "Latin 'cognoscere' (to know, recognize)",
+            "common_confusion": "Cognitive relates to how we process knowledge, distinct from emotional (affective) states.",
+            "memory_aid": "RECOGNIZE: mental tools for thinking and knowing.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-111"
+        },
+        {
+            "word": "assuage",
+            "part_of_speech": "verb",
+            "category": "Foundation Bridge",
+            "definition": "To make an unpleasant feeling less intense; to satisfy or appease.",
+            "contextual_meaning": "To calm consumer panic, relieve market anxiety, or quiet vocal investor dissent.",
+            "example_sentence": "The bank's emergency capital injection assuaged depositor fears of systemic insolvency.",
+            "business_example": "A generous severance package assuaged staff anxieties during the divisional spin-off.",
+            "synonyms": [
+                "placate",
+                "mollify",
+                "alleviate",
+                "appease"
+            ],
+            "antonyms": [
+                "inflame",
+                "aggravate",
+                "intensify"
+            ],
+            "root_prefix_suffix": "Latin 'ad-' (to) + 'suavis' (sweet)",
+            "common_confusion": "Assuage means to soothe feelings or hunger, making them milder.",
+            "memory_aid": "A-SWEETEN: make bitter anxiety sweet and calm.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-112"
+        },
+        {
+            "word": "lucid",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Expressed clearly; easy to understand; completely intelligible.",
+            "contextual_meaning": "Pristine intellectual clarity that demystifies a complex subject.",
+            "example_sentence": "The economist delivered a lucid explanation of how quantitative easing influences yield curves.",
+            "business_example": "Clear and lucid board minutes protected directors against subsequent proxy challenges.",
+            "synonyms": [
+                "articulate",
+                "transparent",
+                "coherent",
+                "perspicuous"
+            ],
+            "antonyms": [
+                "opaque",
+                "convoluted",
+                "abstruse"
+            ],
+            "root_prefix_suffix": "Latin 'lucere' (to shine, from lux = light)",
+            "common_confusion": "Lucid writing sheds clear light on difficult topics.",
+            "memory_aid": "LUCID = LIGHT: bright and transparent as crystal.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-113"
+        },
+        {
+            "word": "opaque",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Not transparent; hard or impossible to understand.",
+            "contextual_meaning": "Lacking accountability or conceptual transparency; impenetrable to scrutiny.",
+            "example_sentence": "The offshore corporate ownership structure was deliberately opaque to shield beneficial owners.",
+            "business_example": "Credit rating agencies struggled to evaluate the opaque tranches of subprime mortgages.",
+            "synonyms": [
+                "inscrutable",
+                "abstruse",
+                "cryptic",
+                "impenetrable"
+            ],
+            "antonyms": [
+                "lucid",
+                "transparent",
+                "clear"
+            ],
+            "root_prefix_suffix": "Latin 'opacus' (darkened, shady)",
+            "common_confusion": "Opaque in business writing denotes intentional or structural lack of transparency.",
+            "memory_aid": "OPAQUE: light cannot shine through.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-114"
+        },
+        {
+            "word": "prodigal",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Spending money or resources freely and recklessly; wastefully extravagant.",
+            "contextual_meaning": "Irresponsibly burning through capital reserves without disciplined return on investment.",
+            "example_sentence": "The startup's prodigal spending on marketing sponsorships exhausted its Series A in nine months.",
+            "business_example": "Activist funds intervened to curtail the CEO's prodigal corporate jet expenditures.",
+            "synonyms": [
+                "profligate",
+                "spendthrift",
+                "improvident",
+                "extravagant"
+            ],
+            "antonyms": [
+                "frugal",
+                "parsimonious",
+                "austere"
+            ],
+            "root_prefix_suffix": "Latin 'prodigus' (lavish, wasteful)",
+            "common_confusion": "Prodigal (wasteful) vs Prodigious (immense/enormous). Completely different roots.",
+            "memory_aid": "PRODIGAL SON: wastes his entire inheritance recklessly.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-115"
+        },
+        {
+            "word": "enigma",
+            "part_of_speech": "noun",
+            "category": "Foundation Bridge",
+            "definition": "A person or thing that is mysterious, puzzling, or difficult to understand.",
+            "contextual_meaning": "A scientific puzzle or market behavior that resists prevailing explanatory theories.",
+            "example_sentence": "The enduring resilience of consumer spending despite high interest rates remained an economic enigma.",
+            "business_example": "The reclusive founder's sudden resignation remained an enigma to corporate analysts.",
+            "synonyms": [
+                "conundrum",
+                "paradox",
+                "puzzle",
+                "riddle"
+            ],
+            "antonyms": [
+                "open book",
+                "transparent reality"
+            ],
+            "root_prefix_suffix": "Greek 'ainigma' (riddle, from ainos = fable)",
+            "common_confusion": "An enigma defies easy deduction; solving it requires a new conceptual breakthrough.",
+            "memory_aid": "ENIGMA MACHINE: famously complex code to decipher.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-116"
+        },
+        {
+            "word": "fervid",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Intensely enthusiastic or passionate, especially to an excessive degree.",
+            "contextual_meaning": "Ardent, zealous commitment; often uncritical and prone to emotional bias.",
+            "example_sentence": "The author tempers the fervid claims made by early evangelists of blockchain technology.",
+            "business_example": "The brand cultivated a fervid cult following that camped overnight outside flagship stores.",
+            "synonyms": [
+                "ardent",
+                "fervent",
+                "impassioned",
+                "zealous"
+            ],
+            "antonyms": [
+                "apathetic",
+                "lukewarm",
+                "dispassionate"
+            ],
+            "root_prefix_suffix": "Latin 'fervere' (to boil, glow)",
+            "common_confusion": "Fervid advocacy lacks the balanced dispassionate objectivity required on the GMAT.",
+            "memory_aid": "BOILING FEVER: boiling over with passionate intensity.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-117"
+        },
+        {
+            "word": "placate",
+            "part_of_speech": "verb",
+            "category": "Foundation Bridge",
+            "definition": "To make someone less angry or hostile; pacify.",
+            "contextual_meaning": "Offering concessions to neutralize angry regulators, shareholders, or community groups.",
+            "example_sentence": "The pharmaceutical company settled out of court to placate public outrage.",
+            "business_example": "The board appointed an independent lead director to placate activist institutional investors.",
+            "synonyms": [
+                "conciliate",
+                "propitiate",
+                "mollify",
+                "appease"
+            ],
+            "antonyms": [
+                "provoke",
+                "enrage",
+                "antagonize"
+            ],
+            "root_prefix_suffix": "Latin 'placare' (to soothe, appease)",
+            "common_confusion": "Placating often involves symbolic or tactical concessions rather than total surrender.",
+            "memory_aid": "PLACATE: make peaceful and calm.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-118"
+        },
+        {
+            "word": "laconic",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Using very few words; concise to the point of seeming rude or mysterious.",
+            "contextual_meaning": "Extremely terse and stripped of rhetorical ornamentation.",
+            "example_sentence": "The CEO's laconic one-sentence reply squashed rumors of a merger.",
+            "business_example": "His laconic executive memos conveyed direct orders without corporate jargon.",
+            "synonyms": [
+                "terse",
+                "succinct",
+                "curt",
+                "pithy"
+            ],
+            "antonyms": [
+                "verbose",
+                "garrulous",
+                "loquacious"
+            ],
+            "root_prefix_suffix": "Greek 'Lakonikos' (Spartan; from Laconia, home of Spartans famed for brief speech)",
+            "common_confusion": "Laconic means using few words, not necessarily polite.",
+            "memory_aid": "SPARTAN LACONIC: Spartans said 'If' when threatened with invasion.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-119"
+        },
+        {
+            "word": "pedantic",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Excessively concerned with minor details, formal rules, or displaying academic learning.",
+            "contextual_meaning": "Nitpicking over trivial definitions while missing the larger strategic argument.",
+            "example_sentence": "The reviewer dismissed the essay with pedantic critiques of punctuation rather than addressing the thesis.",
+            "business_example": "Overly pedantic legal compliance workflows stalled the fast-moving joint venture talks.",
+            "synonyms": [
+                "nitpicking",
+                "scrupulous",
+                "punctilious",
+                "doctrinaire"
+            ],
+            "antonyms": [
+                "pragmatic",
+                "big-picture",
+                "flexible"
+            ],
+            "root_prefix_suffix": "Italian 'pedante' (teacher, schoolmaster)",
+            "common_confusion": "Pedantic is derogatory; it means missing the forest for microscopic leaves.",
+            "memory_aid": "PEDANTIC PROFESSOR: obsessing over footnotes instead of the main idea.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-120"
+        },
+        {
+            "word": "vacillate",
+            "part_of_speech": "verb",
+            "category": "Foundation Bridge",
+            "definition": "To alternate or waver between different opinions or actions; be indecisive.",
+            "contextual_meaning": "Fluctuating between opposing strategic paths without committing.",
+            "example_sentence": "The monetary committee vacillated between raising rates to curb inflation and pausing to safeguard banking.",
+            "business_example": "Vacillating between luxury and discount positioning eroded the retailer's brand equity.",
+            "synonyms": [
+                "dither",
+                "oscillate",
+                "waver",
+                "hesitate"
+            ],
+            "antonyms": [
+                "resolve",
+                "decide",
+                "commit"
+            ],
+            "root_prefix_suffix": "Latin 'vacillare' (to sway to and fro)",
+            "common_confusion": "Vacillation causes strategic paralysis by trying to satisfy two mutually exclusive options.",
+            "memory_aid": "OSCILLATE / VACILLATE: swaying back and forth like a pendulum.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-121"
+        },
+        {
+            "word": "venerate",
+            "part_of_speech": "verb",
+            "category": "Foundation Bridge",
+            "definition": "To regard with great respect; revere.",
+            "contextual_meaning": "Holding an intellectual predecessor or founding institution in profound reverence.",
+            "example_sentence": "Constitutional originalists venerate the exact eighteenth-century text crafted by the framers.",
+            "business_example": "The corporate culture venerated the legendary founder's original management principles.",
+            "synonyms": [
+                "revere",
+                "idolize",
+                "esteem",
+                "hallow"
+            ],
+            "antonyms": [
+                "disparage",
+                "deride",
+                "despise"
+            ],
+            "root_prefix_suffix": "Latin 'venerari' (to worship, adore)",
+            "common_confusion": "Venerating an old theory often blinds scholars to newer contradictory empirical data.",
+            "memory_aid": "VENERABLE: showing deep respect to an elder.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-122"
+        },
+        {
+            "word": "waver",
+            "part_of_speech": "verb",
+            "category": "Foundation Bridge",
+            "definition": "To shake with a quivering motion; be undecided between two opinions or courses of action.",
+            "contextual_meaning": "Showing weakness or doubt in resolving a dispute or holding a policy stance.",
+            "example_sentence": "Consumer confidence wavered as mortgage rates climbed above seven percent.",
+            "business_example": "The venture fund wavered before ultimately declining the follow-on financing round.",
+            "synonyms": [
+                "falter",
+                "hesitate",
+                "fluctuate",
+                "totter"
+            ],
+            "antonyms": [
+                "stand firm",
+                "persevere"
+            ],
+            "root_prefix_suffix": "Middle English 'waveren' (to wander, wave)",
+            "common_confusion": "Waver (to hesitate) vs Waiver (giving up a right). Distinct spelling and meaning.",
+            "memory_aid": "WAVER: waving back and forth in doubt.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-123"
+        },
+        {
+            "word": "ephemeral",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Lasting for a very short time; transitory.",
+            "contextual_meaning": "Temporary fad or short-lived surge that fails to build permanent value.",
+            "example_sentence": "Social media viral trends generate ephemeral sales spikes rather than loyal customers.",
+            "business_example": "The financial windfalls of the commodity super-cycle proved ephemeral.",
+            "synonyms": [
+                "transitory",
+                "fleeting",
+                "short-lived",
+                "fugacious"
+            ],
+            "antonyms": [
+                "perennial",
+                "durable",
+                "eternal",
+                "permanent"
+            ],
+            "root_prefix_suffix": "Greek 'ephemeros' (lasting a single day)",
+            "common_confusion": "Ephemeral phenomena disappear rapidly; sustainable competitive advantages endure.",
+            "memory_aid": "MAYFLY: lives for only one day.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-124"
+        },
+        {
+            "word": "garrulous",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Excessively talkative, especially on trivial matters.",
+            "contextual_meaning": "Rambling and wordy; opposite of the concise, logical discipline needed on the GMAT.",
+            "example_sentence": "The garrulous witness frustrated attorneys by introducing irrelevant personal anecdotes.",
+            "business_example": "The executive's garrulous keynote ran forty minutes over schedule without clarifying strategy.",
+            "synonyms": [
+                "loquacious",
+                "voluble",
+                "verbose",
+                "long-winded"
+            ],
+            "antonyms": [
+                "laconic",
+                "taciturn",
+                "reticent"
+            ],
+            "root_prefix_suffix": "Latin 'garrire' (to chatter)",
+            "common_confusion": "Garrulous speech is filled with trivial, unhelpful filler words.",
+            "memory_aid": "GARRULOUS: babbling like a chatterbox.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-125"
+        },
+        {
+            "word": "arcane",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Understood by few; mysterious or secret.",
+            "contextual_meaning": "Highly esoteric technical regulations or jargon accessible only to niche specialists.",
+            "example_sentence": "Clearing derivatives requires navigating an arcane labyrinth of cross-border margin rules.",
+            "business_example": "The firm capitalized on arcane tax code provisions to minimize statutory liabilities.",
+            "synonyms": [
+                "esoteric",
+                "recondite",
+                "abstruse",
+                "inscrutable"
+            ],
+            "antonyms": [
+                "accessible",
+                "commonplace",
+                "transparent"
+            ],
+            "root_prefix_suffix": "Latin 'arcanus' (hidden, from arca = chest/box)",
+            "common_confusion": "Arcane matters are obscure because they are highly specialized, not necessarily evil.",
+            "memory_aid": "ARCANE: locked away inside a secret chest.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-126"
+        },
+        {
+            "word": "convoluted",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Extremely complex and difficult to follow; intricately folded.",
+            "contextual_meaning": "Tortuous, over-complicated sentences or argument structures common in dense GMAT passages.",
+            "example_sentence": "The stimulus featured convoluted clauses designed to test the reader's subject-verb parsing.",
+            "business_example": "The cross-holding corporate structure was so convoluted that rating agencies refused coverage.",
+            "synonyms": [
+                "tortuous",
+                "byzantine",
+                "labyrinthine",
+                "tangled"
+            ],
+            "antonyms": [
+                "straightforward",
+                "lucid",
+                "linear"
+            ],
+            "root_prefix_suffix": "Latin 'convolvere' (to roll together)",
+            "common_confusion": "GMAT RC passages often disguise simple arguments in convoluted syntax.",
+            "memory_aid": "CONVOLUTED: twisted up like a maze of wires.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-127"
+        },
+        {
+            "word": "reticent",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Not revealing one's thoughts or feelings readily; reserved.",
+            "contextual_meaning": "Reluctant to speak publicly or disclose confidential strategic plans.",
+            "example_sentence": "The central bank governor was reticent regarding the exact timing of quantitative tightening.",
+            "business_example": "The target board remained reticent during hostile tender offer inquiries.",
+            "synonyms": [
+                "reserved",
+                "uncommunicative",
+                "taciturn",
+                "guarded"
+            ],
+            "antonyms": [
+                "frank",
+                "loquacious",
+                "effusive"
+            ],
+            "root_prefix_suffix": "Latin 'reticere' (to keep silent, from re- + tacere)",
+            "common_confusion": "Reticent means reluctant to speak; reluctant means unwilling in general.",
+            "memory_aid": "RETICENT: keeping thoughts held back under lock and key.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-128"
+        },
+        {
+            "word": "meticulous",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Showing great attention to detail; very careful and precise.",
+            "contextual_meaning": "Exemplary scientific or analytical thoroughness that catches subtle errors.",
+            "example_sentence": "The researcher's meticulous archival records validated the re-dating of the treaty.",
+            "business_example": "Meticulous due diligence uncovered three undisclosed environmental liabilities.",
+            "synonyms": [
+                "scrupulous",
+                "punctilious",
+                "painstaking",
+                "rigorous"
+            ],
+            "antonyms": [
+                "careless",
+                "slipshod",
+                "cursory"
+            ],
+            "root_prefix_suffix": "Latin 'meticulosus' (fearful, from metus = fear of making mistakes)",
+            "common_confusion": "Meticulous work is painstaking and thorough in a positive sense.",
+            "memory_aid": "METICULOUS: checking every minute detail twice.",
+            "level": 1,
+            "difficulty": 2,
+            "id": "v-129"
+        },
+        {
+            "word": "pernicious",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Having a harmful effect, especially in a gradual or subtle way.",
+            "contextual_meaning": "An insidious systemic risk that slowly degrades balance sheets or competitive health.",
+            "example_sentence": "Subtle accounting distortions had a pernicious effect on the integrity of executive incentives.",
+            "business_example": "Silent customer defections are more pernicious to SaaS platforms than vocal churn.",
+            "synonyms": [
+                "insidious",
+                "deleterious",
+                "detrimental",
+                "ruinous"
+            ],
+            "antonyms": [
+                "beneficial",
+                "salutary",
+                "benign"
+            ],
+            "root_prefix_suffix": "Latin 'perniciodes' (destructive, from per- + nex = death)",
+            "common_confusion": "Pernicious harm creeps in invisibly and does grave damage over time.",
+            "memory_aid": "PERNICIOUS: silently poisoning the foundation.",
+            "level": 3,
+            "difficulty": 4,
+            "id": "v-130"
+        },
+        {
+            "word": "austere",
+            "part_of_speech": "adjective",
+            "category": "Foundation Bridge",
+            "definition": "Severe or strict in manner, attitude, or appearance; having no comforts or luxuries.",
+            "contextual_meaning": "Stripped of all superfluity; minimalist, rigorous, and disciplined.",
+            "example_sentence": "The monastery lived by an austere rule of silence and subsistence farming.",
+            "business_example": "The incoming turnaround CEO established an austere corporate headquarters in an industrial park.",
+            "synonyms": [
+                "spartan",
+                "ascetic",
+                "unadorned",
+                "rigorous"
+            ],
+            "antonyms": [
+                "luxurious",
+                "opulent",
+                "lavish",
+                "indulgent"
+            ],
+            "root_prefix_suffix": "Greek 'austeros' (harsh, bitter, dry)",
+            "common_confusion": "Austere prose is stark and unadorned, free of emotional hyperbole.",
+            "memory_aid": "AUSTERE: zero frills, maximum discipline.",
+            "level": 2,
+            "difficulty": 3,
+            "id": "v-131"
+        }
   ],
   "CATALOG": {
     "critical_reasoning": {
@@ -4679,7 +7306,7 @@ window.ENGLISH_DATA = {
       ]
     },
     "foundation_vocabulary": {
-      "total_items": 30,
+      "total_items": 131,
       "levels": [
         2,
         3

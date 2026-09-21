@@ -1918,8 +1918,18 @@
 
     startDeck: function (config) {
       this.deck = Array.isArray(config.deck) && config.deck.length > 0
+    startDeck: function (config = {}) {
+      const allVocab = (window.ENGLISH_DATA && Array.isArray(window.ENGLISH_DATA.VOCABULARY_ITEMS) && window.ENGLISH_DATA.VOCABULARY_ITEMS.length > 0)
+        ? window.ENGLISH_DATA.VOCABULARY_ITEMS
+        : BUILTIN_FLASHCARDS;
+      let targetDeck = Array.isArray(config.deck) && config.deck.length > 0
         ? config.deck
         : BUILTIN_FLASHCARDS;
+        : allVocab;
+      if (config.count && config.count > 0 && targetDeck.length > config.count) {
+        targetDeck = [...targetDeck].sort(() => Math.random() - 0.5).slice(0, config.count);
+      }
+      this.deck = targetDeck;
       this.currentIndex = 0;
       this.container = config.container || document.getElementById("englishFlashcardView") || document.getElementById("englishQuestionView");
       this.container = config.container || EnglishOverlayManager.getViewContainer();
@@ -1964,6 +1974,7 @@
                 <h2 class="card-word-title">${card.word}</h2>
                 <span class="card-phonetic">${card.phonetic || ''}</span>
                 <p class="card-hint-text" id="engCardHintText" style="display: none;">${card.hint || 'No hint available.'}</p>
+                <p class="card-hint-text" id="engCardHintText" style="display: none;">${card.hint || card.root_prefix_suffix || 'Think of the Latin/Greek root or contextual usage.'}</p>
               </div>
 
               <div class="card-front-bottom">
@@ -1985,14 +1996,23 @@
                 </div>
 
                 ${card.contextual ? `
+                ${(card.contextual_meaning || card.contextual) ? `
                   <div class="card-example-box">
                     <strong>Contextual Usage:</strong> ${card.contextual}
+                    <strong>GMAT Contextual Nuance:</strong> ${card.contextual_meaning || card.contextual}
+                  </div>
+                ` : ''}
+
+                ${card.common_confusion ? `
+                  <div class="card-example-box" style="border-left: 3px solid #f59e0b; background: #fffbeb;">
+                    <strong style="color: #b45309;">⚠️ Trap / Common Confusion:</strong> ${card.common_confusion}
                   </div>
                 ` : ''}
 
                 ${card.business_example ? `
                   <div class="card-example-box">
                     <strong>Business Context:</strong> ${card.business_example}
+                    <strong>Executive / Business Context:</strong> ${card.business_example}
                   </div>
                 ` : ''}
 
@@ -2004,8 +2024,10 @@
                 ` : ''}
 
                 ${card.mnemonic ? `
+                ${(card.memory_aid || card.mnemonic) ? `
                   <div class="card-mnemonic-box">
                     <strong>💡 Mnemonic Memory Aid:</strong> ${card.mnemonic}
+                    <strong>💡 Mnemonic Memory Aid:</strong> ${card.memory_aid || card.mnemonic}
                   </div>
                 ` : ''}
               </div>
@@ -2406,39 +2428,97 @@
               <div style="text-align: center;" title="Segregated GMAT Verbal Readiness (CR + RC)">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Verbal Readiness</span>
                 <div style="font-size: 18px; font-weight: 800; color: #0f766e;">${verbalReadiness}/100 <small style="font-size: 11px; color: #64748b;">(${verbalTier})</small></div>
+          <!-- Top Executive Modern HUD Strip -->
+          <section class="english-hud-strip" aria-label="GMAT Verbal Readiness Overview" style="margin-bottom: 20px;">
+            <div class="english-hud-top">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span class="english-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">GMAT Verbal Reasoning</span>
+                  <span style="font-size: 11.5px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Executive Dashboard</span>
+                </div>
+                <h2 class="english-hub-brand-title">English Practice Hub</h2>
+                <p class="english-hub-brand-sub">Master Critical Reasoning, Reading Comprehension, Foundation Grammar, and 131 Authentic GMAT Vocabulary terms.</p>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;" title="Segregated Foundation Readiness (Grammar + Vocab)">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Foundation</span>
                 <div style="font-size: 18px; font-weight: 800; color: #0891b2;">${foundationReadiness}/100 <small style="font-size: 11px; color: #64748b;">(${foundationTier})</small></div>
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="toggleAiModeTopBtn" class="english-ai-toggle-pill ${self.isAiMode ? 'is-active' : ''}" type="button" title="Toggle between Adaptive AI Generation and Standard Curated Bank">
+                  <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${self.isAiMode ? '#16a34a' : '#94a3b8'};"></span>
+                  <span>${self.isAiMode ? '🤖 AI Mode: Adaptive Generation' : '📚 Curated Question Bank'}</span>
+                </button>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;" title="Estimated Overall Readiness Band">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Estimated Band</span>
                 <div style="font-size: 14px; font-weight: 800; color: #4338ca;">${compositeBand}</div>
+            </div>
+
+            <div class="english-hud-metrics-grid">
+              <div class="english-hud-tile" title="Segregated GMAT Verbal Readiness (Critical Reasoning + Reading Comprehension)">
+                <div class="hud-tile-header">
+                  <span class="hud-tile-label">Verbal Readiness</span>
+                  <span class="hud-tile-pill green">${verbalTier}</span>
+                </div>
+                <div class="hud-tile-val verbal-accent">${verbalReadiness}<small style="font-size: 13px; color: #64748b; font-weight: 600;">/100</small></div>
+                <div class="hud-tile-sub">CR & RC Scaled Score</div>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Accuracy</span>
                 <div style="font-size: 18px; font-weight: 800; color: #1e3a5f;">${accuracy}</div>
+
+              <div class="english-hud-tile" title="Segregated Foundation Readiness (Grammar Rules + GMAT Vocabulary)">
+                <div class="hud-tile-header">
+                  <span class="hud-tile-label">Foundation</span>
+                  <span class="hud-tile-pill blue">${foundationTier}</span>
+                </div>
+                <div class="hud-tile-val foundation-accent">${foundationReadiness}<small style="font-size: 13px; color: #64748b; font-weight: 600;">/100</small></div>
+                <div class="hud-tile-sub">Grammar & Vocab Mastery</div>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">CR Avg Pace</span>
                 <div style="font-size: 18px; font-weight: 800; color: #2563eb;">${crAvg}</div>
+
+              <div class="english-hud-tile" title="Estimated Overall Readiness Band">
+                <div class="hud-tile-header">
+                  <span class="hud-tile-label">Estimated Band</span>
+                  <span class="hud-tile-pill amber">Pathway</span>
+                </div>
+                <div class="hud-tile-val" style="color: #4338ca; font-size: 18px;">${compositeBand}</div>
+                <div class="hud-tile-sub">Target 700+ GMAT Pathway</div>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">RC Avg Pace</span>
                 <div style="font-size: 18px; font-weight: 800; color: #b45309;">${rcAvg}</div>
+
+              <div class="english-hud-tile" title="Pacing and Accuracy Metrics">
+                <div class="hud-tile-header">
+                  <span class="hud-tile-label">Accuracy & Pace</span>
+                  <span style="font-size: 12px; font-weight: 700; color: #0f172a;">${accuracy}</span>
+                </div>
+                <div class="hud-tile-val pace-accent" style="font-size: 18px;">CR: ${crAvg} <small style="font-size: 11.5px; color: #64748b;">• RC: ${rcAvg}</small></div>
+                <div class="hud-tile-sub">CR Target: ~120s / question</div>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;">
                 <span style="font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700;">Streak</span>
                 <div style="font-size: 18px; font-weight: 800; color: #ea580c;">🔥 ${streak}</div>
+
+              <div class="english-hud-tile" title="Daily Practice Streak and Solved Questions">
+                <div class="hud-tile-header">
+                  <span class="hud-tile-label">Daily Streak</span>
+                  <span style="font-size: 11px; font-weight: 700; color: #ea580c;">ACTIVE</span>
+                </div>
+                <div class="hud-tile-val streak-accent">🔥 ${streak}</div>
+                <div class="hud-tile-sub">Total Solved: ${totalSolved} Qs</div>
               </div>
             </div>
           </header>
+          </section>
 
           ${resumeBannerHtml}
 
@@ -2457,6 +2537,19 @@
             <button class="english-subtab-btn ${this.activeSubtab === 'progress' ? 'is-active' : ''}" data-subtab="progress" type="button" style="padding: 10px 18px; font-weight: 700; font-size: 14px; background: none; border: none; border-bottom: 3px solid ${this.activeSubtab === 'progress' ? '#2563eb' : 'transparent'}; color: ${this.activeSubtab === 'progress' ? '#2563eb' : '#64748b'}; cursor: pointer;">
               📈 Verbal Progress & Trajectory
             </button>
+          <!-- 3 Modern Subtabs Navigation -->
+          <nav class="english-subtabs-bar" aria-label="Section Navigation">
+            <div class="english-subtabs-pills">
+              <button class="english-subtab-btn english-subtab-pill ${this.activeSubtab === 'gmat_verbal' ? 'is-active' : ''}" data-subtab="gmat_verbal" type="button">
+                📚 GMAT Verbal Reasoning
+              </button>
+              <button class="english-subtab-btn english-subtab-pill ${this.activeSubtab === 'foundation' ? 'is-active' : ''}" data-subtab="foundation" type="button">
+                🌱 English Foundation
+              </button>
+              <button class="english-subtab-btn english-subtab-pill ${this.activeSubtab === 'progress' ? 'is-active' : ''}" data-subtab="progress" type="button">
+                📈 Verbal Progress & Trajectory
+              </button>
+            </div>
           </nav>
 
           <!-- Subtab View Container -->
@@ -2475,6 +2568,18 @@
           self.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
         });
       });
+
+      // Top AI toggle button
+      const topAiBtn = screen.querySelector("#toggleAiModeTopBtn");
+      if (topAiBtn) {
+        topAiBtn.addEventListener("click", () => {
+          self.isAiMode = !self.isAiMode;
+          try {
+            localStorage.setItem("gmat_english_ai_mode", self.isAiMode ? "true" : "false");
+          } catch (e) {}
+          self.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
+        });
+      }
 
       // Resume & Discard listeners
       const resumeBtn = screen.querySelector("#engResumeBtn");
@@ -2747,11 +2852,34 @@
 
     // -----------------------------------------------------------------------
     // SUBTAB 2: ENGLISH FOUNDATION (Grammar & Vocabulary)
+    // SUBTAB 2: ENGLISH FOUNDATION (Grammar & GMAT Vocabulary Hub)
     // -----------------------------------------------------------------------
     renderFoundationTab: function (container, overview) {
       const self = this;
       const grammarCount = (window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) ? window.ENGLISH_DATA.GRAMMAR_QUESTIONS.length : 25;
       const vocabCount = (window.ENGLISH_DATA && window.ENGLISH_DATA.VOCABULARY_ITEMS) ? window.ENGLISH_DATA.VOCABULARY_ITEMS.length : 30;
+      const vocabItems = (window.ENGLISH_DATA && Array.isArray(window.ENGLISH_DATA.VOCABULARY_ITEMS) && window.ENGLISH_DATA.VOCABULARY_ITEMS.length > 0)
+        ? window.ENGLISH_DATA.VOCABULARY_ITEMS
+        : BUILTIN_FLASHCARDS;
+      const vocabCount = vocabItems.length;
+
+      // Category word counts
+      const catCounts = {
+        all: vocabCount,
+        "Argumentation & Logic": 0,
+        "Author Tone & Attitude": 0,
+        "Business & Economics": 0,
+        "Science & Methodology": 0,
+        "Foundation Bridge": 0,
+      };
+      vocabItems.forEach((v) => {
+        if (v.category && catCounts[v.category] !== undefined) {
+          catCounts[v.category]++;
+        }
+      });
+
+      let currentCategory = "all";
+      let currentQuery = "";
 
       container.innerHTML = `
         <div style="display: flex; flex-direction: column; gap: 24px;">
@@ -2794,21 +2922,62 @@
                 <span style="font-size: 11px; font-weight: 700; color: #166534;">LEVEL 1</span>
                 <h5 style="margin: 4px 0 2px; font-size: 13px; color: #111827;">Basic English</h5>
                 <p style="font-size: 11.5px; color: #64748b; margin: 0;">Parts of speech, Subject-verb agreement, Basic vocabulary</p>
+          <!-- Section A: Grammar Mastery & Curriculum Progression -->
+          <div class="cr-stimulus-card" style="border-left: 5px solid #0f766e; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+              <div>
+                <span class="english-badge foundation-badge">Grammar Mastery & Rules</span>
+                <h3 style="margin: 8px 0 4px; font-size: 19px; color: #1e3a5f;">Sentence Mechanics & Grammar Curriculum (${grammarCount} Questions)</h3>
+                <p style="font-size: 13.5px; color: #475569; margin: 0; max-width: 720px; line-height: 1.5;">
+                  Master Subject-Verb Agreement, Dangling Modifiers, Parallel Construction, Verb Tense sequences, and Idiomatic accuracy tested in GMAT reasoning.
+                </p>
               </div>
               <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dcfce7;">
                 <span style="font-size: 11px; font-weight: 700; color: #166534;">LEVEL 2</span>
                 <h5 style="margin: 4px 0 2px; font-size: 13px; color: #111827;">Intermediate English</h5>
                 <p style="font-size: 11.5px; color: #64748b; margin: 0;">Clauses, Modifiers, Parallelism, Comparisons</p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="english-btn english-btn-primary" style="background: #0f766e; border-color: #0f766e;" type="button" id="startGrammarLearnBtn">
+                  📖 Learn Mode (Instant Feedback)
+                </button>
+                <button class="english-btn english-btn-secondary" type="button" id="startGrammarDrillBtn">
+                  ⚡ Timed Drill (10Q)
+                </button>
+                <button class="english-btn english-btn-secondary" type="button" id="startFoundationDiagBtn">
+                  🔬 Diagnostic (16Q)
+                </button>
               </div>
               <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dcfce7;">
                 <span style="font-size: 11px; font-weight: 700; color: #166534;">LEVEL 3</span>
                 <h5 style="margin: 4px 0 2px; font-size: 13px; color: #111827;">Advanced Foundation</h5>
                 <p style="font-size: 11.5px; color: #64748b; margin: 0;">Concision, Sentence logic, Academic vocabulary</p>
+            </div>
+
+            <!-- Curriculum Level Roadmap -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 11px; font-weight: 700; color: #0f766e;">LEVEL 1 • BASIC</span>
+                <h5 style="margin: 4px 0 2px; font-size: 13px; color: #0f172a;">Parts of Speech</h5>
+                <p style="font-size: 11.5px; color: #64748b; margin: 0;">Subject-verb number agreement, pronoun references</p>
               </div>
               <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dcfce7;">
                 <span style="font-size: 11px; font-weight: 700; color: #166534;">LEVEL 4</span>
                 <h5 style="margin: 4px 0 2px; font-size: 13px; color: #111827;">GMAT Bridge</h5>
                 <p style="font-size: 11.5px; color: #64748b; margin: 0;">Argument terminology, Cause-and-effect language</p>
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 11px; font-weight: 700; color: #0f766e;">LEVEL 2 • INTERMEDIATE</span>
+                <h5 style="margin: 4px 0 2px; font-size: 13px; color: #0f172a;">Modifiers & Clauses</h5>
+                <p style="font-size: 11.5px; color: #64748b; margin: 0;">Participial modifiers, relative clauses, parallelism</p>
+              </div>
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 11px; font-weight: 700; color: #0f766e;">LEVEL 3 • ADVANCED</span>
+                <h5 style="margin: 4px 0 2px; font-size: 13px; color: #0f172a;">Concision & Logic</h5>
+                <p style="font-size: 11.5px; color: #64748b; margin: 0;">Passive vs active voice, elliptical comparisons, correlatives</p>
+              </div>
+              <div style="background: #f8fafc; padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 11px; font-weight: 700; color: #0f766e;">LEVEL 4 • GMAT BRIDGE</span>
+                <h5 style="margin: 4px 0 2px; font-size: 13px; color: #0f172a;">Argument Syntax</h5>
+                <p style="font-size: 11.5px; color: #64748b; margin: 0;">Subordinating counter-evidence, causal link phrases</p>
               </div>
             </div>
           </div>
@@ -2825,9 +2994,33 @@
               <div style="display: flex; gap: 10px; margin-top: 16px;">
                 <button class="english-btn english-btn-primary" style="flex: 1; background: #0f766e; border-color: #0f766e;" type="button" id="startGrammarLearnBtn">
                   📖 Learn Mode (Instant Feedback)
+          <!-- Section B: Authentic GMAT Vocabulary Hub (131 Words) -->
+          <section class="english-vocab-hub" aria-label="GMAT Vocabulary Hub">
+            <div class="vocab-hub-topbar">
+              <div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                  <span class="english-badge" style="background: #dcfce7; color: #166534; border-color: #bbf7d0;">
+                    ${vocabCount} GMAT High-Frequency Words
+                  </span>
+                  <span style="font-size: 12px; color: #64748b; font-weight: 600;">Spaced Repetition System</span>
+                </div>
+                <h3 style="margin: 4px 0; font-size: 20px; font-weight: 800; color: #0f172a;">
+                  GMAT Vocabulary Hub & Word Explorer
+                </h3>
+                <p style="margin: 0; font-size: 13px; color: #64748b;">
+                  Targeted vocabulary for Critical Reasoning and Reading Comprehension across 5 exam domains.
+                </p>
+              </div>
+
+              <!-- Top Actions: SRS Deck Launchers -->
+              <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="english-btn english-btn-primary" id="openFlashcardsBtn" style="background: #16a34a; border-color: #16a34a; font-size: 13px;" type="button">
+                  🗂 Open Flashcards SRS (<span id="activeDeckCountLabel">${vocabCount}</span> Cards) →
                 </button>
                 <button class="english-btn english-btn-secondary" type="button" id="startGrammarDrillBtn">
                   ⚡ Timed Drill
+                <button class="english-btn english-btn-secondary" id="vocabQuick10Btn" style="font-size: 13px;" type="button">
+                  ⚡ Quick 10-Card Drill
                 </button>
               </div>
             </div>
@@ -2846,11 +3039,149 @@
                 <button class="english-btn english-btn-secondary" type="button" id="startFoundationDiagBtn">
                   🔬 Diagnostic (16Q)
                 </button>
+            <!-- Categories and Search Bar -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; border-top: 1px solid #f1f5f9; padding-top: 14px;">
+              <div class="vocab-categories-bar" id="vocabCatBar">
+                <button class="vocab-cat-chip is-active" data-cat="all" type="button">All (${vocabCount})</button>
+                <button class="vocab-cat-chip" data-cat="Argumentation & Logic" type="button">Argumentation & Logic (${catCounts['Argumentation & Logic'] || 0})</button>
+                <button class="vocab-cat-chip" data-cat="Author Tone & Attitude" type="button">Author Tone (${catCounts['Author Tone & Attitude'] || 0})</button>
+                <button class="vocab-cat-chip" data-cat="Business & Economics" type="button">Business & Econ (${catCounts['Business & Economics'] || 0})</button>
+                <button class="vocab-cat-chip" data-cat="Science & Methodology" type="button">Science & Method (${catCounts['Science & Methodology'] || 0})</button>
+                <button class="vocab-cat-chip" data-cat="Foundation Bridge" type="button">Foundation Bridge (${catCounts['Foundation Bridge'] || 0})</button>
+              </div>
+
+              <div class="vocab-search-wrap">
+                <span class="vocab-search-icon">🔍</span>
+                <input type="text" id="vocabSearchInput" class="vocab-search-input" placeholder="Search 131 words, traps, synonyms..." autocomplete="off">
               </div>
             </div>
           </div>
+
+            <!-- Real-time Filter Count / Status -->
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #64748b; margin-top: -6px;">
+              <span id="vocabFilterStatus">Showing all ${vocabCount} GMAT vocabulary words</span>
+              <span>Click any card to launch 3D flashcard review</span>
+            </div>
+
+            <!-- Word Explorer Grid -->
+            <div class="vocab-word-grid" id="vocabWordGrid">
+              <!-- Dynamically populated -->
+            </div>
+          </section>
         </div>
       `;
+
+      // Helper function to filter items
+      function getFilteredItems() {
+        return vocabItems.filter((item) => {
+          const matchesCat = currentCategory === "all" || item.category === currentCategory;
+          if (!matchesCat) return false;
+          if (!currentQuery) return true;
+          const q = currentQuery.toLowerCase();
+          const w = (item.word || "").toLowerCase();
+          const def = (item.definition || "").toLowerCase();
+          const ctxt = (item.contextual_meaning || "").toLowerCase();
+          const trap = (item.common_confusion || "").toLowerCase();
+          const syns = Array.isArray(item.synonyms) ? item.synonyms.join(" ").toLowerCase() : "";
+          return w.includes(q) || def.includes(q) || ctxt.includes(q) || trap.includes(q) || syns.includes(q);
+        });
+      }
+
+      // Helper function to render cards into #vocabWordGrid
+      function updateGrid() {
+        const filtered = getFilteredItems();
+        const gridEl = container.querySelector("#vocabWordGrid");
+        const countLabel = container.querySelector("#activeDeckCountLabel");
+        const statusLabel = container.querySelector("#vocabFilterStatus");
+
+        if (countLabel) countLabel.textContent = filtered.length;
+        if (statusLabel) {
+          statusLabel.textContent = `Showing ${filtered.length} of ${vocabCount} words${currentCategory !== 'all' ? ` in ${currentCategory}` : ''}${currentQuery ? ` matching "${currentQuery}"` : ''}`;
+        }
+
+        if (!gridEl) return;
+
+        if (filtered.length === 0) {
+          gridEl.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: #64748b;">
+              <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+              <h4 style="margin: 0 0 4px; color: #1e293b;">No vocabulary words found</h4>
+              <p style="margin: 0; font-size: 13px;">Try clearing your search query or choosing another category.</p>
+            </div>
+          `;
+          return;
+        }
+
+        gridEl.innerHTML = filtered.map((item) => {
+          const synHtml = Array.isArray(item.synonyms) && item.synonyms.length > 0
+            ? item.synonyms.slice(0, 4).map((s) => `<span class="vocab-syn-tag">${s}</span>`).join("")
+            : "";
+          return `
+            <div class="vocab-word-card" data-word="${item.word}">
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div class="vocab-card-header">
+                  <div>
+                    <span class="vocab-word-title">${item.word}</span>
+                    <span class="vocab-word-pos">${item.part_of_speech || ''}</span>
+                  </div>
+                  <span class="vocab-category-badge">${item.category || 'GMAT'}</span>
+                </div>
+
+                <p class="vocab-def-text">${item.definition}</p>
+
+                ${item.contextual_meaning ? `
+                  <div class="vocab-gmat-context">
+                    <strong>GMAT Nuance:</strong> ${item.contextual_meaning}
+                  </div>
+                ` : ''}
+
+                ${item.common_confusion ? `
+                  <div class="vocab-trap-box">
+                    <strong>⚠️ Common Trap:</strong> ${item.common_confusion}
+                  </div>
+                ` : ''}
+
+                ${synHtml ? `
+                  <div class="vocab-syn-list">
+                    ${synHtml}
+                  </div>
+                ` : ''}
+              </div>
+
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                <span style="font-size: 11px; color: #94a3b8;">${item.root_prefix_suffix || 'GMAT Vocabulary'}</span>
+                <button class="english-btn english-btn-ghost practice-word-btn" style="padding: 4px 10px; font-size: 12px; color: #0f766e; border-color: #cbd5e1;" data-word="${item.word}" type="button">
+                  🗂 3D Card
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+        // Attach per-card click listener
+        gridEl.querySelectorAll(".practice-word-btn").forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const wName = btn.dataset.word;
+            const cardObj = vocabItems.find((v) => v.word.toLowerCase() === wName.toLowerCase());
+            if (cardObj) {
+              self.startFlashcards({ deck: [cardObj] });
+            }
+          });
+        });
+
+        gridEl.querySelectorAll(".vocab-word-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            const wName = card.dataset.word;
+            const cardObj = vocabItems.find((v) => v.word.toLowerCase() === wName.toLowerCase());
+            if (cardObj) {
+              self.startFlashcards({ deck: [cardObj] });
+            }
+          });
+        });
+      }
+
+      updateGrid();
 
       // Event listener for AI toggle
       const toggleAiBtn = container.querySelector("#toggleAiModeFoundationBtn");
@@ -2865,6 +3196,7 @@
       }
 
       // Event listeners
+      // Event listeners for Grammar
       container.querySelector("#startGrammarLearnBtn").addEventListener("click", () => {
         const qs = (window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) ? window.ENGLISH_DATA.GRAMMAR_QUESTIONS : [];
         self.startPracticeSession({ mode: "untimed", subsection: "Grammar", count: 10, questions: self.isAiMode ? null : qs });
@@ -2875,13 +3207,47 @@
         self.startPracticeSession({ mode: "drill", subsection: "Grammar", count: 10, questions: self.isAiMode ? null : qs });
       });
 
+      container.querySelector("#startFoundationDiagBtn").addEventListener("click", () => {
+        self.startPracticeSession({ mode: "foundation_diagnostic" });
+      });
+
+      // Category filter chips
+      container.querySelectorAll(".vocab-cat-chip").forEach((chip) => {
+        chip.addEventListener("click", () => {
+          container.querySelectorAll(".vocab-cat-chip").forEach((c) => c.classList.remove("is-active"));
+          chip.classList.add("is-active");
+          currentCategory = chip.dataset.cat;
+          updateGrid();
+        });
+      });
+
+      // Search input live filtering
+      const searchInput = container.querySelector("#vocabSearchInput");
+      if (searchInput) {
+        searchInput.addEventListener("input", (e) => {
+          currentQuery = e.target.value.trim();
+          updateGrid();
+        });
+      }
+
+      // Open Flashcards SRS button
       container.querySelector("#openFlashcardsBtn").addEventListener("click", () => {
         self.startFlashcards();
+        const filtered = getFilteredItems();
+        self.startFlashcards({ deck: filtered.length > 0 ? filtered : vocabItems });
       });
 
       container.querySelector("#startFoundationDiagBtn").addEventListener("click", () => {
         self.startPracticeSession({ mode: "foundation_diagnostic" });
       });
+      // Quick 10-card drill button
+      const quick10Btn = container.querySelector("#vocabQuick10Btn");
+      if (quick10Btn) {
+        quick10Btn.addEventListener("click", () => {
+          const filtered = getFilteredItems();
+          self.startFlashcards({ deck: filtered.length > 0 ? filtered : vocabItems, count: 10 });
+        });
+      }
     },
 
     // -----------------------------------------------------------------------
