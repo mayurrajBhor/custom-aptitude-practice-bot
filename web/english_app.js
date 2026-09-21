@@ -1933,6 +1933,7 @@
       this.currentIndex = 0;
       this.container = config.container || document.getElementById("englishFlashcardView") || document.getElementById("englishQuestionView");
       this.container = config.container || EnglishOverlayManager.getViewContainer();
+      this.container = config.container || (window.EnglishOverlayManager && EnglishOverlayManager.getViewContainer()) || document.getElementById("englishPracticeView");
       this.onComplete = config.onComplete || null;
       this.isFlipped = false;
 
