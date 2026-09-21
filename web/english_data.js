@@ -7211,6 +7211,681 @@ window.ENGLISH_DATA = {
             "level": 2,
             "difficulty": 3,
             "id": "v-131"
+        },
+        {
+                  "word": "anachronistic",
+                  "part_of_speech": "adjective",
+                  "category": "Science & Methodology",
+                  "definition": "Belonging or appropriate to a period other than that in which it exists; conspicuously old-fashioned.",
+                  "contextual_meaning": "Out of proper historical or chronological sequence, undermining historical causality arguments.",
+                  "example_sentence": "The historian showed that the cited correspondence was anachronistic, mentioning steam engines decades before their invention.",
+                  "business_example": "Relying on quarterly batch accounting in an era of real-time algorithmic settlement proved hopelessly anachronistic.",
+                  "synonyms": [
+                            "archaic",
+                            "antiquated",
+                            "outmoded",
+                            "chronologically misplaced"
+                  ],
+                  "antonyms": [
+                            "contemporary",
+                            "synchronous",
+                            "modern",
+                            "timely"
+                  ],
+                  "root_prefix_suffix": "Greek ana- (against) + chronos (time)",
+                  "common_confusion": "Anachronistic means misplaced in time, not merely old or traditional.",
+                  "memory_aid": "ANACHRONISTIC: Against (ANA) the chronological clock (CHRONO).",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-132"
+        },
+        {
+                  "word": "apocryphal",
+                  "part_of_speech": "adjective",
+                  "category": "Argumentation & Logic",
+                  "definition": "Of doubtful authenticity, although widely circulated as being true.",
+                  "contextual_meaning": "Widely repeated anecdotal claims that lack empirical verification in a critical reasoning stimulus.",
+                  "example_sentence": "The famous story of the founder sketching the business plan on a napkin turned out to be apocryphal.",
+                  "business_example": "Investment committees must discard apocryphal market lore and demand audited cohort metrics.",
+                  "synonyms": [
+                            "spurious",
+                            "unverified",
+                            "dubious",
+                            "mythical"
+                  ],
+                  "antonyms": [
+                            "authentic",
+                            "canonical",
+                            "verified",
+                            "substantiated"
+                  ],
+                  "root_prefix_suffix": "Greek apokryptein (to hide away)",
+                  "common_confusion": "Apocryphal does not always mean deliberate lie; it means an unauthenticated myth.",
+                  "memory_aid": "APOCRYPHAL: sounds like a crypt—hidden sources that cannot be verified.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-133"
+        },
+        {
+                  "word": "capricious",
+                  "part_of_speech": "adjective",
+                  "category": "Business & Economics",
+                  "definition": "Given to sudden and unaccountable changes of mood or behavior; erratic, unpredictable.",
+                  "contextual_meaning": "Subject to volatile shifts without rational underlying economic or operational basis.",
+                  "example_sentence": "The regulatory agency was criticized for its capricious enforcement of environmental standards.",
+                  "business_example": "Venture funds avoid jurisdictions plagued by capricious tariff policies and arbitrary licensing.",
+                  "synonyms": [
+                            "fickle",
+                            "mercurial",
+                            "volatile",
+                            "arbitrary"
+                  ],
+                  "antonyms": [
+                            "steadfast",
+                            "predictable",
+                            "consistent",
+                            "immutable"
+                  ],
+                  "root_prefix_suffix": "Italian capriccio (whim, freak of fancy)",
+                  "common_confusion": "Capricious behavior lacks rationale; arbitrary behavior may have authority without reason.",
+                  "memory_aid": "CAPRICIOUS: leaping like a capricorn (goat) in unexpected directions.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-134"
+        },
+        {
+                  "word": "castigate",
+                  "part_of_speech": "verb",
+                  "category": "Author Tone & Attitude",
+                  "definition": "To reprimand severely; censure formally.",
+                  "contextual_meaning": "Strong negative authorial stance attacking an opponent or policy in GMAT Reading Comprehension.",
+                  "example_sentence": "The editorial castigated the board for rubber-stamping executive bonuses amidst declining net margins.",
+                  "business_example": "Shareholder activists castigated management for refusing to divvy capital into share buybacks.",
+                  "synonyms": [
+                            "chastise",
+                            "rebuke",
+                            "censure",
+                            "admonish"
+                  ],
+                  "antonyms": [
+                            "laud",
+                            "commend",
+                            "praise",
+                            "extol"
+                  ],
+                  "root_prefix_suffix": "Latin castigare (to purify or drive away vices)",
+                  "common_confusion": "Castigate implies public verbal condemnation, not physical punishment.",
+                  "memory_aid": "CASTIGATE: to castigate is to give someone a harsh verbal castigation.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-135"
+        },
+        {
+                  "word": "circumspect",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Wary and unwilling to take risks; heedful of circumstances and potential traps.",
+                  "contextual_meaning": "Careful qualification and measured caution characteristic of balanced GMAT authorial tone.",
+                  "example_sentence": "The epidemiologist offered a circumspect assessment of the drug trial, citing small cohort sizes.",
+                  "business_example": "Given antitrust headwinds, the general counsel took a circumspect approach to public acquisition statements.",
+                  "synonyms": [
+                            "cautious",
+                            "prudent",
+                            "guarded",
+                            "judicious"
+                  ],
+                  "antonyms": [
+                            "reckless",
+                            "rash",
+                            "incautious",
+                            "foolhardy"
+                  ],
+                  "root_prefix_suffix": "Latin circum- (around) + specere (to look)",
+                  "common_confusion": "Circumspect means cautious; circuitous means indirect or roundabout.",
+                  "memory_aid": "CIRCUMSPECT: looking (spect) all around (circum) before taking a step.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-136"
+        },
+        {
+                  "word": "deleterious",
+                  "part_of_speech": "adjective",
+                  "category": "Business & Economics",
+                  "definition": "Causing harm or damage; injurious to an outcome, health, or market equilibrium.",
+                  "contextual_meaning": "Producing negative systemic outcomes often overlooked by myopic cost-cutting arguments.",
+                  "example_sentence": "The rapid drawdown of research funding had a deleterious impact on the firm patent output.",
+                  "business_example": "Price gouging during supplier bottlenecks caused deleterious long-term brand erosion.",
+                  "synonyms": [
+                            "detrimental",
+                            "harmful",
+                            "injurious",
+                            "damaging"
+                  ],
+                  "antonyms": [
+                            "salubrious",
+                            "beneficial",
+                            "advantageous",
+                            "wholesome"
+                  ],
+                  "root_prefix_suffix": "Greek deleterios (noxious, destructive)",
+                  "common_confusion": "Deleterious means actively damaging, not merely useless or inert.",
+                  "memory_aid": "DELETERIOUS: acts like a DELETE key on value and performance.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-137"
+        },
+        {
+                  "word": "equivocate",
+                  "part_of_speech": "verb",
+                  "category": "Argumentation & Logic",
+                  "definition": "To use ambiguous language so as to conceal the truth or avoid committing oneself.",
+                  "contextual_meaning": "A critical reasoning flaw involving shifting definitions or evasive premise wording.",
+                  "example_sentence": "When asked if subsidies would expire next quarter, the minister equivocated by discussing overall fiscal health.",
+                  "business_example": "The CFO equivocated regarding customer churn rates, blending renewals with one-time pilot trials.",
+                  "synonyms": [
+                            "prevaricate",
+                            "hedge",
+                            "vacillate",
+                            "quibble"
+                  ],
+                  "antonyms": [
+                            "clarify",
+                            "pronounce",
+                            "affirm",
+                            "authenticate"
+                  ],
+                  "root_prefix_suffix": "Latin aequus (equal) + vocare (to call)",
+                  "common_confusion": "Equivocate means using words with double meaning to deceive, not speaking equally.",
+                  "memory_aid": "EQUIVOCATE: equal voices (equi-voice) saying both yes and no to confuse.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-138"
+        },
+        {
+                  "word": "esoteric",
+                  "part_of_speech": "adjective",
+                  "category": "Science & Methodology",
+                  "definition": "Intended for or likely to be understood by only a small number of people with specialized knowledge.",
+                  "contextual_meaning": "Technical domain-specific jargon that GMAT RC passages require reading past without panic.",
+                  "example_sentence": "Quantum decoherence remains an esoteric topic even among trained mechanical engineers.",
+                  "business_example": "The boutique advisory specialized in esoteric cross-currency structured credit swaps.",
+                  "synonyms": [
+                            "abstruse",
+                            "recondite",
+                            "arcane",
+                            "inscrutable"
+                  ],
+                  "antonyms": [
+                            "exoteric",
+                            "commonplace",
+                            "accessible",
+                            "elementary"
+                  ],
+                  "root_prefix_suffix": "Greek esotero (inner, pertaining to the inner circle)",
+                  "common_confusion": "Esoteric means obscure and specialized, not weird or irrational.",
+                  "memory_aid": "ESOTERIC: understood only by an internal, exclusive circle.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-139"
+        },
+        {
+                  "word": "exculpate",
+                  "part_of_speech": "verb",
+                  "category": "Argumentation & Logic",
+                  "definition": "To show or declare that someone is not guilty of wrongdoing; exonerate.",
+                  "contextual_meaning": "A logical move in CR that eliminates causal responsibility from an accused variable.",
+                  "example_sentence": "Forensic telemetry exculpated the software patch, showing hardware latency caused the outage.",
+                  "business_example": "The external compliance audit completely exculpated the regional sales director from bid-rigging charges.",
+                  "synonyms": [
+                            "exonerate",
+                            "acquit",
+                            "vindicate",
+                            "absolve"
+                  ],
+                  "antonyms": [
+                            "incriminate",
+                            "inculpate",
+                            "indict",
+                            "criminate"
+                  ],
+                  "root_prefix_suffix": "Latin ex- (out of) + culpa (fault, guilt)",
+                  "common_confusion": "Exculpate removes guilt; extenuate lessens the perceived gravity of a fault.",
+                  "memory_aid": "EXCULPATE: Ex (out of) + Culpa (culprit/guilt) -> freed from guilt.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-140"
+        },
+        {
+                  "word": "iconoclast",
+                  "part_of_speech": "noun",
+                  "category": "Argumentation & Logic",
+                  "definition": "A person who attacks cherished beliefs or traditional institutions; challenger of orthodox assumptions.",
+                  "contextual_meaning": "A researcher or theorist who upends prevailing consensus in GMAT RC science/history passages.",
+                  "example_sentence": "Copernicus was an intellectual iconoclast whose heliocentric model dismantled geocentric dogma.",
+                  "business_example": "The fintech founder positioned herself as an iconoclast taking aim at predatory banking fees.",
+                  "synonyms": [
+                            "rebel",
+                            "dissident",
+                            "nonconformist",
+                            "heretic"
+                  ],
+                  "antonyms": [
+                            "conformist",
+                            "traditionalist",
+                            "orthodox",
+                            "dogmatist"
+                  ],
+                  "root_prefix_suffix": "Greek eikon (image) + klan (to break)",
+                  "common_confusion": "An iconoclast challenges beliefs and systems, not simply a rule-breaker for sport.",
+                  "memory_aid": "ICONOCLAST: Icon-Clasher -> smashes traditional conceptual icons.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-141"
+        },
+        {
+                  "word": "implacable",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Unable to be placated, soothed, or appeased; relentless and unstoppable.",
+                  "contextual_meaning": "An unrelenting standard, opposing force, or critical opponent that admits no compromise.",
+                  "example_sentence": "The environmental advocacy group remained an implacable opponent of the proposed pipeline.",
+                  "business_example": "The legacy retailer struggled against the implacable march of e-commerce delivery networks.",
+                  "synonyms": [
+                            "unappeasable",
+                            "unforgiving",
+                            "inflexible",
+                            "intransigent"
+                  ],
+                  "antonyms": [
+                            "placable",
+                            "conciliatory",
+                            "accommodating",
+                            "malleable"
+                  ],
+                  "root_prefix_suffix": "Latin in- (not) + placare (to calm, soothe)",
+                  "common_confusion": "Implacable describes immovable hostility or persistence; inscrutable means difficult to interpret.",
+                  "memory_aid": "IMPLACABLE: cannot be PACIFIED (im-placable).",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-142"
+        },
+        {
+                  "word": "inchoate",
+                  "part_of_speech": "adjective",
+                  "category": "Science & Methodology",
+                  "definition": "Just begun and so not fully formed or developed; rudimentary.",
+                  "contextual_meaning": "Early-stage hypotheses, emerging industries, or rudimentary structures lacking formal coherence.",
+                  "example_sentence": "In the early 1970s, personal computing existed only as an inchoate collection of hobbyist kits.",
+                  "business_example": "Regulatory frameworks surrounding generative AI models remain largely inchoate and inconsistent.",
+                  "synonyms": [
+                            "rudimentary",
+                            "nascent",
+                            "embryonic",
+                            "unformed"
+                  ],
+                  "antonyms": [
+                            "developed",
+                            "mature",
+                            "fully formed",
+                            "crystallized"
+                  ],
+                  "root_prefix_suffix": "Latin inchoare (to begin, set in motion)",
+                  "common_confusion": "Inchoate means unformed/early stage, not chaotic or disorganized.",
+                  "memory_aid": "INCHOATE: In-CHOKE-it -> so early it has not even hatched yet.",
+                  "level": 3,
+                  "difficulty": 5,
+                  "id": "v-143"
+        },
+        {
+                  "word": "intransigent",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Unwilling or refusing to change one views or to agree about something; uncompromising.",
+                  "contextual_meaning": "Deadlocked negotiations or dogmatic researchers unwilling to revise models despite empirical data.",
+                  "example_sentence": "Negotiations broke down when both union leaders and management adopted intransigent postures.",
+                  "business_example": "An intransigent posture during patent licensing discussions frequently leads straight to litigation.",
+                  "synonyms": [
+                            "uncompromising",
+                            "resolute",
+                            "obstinate",
+                            "inflexible"
+                  ],
+                  "antonyms": [
+                            "compliant",
+                            "amenable",
+                            "yielding",
+                            "cooperative"
+                  ],
+                  "root_prefix_suffix": "Spanish los intransigentes (those who refuse to compromise)",
+                  "common_confusion": "Intransigent implies stubborn refusal to compromise on principle, not passive inactivity.",
+                  "memory_aid": "INTRANSIGENT: In-Transaction-Refuser -> won not budge an inch.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-144"
+        },
+        {
+                  "word": "laconic",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Using very few words; concise to the point of seeming terse or abrupt.",
+                  "contextual_meaning": "Sparse and unadorned communication style in corporate or academic reporting.",
+                  "example_sentence": "The chairman issued a laconic one-sentence release confirming the departure of the CEO.",
+                  "business_example": "Under intense cross-examination, the general counsel gave only laconic, monosyllabic responses.",
+                  "synonyms": [
+                            "terse",
+                            "succinct",
+                            "pithy",
+                            "taciturn"
+                  ],
+                  "antonyms": [
+                            "verbose",
+                            "loquacious",
+                            "garrulous",
+                            "effusive"
+                  ],
+                  "root_prefix_suffix": "Greek Lakonikos (Spartan, known for pithy speech)",
+                  "common_confusion": "Laconic refers to word economy; lethargic refers to low physical energy.",
+                  "memory_aid": "LACONIC: Spartan economy of words -> Like a comic caption, short and punchy.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-145"
+        },
+        {
+                  "word": "mercurial",
+                  "part_of_speech": "adjective",
+                  "category": "Business & Economics",
+                  "definition": "Subject to sudden or unpredictable changes of mood or mind; volatile.",
+                  "contextual_meaning": "High-beta market conditions or erratic executive leadership that resists modeling.",
+                  "example_sentence": "The commodity market was driven by mercurial investor sentiment rather than supply fundamentals.",
+                  "business_example": "Founder-led tech startups frequently struggle under the mercurial directives of erratic founders.",
+                  "synonyms": [
+                            "volatile",
+                            "capricious",
+                            "erratic",
+                            "temperamental"
+                  ],
+                  "antonyms": [
+                            "equable",
+                            "steady",
+                            "placid",
+                            "reliable"
+                  ],
+                  "root_prefix_suffix": "Latin Mercurius (Mercury, god of trade, speed, and change)",
+                  "common_confusion": "Mercurial implies swift, unpredictable shifting, not merely high speed.",
+                  "memory_aid": "MERCURIAL: moves like liquid mercury—slippery and shifting every second.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-146"
+        },
+        {
+                  "word": "obsequious",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Obedient or attentive to an excessive or servile degree; fawning.",
+                  "contextual_meaning": "Sycophantic behavior in corporate governance that compromises oversight independence.",
+                  "example_sentence": "The board was dismissed as an obsequious rubber stamp for the founder pet ventures.",
+                  "business_example": "An obsequious executive committee failed to warn the chief executive of catastrophic balance sheet risks.",
+                  "synonyms": [
+                            "sycophantic",
+                            "servile",
+                            "fawning",
+                            "subservient"
+                  ],
+                  "antonyms": [
+                            "assertive",
+                            "defiant",
+                            "independent",
+                            "imperious"
+                  ],
+                  "root_prefix_suffix": "Latin obsequi (to comply with, follow slavishly)",
+                  "common_confusion": "Obsequious implies insincere flattery for personal gain, not genuine loyalty.",
+                  "memory_aid": "OBSEQUIOUS: Obsequious behavior is obsessed with pleasing superiors.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-147"
+        },
+        {
+                  "word": "pedantic",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Excessively concerned with minor details, rules, or display of academic learning.",
+                  "contextual_meaning": "Author tone fixated on technical trivialities rather than core systemic findings.",
+                  "example_sentence": "The reviewer offered a pedantic critique focusing on footnote pagination rather than experimental rigor.",
+                  "business_example": "Overly pedantic contract drafting delayed the cross-border merger closing by several months.",
+                  "synonyms": [
+                            "hypercritical",
+                            "punctilious",
+                            "nitpicking",
+                            "scrupulous"
+                  ],
+                  "antonyms": [
+                            "broad-minded",
+                            "holistic",
+                            "pragmatic",
+                            "informal"
+                  ],
+                  "root_prefix_suffix": "Italian pedante (teacher, schoolmaster)",
+                  "common_confusion": "Pedantic means rigid insistence on small rules; scholarly means intellectually rigorous.",
+                  "memory_aid": "PEDANTIC: like a strict schoolmaster (pedagogue) obsessing over commas.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-148"
+        },
+        {
+                  "word": "pernicious",
+                  "part_of_speech": "adjective",
+                  "category": "Business & Economics",
+                  "definition": "Having a harmful effect, especially in a gradual, subtle, or insidious way.",
+                  "contextual_meaning": "Long-term invisible costs that gradually hollow out competitive advantage or financial stability.",
+                  "example_sentence": "Inflation exerts a pernicious drag on lower-income purchasing power over multi-year cycles.",
+                  "business_example": "Deferred infrastructure maintenance proved to be a pernicious drain on quarterly operating cash flows.",
+                  "synonyms": [
+                            "insidious",
+                            "detrimental",
+                            "destructive",
+                            "baneful"
+                  ],
+                  "antonyms": [
+                            "benign",
+                            "salutary",
+                            "wholesome",
+                            "innocuous"
+                  ],
+                  "root_prefix_suffix": "Latin pernicies (ruin, destruction)",
+                  "common_confusion": "Pernicious harm is slow and insidious; catastrophic harm is sudden and acute.",
+                  "memory_aid": "PERNICIOUS: Pernicious damage progresses like a quiet poison.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-149"
+        },
+        {
+                  "word": "perfunctory",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Carried out with a minimum of effort or reflection; superficial and routine.",
+                  "contextual_meaning": "Box-checking behavior that satisfies formal regulations without fulfilling intent.",
+                  "example_sentence": "The regulator conducted only a perfunctory review of the lending documents before approval.",
+                  "business_example": "Conducting perfunctory cybersecurity audits exposes corporate assets to catastrophic penetration.",
+                  "synonyms": [
+                            "cursory",
+                            "desultory",
+                            "superficial",
+                            "token"
+                  ],
+                  "antonyms": [
+                            "thorough",
+                            "diligent",
+                            "rigorous",
+                            "meticulous"
+                  ],
+                  "root_prefix_suffix": "Latin perfunctorius (done routinely, discharged superficially)",
+                  "common_confusion": "Perfunctory means done carelessly out of obligation, not completed with incompetence.",
+                  "memory_aid": "PERFUNCTORY: performed for function alone, zero care or thought.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-150"
+        },
+        {
+                  "word": "quixotic",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Exceedingly idealistic; unrealistic and impractical.",
+                  "contextual_meaning": "Grand strategic proposals that ignore operational constraints and economic realities.",
+                  "example_sentence": "The attempt to eliminate corporate hierarchies entirely proved to be a quixotic management fad.",
+                  "business_example": "Entering a saturated foreign telecom sector without localized distribution was deemed quixotic by analysts.",
+                  "synonyms": [
+                            "impractical",
+                            "utopian",
+                            "visionary",
+                            "chimerical"
+                  ],
+                  "antonyms": [
+                            "pragmatic",
+                            "realistic",
+                            "utilitarian",
+                            "hard-headed"
+                  ],
+                  "root_prefix_suffix": "From Don Quixote, character who fought windmills believing they were giants",
+                  "common_confusion": "Quixotic means impractical idealism, not eccentric insanity.",
+                  "memory_aid": "QUIXOTIC: Don Quixote tilting at windmills.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-151"
+        },
+        {
+                  "word": "recalcitrant",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Having an obstinately uncooperative attitude toward authority or discipline.",
+                  "contextual_meaning": "Subsidiaries or trading partners that resist centralized mandates and standardization.",
+                  "example_sentence": "The ministry threatened severe financial sanctions against recalcitrant municipal water authorities.",
+                  "business_example": "Integrating recalcitrant legacy divisions required replacing entire senior executive leadership teams.",
+                  "synonyms": [
+                            "refractory",
+                            "unruly",
+                            "defiant",
+                            "insubordinate"
+                  ],
+                  "antonyms": [
+                            "amenable",
+                            "docile",
+                            "compliant",
+                            "tractable"
+                  ],
+                  "root_prefix_suffix": "Latin recalcitrare (to kick back like a mule)",
+                  "common_confusion": "Recalcitrant implies deliberate defiance of authority, not merely reluctance.",
+                  "memory_aid": "RECALCITRANT: kicking back like an uncooperative mule.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-152"
+        },
+        {
+                  "word": "salubrious",
+                  "part_of_speech": "adjective",
+                  "category": "Science & Methodology",
+                  "definition": "Health-giving; healthy; beneficial to well-being or prosperity.",
+                  "contextual_meaning": "Favorable economic or biological environments that foster sustained growth.",
+                  "example_sentence": "The alpine sanitarium promoted the salubrious effects of low humidity and clean air.",
+                  "business_example": "Low interest rates and regulatory certainty provided a salubrious climate for private equity syndicates.",
+                  "synonyms": [
+                            "wholesome",
+                            "beneficial",
+                            "healthful",
+                            "conducive"
+                  ],
+                  "antonyms": [
+                            "deleterious",
+                            "noxious",
+                            "insalubrious",
+                            "unwholesome"
+                  ],
+                  "root_prefix_suffix": "Latin salus (health, safety)",
+                  "common_confusion": "Salubrious means health-promoting; salutary means producing beneficial results through correction.",
+                  "memory_aid": "SALUBRIOUS: Salus (health) -> creates a healthy condition.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-153"
+        },
+        {
+                  "word": "sycophant",
+                  "part_of_speech": "noun",
+                  "category": "Author Tone & Attitude",
+                  "definition": "A person who acts obsequiously toward someone important in order to gain advantage.",
+                  "contextual_meaning": "Yes-men who surround powerful executives, blinding them to competitive threats.",
+                  "example_sentence": "The author described the royal court as a viper nest of sycophants vying for royal favors.",
+                  "business_example": "An executive who surrounds himself with sycophants creates an echo chamber vulnerable to disruption.",
+                  "synonyms": [
+                            "toady",
+                            "flatterer",
+                            "fawner",
+                            "lackey"
+                  ],
+                  "antonyms": [
+                            "critic",
+                            "dissenter",
+                            "independent",
+                            "adversary"
+                  ],
+                  "root_prefix_suffix": "Greek sykophantes (informer, slanderer)",
+                  "common_confusion": "A sycophant is the person; obsequious is the descriptive adjective.",
+                  "memory_aid": "SYCOPHANT: Psycho-fawner who flatters for profit.",
+                  "level": 3,
+                  "difficulty": 4,
+                  "id": "v-154"
+        },
+        {
+                  "word": "taciturn",
+                  "part_of_speech": "adjective",
+                  "category": "Author Tone & Attitude",
+                  "definition": "Reserved or uncommunicative in speech; saying little.",
+                  "contextual_meaning": "Understated, minimal disclosure by corporate leadership during contentious public hearings.",
+                  "example_sentence": "Known for his taciturn demeanor, the central banker revealed nothing about prospective interest cuts.",
+                  "business_example": "The acquisition target remained taciturn, neither confirming nor denying hostile buyout rumors.",
+                  "synonyms": [
+                            "untalkative",
+                            "reticent",
+                            "uncommunicative",
+                            "laconic"
+                  ],
+                  "antonyms": [
+                            "loquacious",
+                            "garrulous",
+                            "voluble",
+                            "verbose"
+                  ],
+                  "root_prefix_suffix": "Latin tacere (to be silent)",
+                  "common_confusion": "Taciturn describes habitual quietness; tacit describes unspoken agreement.",
+                  "memory_aid": "TACITURN: turns away from talking (tacit = silent).",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-155"
+        },
+        {
+                  "word": "venerate",
+                  "part_of_speech": "verb",
+                  "category": "Author Tone & Attitude",
+                  "definition": "To regard with great respect; revere.",
+                  "contextual_meaning": "Uncritical reverence for historic paradigms that prevents modern empirical re-evaluation.",
+                  "example_sentence": "Traditional economists continued to venerate equilibrium models despite recurring liquidity panics.",
+                  "business_example": "While the company venerated its founding heritage, it aggressively overhauled manufacturing automation.",
+                  "synonyms": [
+                            "revere",
+                            "exalt",
+                            "hallow",
+                            "lionize"
+                  ],
+                  "antonyms": [
+                            "disparage",
+                            "deride",
+                            "despise",
+                            "execrate"
+                  ],
+                  "root_prefix_suffix": "Latin venerari (to worship, revere)",
+                  "common_confusion": "Venerate is deep honor and respect; adulate is excessive servile flattery.",
+                  "memory_aid": "VENERATE: treat as venerable and worthy of honor.",
+                  "level": 2,
+                  "difficulty": 3,
+                  "id": "v-156"
         }
   ],
   "CATALOG": {

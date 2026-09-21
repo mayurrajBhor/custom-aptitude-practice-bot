@@ -713,11 +713,17 @@ function setScreen(name) {
   $(`#${name}Screen`)?.classList.add("is-active");
   const navTarget = name === "progress" ? "progress" : (name === "english" ? "english" : "practice");
   document.querySelector(`[data-screen-target="${navTarget}"]`)?.classList.add("is-active");
+  try {
+    window.localStorage?.setItem("aptitudeActiveScreen", name);
+  } catch (e) {}
   if (name === "progress") {
     void renderAdvancedProgressDashboard();
     void renderLocalJournal();
   } else if (name === "english") {
     window.EnglishApp?.init();
+    if (window.EnglishApp && typeof window.EnglishApp.init === "function") {
+      window.EnglishApp.init();
+    }
   }
 }
 
@@ -3465,6 +3471,15 @@ function bindEvents() {
   $("#practiceMistakesButton")?.addEventListener("click", startAllMistakeRetry);
   $("#stopPracticeButton")?.addEventListener("click", stopPractice);
 
+  document.querySelectorAll("[data-screen-target]").forEach((tabBtn) => {
+    tabBtn.addEventListener("click", () => {
+      const target = tabBtn.dataset.screenTarget;
+      if (target) {
+        setScreen(target);
+      }
+    });
+  });
+
   const rePracticeBtn = $("#rePracticeWeakButton");
   if (rePracticeBtn) {
     rePracticeBtn.addEventListener("click", rePracticeWeakQuestions);
@@ -4864,9 +4879,39 @@ async function boot() {
   void loadCatalog();
   void loadProfile();
   void renderLocalJournal();
+  // Pre-initialize English section in background so DOM is ready immediately
+  try {
+    if (window.EnglishApp && typeof window.EnglishApp.init === "function") {
+      window.EnglishApp.init();
+    }
+  } catch (e) {
+    console.warn("EnglishApp initial pre-render warning:", e);
+  }
   // Local IndexedDB is the primary history source. Server history, when
   // available, is only a background enhancement and never blocks the journal.
   void syncServerHistory().then(() => renderLocalJournal());
+
+  // Restore screen preference or hash
+  const initialHash = (window.location.hash || "").replace(/^#/, "");
+  const savedScreen = (function () {
+    try {
+      return window.localStorage?.getItem("aptitudeActiveScreen");
+    } catch (e) {
+      return null;
+    }
+  })();
+  if (initialHash === "english" || (!initialHash && savedScreen === "english")) {
+    setScreen("english");
+  } else if (initialHash === "progress" || (!initialHash && savedScreen === "progress")) {
+    setScreen("progress");
+  }
+
+  window.addEventListener("hashchange", () => {
+    const hash = (window.location.hash || "").replace(/^#/, "");
+    if (hash === "english" || hash === "progress" || hash === "practice") {
+      setScreen(hash);
+    }
+  });
 }
 
 boot();

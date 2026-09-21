@@ -2256,6 +2256,18 @@
       const verbalTier = overview.verbal_tier || overview.readiness_tier || "Diagnostic Phase";
       const foundationReadiness = overview.foundation_readiness || 0;
       const foundationTier = overview.foundation_tier || "Beginner";
+      const verbalReadiness = typeof overview.verbal_readiness === 'object' && overview.verbal_readiness !== null
+        ? (overview.verbal_readiness.score || 0)
+        : (overview.verbal_readiness || overview.readiness_score || 0);
+      const verbalTier = typeof overview.verbal_readiness === 'object' && overview.verbal_readiness !== null
+        ? (overview.verbal_readiness.tier || "Diagnostic Phase")
+        : (overview.verbal_tier || overview.readiness_tier || "Diagnostic Phase");
+      const foundationReadiness = typeof overview.foundation_readiness === 'object' && overview.foundation_readiness !== null
+        ? (overview.foundation_readiness.score || 0)
+        : (overview.foundation_readiness || 0);
+      const foundationTier = typeof overview.foundation_readiness === 'object' && overview.foundation_readiness !== null
+        ? (overview.foundation_readiness.tier || "Beginner")
+        : (overview.foundation_tier || "Beginner");
       const compositeBand = (overview.confidence_bands && overview.confidence_bands.composite) || "Baseline";
       const crAvg = overview.cr_avg_time ? `${overview.cr_avg_time}s` : "--";
       const rcAvg = overview.rc_avg_question_time ? `${overview.rc_avg_question_time}s` : "--";
@@ -2439,6 +2451,7 @@
                 </div>
                 <h2 class="english-hub-brand-title">English Practice Hub</h2>
                 <p class="english-hub-brand-sub">Master Critical Reasoning, Reading Comprehension, Foundation Grammar, and 131 Authentic GMAT Vocabulary terms.</p>
+                <p class="english-hub-brand-sub">Master Critical Reasoning, Reading Comprehension, Foundation Grammar, and Authentic GMAT Vocabulary.</p>
               </div>
               <div style="height: 32px; width: 1px; background: #e2e8f0;"></div>
               <div style="text-align: center;" title="Segregated Foundation Readiness (Grammar + Vocab)">
