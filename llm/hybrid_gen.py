@@ -3695,4 +3695,1050 @@ class HybridGenerator:
             "difficulty": 2
         }
 
+    def _is_prime(self, n):
+        if n < 2:
+            return False
+        if n in (2, 3):
+            return True
+        if n % 2 == 0 or n % 3 == 0:
+            return False
+        i = 5
+        while i * i <= n:
+            if n % i == 0 or n % (i + 2) == 0:
+                return False
+            i += 6
+        return True
+
+    def _prime_factors(self, n):
+        factors = {}
+        d = 2
+        while d * d <= n:
+            while n % d == 0:
+                factors[d] = factors.get(d, 0) + 1
+                n //= d
+            d += 1
+        if n > 1:
+            factors[n] = factors.get(n, 0) + 1
+        return factors
+
+    def _lcm(self, a, b):
+        return (a * b) // math.gcd(a, b)
+
+    def _lcm_list(self, nums):
+        res = nums[0]
+        for n in nums[1:]:
+            res = self._lcm(res, n)
+        return res
+
+    def generate_odd_even(self, difficulty=2):
+        """Pattern: Odd/Even Properties"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "parity_arithmetic",
+            "algebraic_parity",
+            "consecutive_integers",
+            "power_and_exponents",
+            "word_problem_parity",
+        ])
+
+        if sub_type == "parity_arithmetic":
+            var_state = random.choice(["x_odd_y_even", "x_odd_y_odd", "x_even_y_even"])
+            if var_state == "x_odd_y_even":
+                q_ask = random.choice(["must be ODD", "must be EVEN"])
+                if q_ask == "must be ODD":
+                    question = "If x is an odd integer and y is an even integer, which of the following expressions MUST be odd?"
+                    correct = "x + 2y"
+                    distractors = ["2x + y", "xy", "x + y + 1"]
+                    explanation = (
+                        "Given: x is Odd, y is Even.\n"
+                        "- 2y is Even, so x + 2y = Odd + Even = Odd (Always True).\n"
+                        "- 2x is Even, so 2x + y = Even + Even = Even.\n"
+                        "- xy = Odd * Even = Even.\n"
+                        "- x + y + 1 = Odd + Even + 1 = Odd + 1 = Even."
+                    )
+                else:
+                    question = "If x is an odd integer and y is an even integer, which of the following expressions MUST be even?"
+                    correct = "xy + 2x"
+                    distractors = ["x + y", "3x + y", "x^2 + y"]
+                    explanation = (
+                        "Given: x is Odd, y is Even.\n"
+                        "- xy = Odd * Even = Even, and 2x is Even. Thus xy + 2x = Even + Even = Even (Always True).\n"
+                        "- x + y = Odd + Even = Odd.\n"
+                        "- 3x + y = Odd + Even = Odd.\n"
+                        "- x^2 + y = Odd + Even = Odd."
+                    )
+            elif var_state == "x_odd_y_odd":
+                question = "If both a and b are odd integers, which of the following expressions MUST be an even integer?"
+                correct = "a + b"
+                distractors = ["ab", "2a + b", "ab + 2"]
+                explanation = (
+                    "Given: a is Odd, b is Odd.\n"
+                    "- a + b = Odd + Odd = Even (Always True).\n"
+                    "- ab = Odd * Odd = Odd.\n"
+                    "- 2a + b = Even + Odd = Odd.\n"
+                    "- ab + 2 = Odd + Even = Odd."
+                )
+            else:
+                question = "If m is an even integer and n is an odd integer, what is the parity of 3m + 5n + 1?"
+                correct = "Even"
+                distractors = ["Odd", "Could be Odd or Even", "Cannot be determined"]
+                explanation = (
+                    "Given: m is Even, n is Odd.\n"
+                    "- 3m = Odd * Even = Even.\n"
+                    "- 5n = Odd * Odd = Odd.\n"
+                    "- 3m + 5n = Even + Odd = Odd.\n"
+                    "- 3m + 5n + 1 = Odd + 1 = Even."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "algebraic_parity":
+            variant = random.choice(["product_three", "sum_chain", "linear_equation"])
+            if variant == "product_three":
+                question = "If a, b, and c are positive integers such that the product a * b * c is an odd integer, which of the following MUST be true?"
+                correct = "All three of a, b, and c are odd"
+                distractors = [
+                    "At least one of a, b, or c is even",
+                    "Exactly two of a, b, and c are odd",
+                    "a + b + c must be an even integer",
+                ]
+                explanation = (
+                    "A product of integers is odd if and only if EVERY factor in the product is odd. "
+                    "If even a single factor were even, the entire product would become even. "
+                    "Therefore, all three integers a, b, and c must be odd. (Note: a + b + c = Odd + Odd + Odd = Odd)."
+                )
+            elif variant == "sum_chain":
+                question = "If x + y is an even integer and y + z is an odd integer, what is the parity of x + z?"
+                correct = "Always Odd"
+                distractors = ["Always Even", "Could be Odd or Even depending on y", "Cannot be determined"]
+                explanation = (
+                    "- x + y is Even implies x and y have the SAME parity (both odd or both even).\n"
+                    "- y + z is Odd implies y and z have OPPOSITE parity.\n"
+                    "- Since x has the same parity as y, and z has the opposite parity of y, x and z must have OPPOSITE parity.\n"
+                    "- The sum of two integers with opposite parity is ALWAYS Odd."
+                )
+            else:
+                k = random.choice([25, 31, 37, 43, 49])
+                question = f"If 3x + 5y = {k}, where x and y are positive integers, which of the following statements must be true regarding the parities of x and y?"
+                correct = "One of x and y is even, and the other is odd"
+                distractors = [
+                    "Both x and y must be odd integers",
+                    "Both x and y must be even integers",
+                    "x must be even and y must be even",
+                ]
+                explanation = (
+                    f"3x + 5y = {k} (an odd number).\n"
+                    "For the sum of two terms (3x and 5y) to be odd, exactly one term must be even and the other must be odd.\n"
+                    "- If 3x is even, then x is even, which forces 5y to be odd, so y is odd.\n"
+                    "- If 3x is odd, then x is odd, which forces 5y to be even, so y is even.\n"
+                    "Hence, x and y must have opposite parities (one even, one odd)."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "consecutive_integers":
+            variant = random.choice(["sum_four", "product_two", "sum_n_value"])
+            if variant == "sum_four":
+                question = "For any integer n, the sum of four consecutive integers n + (n + 1) + (n + 2) + (n + 3) is:"
+                correct = "Always Even"
+                distractors = ["Always Odd", "Even only when n is even", "Odd only when n is odd"]
+                explanation = (
+                    "Sum = n + (n + 1) + (n + 2) + (n + 3) = 4n + 6 = 2(2n + 3).\n"
+                    "Because 2 is a factor of 2(2n + 3), the sum is divisible by 2 for EVERY integer n. "
+                    "Thus, the sum is always even."
+                )
+            elif variant == "product_two":
+                question = "If k is any integer, what is the parity of the product k(k + 1)?"
+                correct = "Always Even"
+                distractors = ["Always Odd", "Even only if k is positive", "Odd only if k is odd"]
+                explanation = (
+                    "Out of any two consecutive integers k and k + 1, exactly one must be even and one must be odd. "
+                    "Since Even * Odd = Even, the product of any two consecutive integers is ALWAYS Even."
+                )
+            else:
+                n_start = random.randint(11, 29)
+                total_sum = sum(n_start + i for i in range(5))
+                largest = n_start + 4
+                question = f"The sum of 5 consecutive integers is {total_sum}. What is the value of the largest of these integers, and is it odd or even?"
+                correct = f"{largest} (which is {'even' if largest % 2 == 0 else 'odd'})"
+                distractors = [
+                    f"{largest - 1} (which is {'even' if (largest - 1) % 2 == 0 else 'odd'})",
+                    f"{largest + 1} (which is {'even' if (largest + 1) % 2 == 0 else 'odd'})",
+                    f"{largest + 2} (which is {'even' if (largest + 2) % 2 == 0 else 'odd'})",
+                ]
+                explanation = (
+                    f"Let the integers be n, n+1, n+2, n+3, n+4. Their sum is 5n + 10 = {total_sum}.\n"
+                    f"5n = {total_sum - 10} => n = {(total_sum - 10) // 5}.\n"
+                    f"The largest integer is n + 4 = {largest}, which is {'even' if largest % 2 == 0 else 'odd'}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "power_and_exponents":
+            variant = random.choice(["x3_minus_x", "power_parity_rule", "base_exponent_parity"])
+            if variant == "x3_minus_x":
+                question = "If x is any positive integer, the expression x^3 - x is ALWAYS:"
+                correct = "Divisible by 6 and always Even"
+                distractors = [
+                    "Always Odd",
+                    "Even only when x is a multiple of 4",
+                    "Divisible by 8 for all values of x",
+                ]
+                explanation = (
+                    "x^3 - x = x(x^2 - 1) = (x - 1) * x * (x + 1).\n"
+                    "This is the product of three consecutive integers. Any three consecutive integers contain "
+                    "at least one multiple of 2 and exactly one multiple of 3. Therefore, the expression is always "
+                    "divisible by 2 * 3 = 6, and is always Even."
+                )
+            elif variant == "power_parity_rule":
+                question = "If a is an odd integer and b is a positive integer, what is the parity of a^b + (a + 1)^b?"
+                correct = "Always Odd"
+                distractors = ["Always Even", "Even if b is even", "Odd only if b is odd"]
+                explanation = (
+                    "1. An odd integer raised to any positive integer power is always Odd (Odd^b = Odd).\n"
+                    "2. Since a is odd, (a + 1) is even. An even integer raised to any positive integer power is always Even (Even^b = Even).\n"
+                    "3. Odd + Even = Odd. Hence, the expression is always Odd regardless of b."
+                )
+            else:
+                question = "If m^n is an even integer, where m and n are positive integers, which of the following MUST be true?"
+                correct = "m must be an even integer"
+                distractors = [
+                    "n must be an even integer",
+                    "Both m and n must be even integers",
+                    "m must be odd and n must be even",
+                ]
+                explanation = (
+                    "The parity of a power m^n (with positive integer exponent n) is determined entirely by its base m. "
+                    "If m were odd, m^n would be the product of n odd numbers, which is always odd. "
+                    "Thus, for m^n to be even, m MUST be even. The exponent n can be any positive integer (e.g., 2^1=2, 2^2=4)."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # word_problem_parity
+        variant = random.choice(["coin_partition", "handshake_lemma"])
+        if variant == "coin_partition":
+            odd_coins = random.choice([25, 27, 33, 35, 41])
+            question = f"Can {odd_coins} gold coins be distributed among 4 treasure chests such that each chest contains an odd number of coins?"
+            correct = "No, because the sum of 4 odd integers is always even"
+            distractors = [
+                f"Yes, by placing {odd_coins // 4} or {(odd_coins // 4) + 1} coins in each chest",
+                f"Yes, because {odd_coins} is an odd number",
+                "Cannot be determined without knowing the size of each chest",
+            ]
+            explanation = (
+                f"Let the coins in each of the 4 chests be o1, o2, o3, o4 (all odd integers).\n"
+                "Sum = (Odd + Odd) + (Odd + Odd) = Even + Even = Even.\n"
+                f"However, the total number of coins is {odd_coins}, which is ODD. "
+                "An even sum can never equal an odd number. Thus, such a distribution is mathematically impossible."
+            )
+        else:
+            n_people = random.choice([15, 17, 19, 21])
+            k_hands = random.choice([3, 5])
+            question = f"In an executive committee of {n_people} members, is it possible for every member to have had meetings with exactly {k_hands} other members?"
+            correct = "No, because the sum of all individual meetings must be an even number"
+            distractors = [
+                f"Yes, the total number of pairwise meetings would be {n_people * k_hands}",
+                f"Yes, because both {n_people} and {k_hands} are odd numbers",
+                "Cannot be determined without a seating arrangement",
+            ]
+            explanation = (
+                f"Each meeting involves 2 people. Thus, 2 * (Total Meetings) = Sum of degrees = {n_people} * {k_hands} = {n_people * k_hands}.\n"
+                f"Since {n_people} and {k_hands} are both odd, their product {n_people * k_hands} is ODD. "
+                "However, 2 * (Total Meetings) must be EVEN. An odd number cannot equal an even number. "
+                "By the Handshake Lemma, this scenario is impossible."
+            )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_prime_composite(self, difficulty=2):
+        """Pattern: Prime/Composite Properties"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "prime_identification",
+            "coprime_pairs",
+            "prime_ranges_and_counting",
+            "composite_properties",
+            "twin_primes_and_triplets",
+        ])
+
+        if sub_type == "prime_identification":
+            primes_pool = [53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173]
+            composites_pool = [
+                (91, "7 * 13"),
+                (119, "7 * 17"),
+                (133, "7 * 19"),
+                (143, "11 * 13"),
+                (161, "7 * 23"),
+                (209, "11 * 19"),
+                (217, "7 * 31"),
+                (221, "13 * 17"),
+                (247, "13 * 19"),
+                (323, "17 * 19"),
+            ]
+            prime_val = random.choice(primes_pool)
+            chosen_comp = random.sample(composites_pool, 3)
+            comp_vals = [c[0] for c in chosen_comp]
+
+            question = "Which of the following numbers is a PRIME number?"
+            correct = str(prime_val)
+            distractors = [str(v) for v in comp_vals]
+            comp_breakdown = ", ".join(f"{c[0]} = {c[1]}" for c in chosen_comp)
+            explanation = (
+                f"- The composite choices have factors: {comp_breakdown}.\n"
+                f"- {prime_val} has no divisors other than 1 and itself (tested up to sqrt({prime_val}) ≈ {round(math.isqrt(prime_val), 1)}). "
+                f"Hence, {prime_val} is a prime number."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "coprime_pairs":
+            variant = random.choice(["find_coprime_pair", "totient_count"])
+            if variant == "find_coprime_pair":
+                coprime_candidates = [
+                    ((15, 28), "15 = 3 * 5, 28 = 2^2 * 7 => gcd = 1"),
+                    ((21, 55), "21 = 3 * 7, 55 = 5 * 11 => gcd = 1"),
+                    ((14, 33), "14 = 2 * 7, 33 = 3 * 11 => gcd = 1"),
+                    ((25, 36), "25 = 5^2, 36 = 2^2 * 3^2 => gcd = 1"),
+                    ((35, 48), "35 = 5 * 7, 48 = 2^4 * 3 => gcd = 1"),
+                ]
+                non_coprime_candidates = [
+                    "(14, 35) [gcd = 7]",
+                    "(21, 57) [gcd = 3]",
+                    "(26, 65) [gcd = 13]",
+                    "(22, 55) [gcd = 11]",
+                    "(18, 51) [gcd = 3]",
+                ]
+                pair, why = random.choice(coprime_candidates)
+                correct = f"({pair[0]}, {pair[1]})"
+                distractors = random.sample(non_coprime_candidates, 3)
+                question = "Which of the following pairs of numbers is COPRIME (relatively prime)?"
+                explanation = (
+                    f"Two numbers are coprime if their greatest common divisor (GCD) is 1.\n"
+                    f"- {correct}: {why}.\n"
+                    "The other pairs share common prime factors > 1."
+                )
+                return self._mcq(question, correct, explanation, level, distractors)
+            else:
+                n = random.choice([12, 18, 20, 24, 30])
+                factors = self._prime_factors(n)
+                phi = n
+                for p in factors:
+                    phi = phi * (p - 1) // p
+                question = f"How many positive integers less than {n} are coprime (relatively prime) to {n}?"
+                correct = str(phi)
+                distractors = [str(phi - 2), str(phi + 2), str(phi + 4)]
+                factor_str = " * ".join(f"{p}^{factors[p]}" if factors[p] > 1 else str(p) for p in factors)
+                totient_str = " * ".join(f"(1 - 1/{p})" for p in factors)
+                explanation = (
+                    f"By Euler's Totient Function phi(n) = n * Product(1 - 1/p) for each distinct prime factor p.\n"
+                    f"Prime factorization of {n} = {factor_str}.\n"
+                    f"phi({n}) = {n} * {totient_str} = {phi} numbers."
+                )
+                return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "prime_ranges_and_counting":
+            ranges = [
+                (10, 30, [11, 13, 17, 19, 23, 29]),
+                (20, 45, [23, 29, 31, 37, 41, 43]),
+                (30, 55, [31, 37, 41, 43, 47, 53]),
+                (50, 75, [53, 59, 61, 67, 71, 73]),
+            ]
+            low, high, primes_in_range = random.choice(ranges)
+            q_type = random.choice(["count", "sum"])
+            if q_type == "count":
+                count = len(primes_in_range)
+                question = f"How many prime numbers are there strictly between {low} and {high}?"
+                correct = str(count)
+                distractors = [str(count - 1), str(count + 1), str(count + 2)]
+                explanation = (
+                    f"The prime numbers between {low} and {high} are: {', '.join(map(str, primes_in_range))}.\n"
+                    f"Total count = {count}."
+                )
+            else:
+                total_sum = sum(primes_in_range)
+                question = f"What is the sum of all prime numbers strictly between {low} and {high}?"
+                correct = str(total_sum)
+                distractors = [str(total_sum - 6), str(total_sum + 6), str(total_sum + 10)]
+                explanation = (
+                    f"The prime numbers between {low} and {high} are: {', '.join(map(str, primes_in_range))}.\n"
+                    f"Sum = {' + '.join(map(str, primes_in_range))} = {total_sum}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "composite_properties":
+            variant = random.choice(["three_factors_square_prime", "p_squared_mod_24"])
+            if variant == "three_factors_square_prime":
+                question = "A positive integer N has exactly 3 distinct positive factors. Which of the following MUST be true about N?"
+                correct = "N is the square of a prime number (N = p^2)"
+                distractors = [
+                    "N is the product of two distinct prime numbers",
+                    "N must be an even integer",
+                    "N is the cube of a prime number (N = p^3)",
+                ]
+                explanation = (
+                    "The number of factors of an integer with prime factorization p1^a * p2^b * ... is (a + 1)(b + 1)... \n"
+                    "For the product to equal 3 (which is prime), there can only be a single prime factor with a + 1 = 3, so a = 2. \n"
+                    "Therefore, N = p^2 where p is a prime number (e.g., 4, 9, 25, 49). Its only factors are 1, p, and p^2."
+                )
+            else:
+                question = "If p is a prime number greater than 3, what is the remainder when p^2 is divided by 24?"
+                correct = "1"
+                distractors = ["0", "5", "7"]
+                explanation = (
+                    "Every prime p > 3 can be expressed in the form 6k ± 1.\n"
+                    "Then p^2 - 1 = (6k ± 1)^2 - 1 = 36k^2 ± 12k = 12k(3k ± 1).\n"
+                    "Since one of k or (3k ± 1) is always even, 12k(3k ± 1) is always divisible by 12 * 2 = 24.\n"
+                    "Thus, p^2 leaves a remainder of 1 when divided by 24."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # twin_primes_and_triplets
+        variant = random.choice(["identify_twin_prime", "prime_triplet_count"])
+        if variant == "identify_twin_prime":
+            twin_pair = random.choice(["(41, 43)", "(59, 61)", "(71, 73)", "(29, 31)", "(17, 19)"])
+            question = "Two prime numbers are called twin primes if they differ by exactly 2. Which of the following is a pair of twin primes?"
+            correct = twin_pair
+            distractors = ["(51, 53)", "(87, 89)", "(91, 93)"]
+            explanation = (
+                f"- {correct} consists of two valid prime numbers whose difference is 2.\n"
+                "- In the distractors: 51 is composite (3 * 17), 87 is composite (3 * 29), and 91 is composite (7 * 13)."
+            )
+        else:
+            question = "How many sets of three prime numbers exist in the form of a prime triplet (p, p + 2, p + 4)?"
+            correct = "Exactly 1 set: (3, 5, 7)"
+            distractors = [
+                "0 sets",
+                "Infinitely many sets",
+                "Exactly 2 sets: (3, 5, 7) and (5, 7, 9)",
+            ]
+            explanation = (
+                "For any integer p, the numbers p, p + 2, and p + 4 leave remainders 0, 1, and 2 in some order when divided by 3. "
+                "Therefore, exactly one of the three numbers must be divisible by 3. "
+                "The only prime divisible by 3 is 3 itself. Thus p must be 3, giving the unique prime triplet (3, 5, 7). "
+                "(Note: 9 is not prime, so (5, 7, 9) is invalid)."
+            )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_factors(self, difficulty=2):
+        """Pattern: Factors and Divisors"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "total_number_of_factors",
+            "sum_of_factors",
+            "odd_and_even_factors",
+            "factor_pairs_and_products",
+            "perfect_square_factors",
+        ])
+
+        if sub_type == "total_number_of_factors":
+            pool = [
+                (72, {"2": 3, "3": 2}, 12),
+                (120, {"2": 3, "3": 1, "5": 1}, 16),
+                (180, {"2": 2, "3": 2, "5": 1}, 18),
+                (240, {"2": 4, "3": 1, "5": 1}, 20),
+                (360, {"2": 3, "3": 2, "5": 1}, 24),
+                (720, {"2": 4, "3": 2, "5": 1}, 30),
+                (1080, {"2": 3, "3": 3, "5": 1}, 32),
+            ]
+            num, factors_dict, total_factors = random.choice(pool)
+            question = f"Find the total number of positive factors (divisors) of {num}."
+            correct = str(total_factors)
+            distractors = [str(total_factors - 4), str(total_factors + 4), str(total_factors + 6)]
+            decomp_str = " * ".join(f"{p}^{exp}" for p, exp in factors_dict.items())
+            formula_str = " * ".join(f"({exp} + 1)" for exp in factors_dict.values())
+            explanation = (
+                f"Step 1: Find the prime factorization of {num} = {decomp_str}.\n"
+                f"Step 2: Apply the divisor formula: Total Factors = {formula_str} = {total_factors}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "sum_of_factors":
+            pool = [
+                (48, {"2": 4, "3": 1}, 124),
+                (60, {"2": 2, "3": 1, "5": 1}, 168),
+                (72, {"2": 3, "3": 2}, 195),
+                (96, {"2": 5, "3": 1}, 252),
+                (108, {"2": 2, "3": 3}, 280),
+                (120, {"2": 3, "3": 1, "5": 1}, 360),
+            ]
+            num, factors_dict, factor_sum = random.choice(pool)
+            question = f"What is the sum of all positive factors (divisors) of {num}?"
+            correct = str(factor_sum)
+            distractors = [str(factor_sum - 20), str(factor_sum + 24), str(factor_sum + 36)]
+            decomp_str = " * ".join(f"{p}^{exp}" for p, exp in factors_dict.items())
+            parts = []
+            for p, exp in factors_dict.items():
+                p_int = int(p)
+                p_sum = sum(p_int ** i for i in range(exp + 1))
+                parts.append(str(p_sum))
+            explanation = (
+                f"Step 1: Prime factorization of {num} = {decomp_str}.\n"
+                f"Step 2: Sum of divisors = {' * '.join(parts)} = {factor_sum}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "odd_and_even_factors":
+            pool = [
+                (120, 4, 12, 16),
+                (180, 6, 12, 18),
+                (240, 4, 16, 20),
+                (360, 6, 18, 24),
+                (480, 4, 20, 24),
+            ]
+            num, odd_count, even_count, total = random.choice(pool)
+            ask_even = random.choice([True, False])
+            if ask_even:
+                question = f"How many EVEN positive factors does the number {num} have?"
+                correct = str(even_count)
+                distractors = [str(odd_count), str(total), str(even_count - 2)]
+                explanation = (
+                    f"Total factors of {num} = {total}.\n"
+                    f"To find odd factors, ignore all powers of 2. Number of odd factors = {odd_count}.\n"
+                    f"Number of even factors = Total Factors - Odd Factors = {total} - {odd_count} = {even_count}."
+                )
+            else:
+                question = f"How many ODD positive factors does the number {num} have?"
+                correct = str(odd_count)
+                distractors = [str(even_count), str(total), str(odd_count + 2)]
+                explanation = (
+                    f"To find the number of odd factors of {num}, completely exclude the prime factor 2 from the factorization.\n"
+                    f"The remaining prime factors give {odd_count} odd factors."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "factor_pairs_and_products":
+            pool = [
+                (120, 16, 8, False),
+                (144, 15, 8, True),
+                (180, 18, 9, False),
+                (225, 9, 5, True),
+                (360, 24, 12, False),
+            ]
+            num, total_f, pairs, is_square = random.choice(pool)
+            question = f"In how many ways can {num} be expressed as a product of two positive integer factors?"
+            correct = str(pairs)
+            distractors = [str(pairs - 2), str(pairs + 1), str(total_f)]
+            if is_square:
+                explanation = (
+                    f"Total factors of {num} = {total_f} (since {num} is a perfect square, {math.isqrt(num)}^2).\n"
+                    f"Ways to express as product of two factors = (Total Factors + 1) / 2 = ({total_f} + 1) / 2 = {pairs}."
+                )
+            else:
+                explanation = (
+                    f"Total factors of {num} = {total_f}.\n"
+                    f"Each pair of factors (a, b) produces a * b = {num}.\n"
+                    f"Number of factor pairs = Total Factors / 2 = {total_f} / 2 = {pairs}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # perfect_square_factors
+        pool = [
+            ("2^4 * 3^2 * 5^1", 6),
+            ("2^5 * 3^4 * 5^2", 18),
+            ("2^6 * 3^3 * 5^2", 16),
+            ("2^3 * 3^4 * 7^2", 12),
+        ]
+        decomp, count_val = random.choice(pool)
+        question = f"How many positive factors of the number N = {decomp} are perfect squares?"
+        correct = str(count_val)
+        distractors = [str(count_val - 4), str(count_val + 4), str(count_val + 6)]
+        explanation = (
+            f"A factor is a perfect square if all the exponents in its prime factorization are even multiples of 2.\n"
+            f"For each prime p^k, the available even exponents are 0, 2, 4, ... up to k.\n"
+            f"Multiplying the choices of even exponents gives: {correct} perfect square factors."
+        )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_multiples(self, difficulty=2):
+        """Pattern: Multiples and Divisibility Patterns"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "counting_multiples_in_range",
+            "common_multiples_and_intervals",
+            "either_or_multiples",
+            "consecutive_multiples_sum",
+            "word_problems_multiples",
+        ])
+
+        if sub_type == "counting_multiples_in_range":
+            m = random.choice([6, 7, 8, 9, 11, 13])
+            start = random.choice([100, 120, 150, 200])
+            end = random.choice([350, 400, 500, 600])
+            count = (end // m) - ((start - 1) // m)
+            question = f"How many positive multiples of {m} are there between {start} and {end} (inclusive)?"
+            correct = str(count)
+            distractors = [str(count - 1), str(count + 1), str(count + 2)]
+            explanation = (
+                f"Formula: Multiples in [A, B] = floor(B / m) - floor((A - 1) / m).\n"
+                f"= floor({end} / {m}) - floor({start - 1} / {m}) = {end // m} - {(start - 1) // m} = {count}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "common_multiples_and_intervals":
+            a, b = random.choice([(6, 8), (8, 12), (9, 15), (12, 16), (15, 20)])
+            lcm_ab = self._lcm(a, b)
+            limit = random.choice([300, 400, 500, 600])
+            count = limit // lcm_ab
+            question = f"How many integers from 1 to {limit} (inclusive) are divisible by both {a} and {b}?"
+            correct = str(count)
+            distractors = [str(count - 2), str(count + 2), str(count + 5)]
+            explanation = (
+                f"Numbers divisible by both {a} and {b} must be multiples of LCM({a}, {b}).\n"
+                f"LCM({a}, {b}) = {lcm_ab}.\n"
+                f"Count of multiples up to {limit} = floor({limit} / {lcm_ab}) = {count}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "either_or_multiples":
+            a, b = random.choice([(4, 6), (6, 9), (4, 10), (6, 8)])
+            lcm_ab = self._lcm(a, b)
+            limit = random.choice([200, 300, 400])
+            count_a = limit // a
+            count_b = limit // b
+            count_both = limit // lcm_ab
+            total = count_a + count_b - count_both
+            question = f"How many integers between 1 and {limit} (inclusive) are divisible by either {a} or {b} (or both)?"
+            correct = str(total)
+            distractors = [str(count_a + count_b), str(total - count_both), str(total + 5)]
+            explanation = (
+                f"Using the Principle of Inclusion-Exclusion: n(A or B) = n(A) + n(B) - n(A and B).\n"
+                f"- Multiples of {a}: floor({limit} / {a}) = {count_a}\n"
+                f"- Multiples of {b}: floor({limit} / {b}) = {count_b}\n"
+                f"- Multiples of both (LCM {lcm_ab}): floor({limit} / {lcm_ab}) = {count_both}\n"
+                f"Total = {count_a} + {count_b} - {count_both} = {total}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "consecutive_multiples_sum":
+            m = random.choice([6, 7, 8, 9, 12])
+            n = random.choice([10, 12, 15, 20])
+            total_sum = m * (n * (n + 1)) // 2
+            question = f"What is the sum of the first {n} positive multiples of {m}?"
+            correct = str(total_sum)
+            distractors = [str(total_sum - m * 2), str(total_sum + m * 2), str(total_sum + m * 5)]
+            explanation = (
+                f"Sum = {m}(1 + 2 + 3 + ... + {n}) = {m} * [n(n + 1) / 2].\n"
+                f"= {m} * [({n} * {n + 1}) / 2] = {m} * {(n * (n + 1)) // 2} = {total_sum}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # word_problems_multiples
+        intervals = random.choice([(12, 15), (15, 20), (20, 25), (18, 24)])
+        t1, t2 = intervals
+        lcm_val = self._lcm(t1, t2)
+        question = f"Two automated safety drones patrol a perimeter: Drone A returns every {t1} minutes, and Drone B returns every {t2} minutes. If both drones depart together at 8:00 AM, after how many minutes will they next return to base at the same time?"
+        correct = f"{lcm_val} minutes"
+        distractors = [f"{t1 * t2} minutes", f"{lcm_val + t1} minutes", f"{lcm_val - t1} minutes"]
+        explanation = (
+            f"The drones will return to base together at intervals equal to the Least Common Multiple of their patrol periods.\n"
+            f"LCM({t1}, {t2}) = {lcm_val} minutes."
+        )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_prime_factorization(self, difficulty=2):
+        """Pattern: Prime Factorization and Exponents"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "canonical_decomposition",
+            "highest_power_in_factorial",
+            "missing_factor_for_perfect_power",
+            "distinct_prime_factors",
+            "algebraic_factorization",
+        ])
+
+        if sub_type == "canonical_decomposition":
+            pool = [
+                (252, "2^2 * 3^2 * 7", ["2^3 * 3 * 7", "2^2 * 3^3 * 7", "2 * 3^2 * 7^2"]),
+                (360, "2^3 * 3^2 * 5", ["2^2 * 3^3 * 5", "2^3 * 3 * 5^2", "2^4 * 3^2 * 5"]),
+                (504, "2^3 * 3^2 * 7", ["2^2 * 3^3 * 7", "2^3 * 3 * 7^2", "2^4 * 3 * 7"]),
+                (540, "2^2 * 3^3 * 5", ["2^3 * 3^2 * 5", "2^2 * 3^2 * 5^2", "2 * 3^3 * 5^2"]),
+                (840, "2^3 * 3 * 5 * 7", ["2^2 * 3^2 * 5 * 7", "2^3 * 3 * 5^2 * 7", "2^4 * 3 * 5 * 7"]),
+            ]
+            num, correct_decomp, dist = random.choice(pool)
+            question = f"What is the canonical prime factorization of {num}?"
+            correct = correct_decomp
+            distractors = dist
+            explanation = (
+                f"Prime factorization steps for {num}:\n"
+                f"Repeated division by prime factors (2, 3, 5, 7...) yields {correct_decomp}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "highest_power_in_factorial":
+            n = random.choice([30, 40, 50, 60, 75, 100])
+            p = random.choice([3, 5])
+            count = 0
+            k = p
+            terms = []
+            while k <= n:
+                term = n // k
+                count += term
+                terms.append(f"floor({n}/{k}) = {term}")
+                k *= p
+            if p == 5 and random.choice([True, False]):
+                question = f"How many trailing zeros does {n}! ({n} factorial) have?"
+                correct = str(count)
+                distractors = [str(count - 2), str(count + 2), str(count + 4)]
+                explanation = (
+                    f"Trailing zeros in {n}! are determined by the highest power of 5 dividing {n}! (Legendre's formula):\n"
+                    f"{' + '.join(terms)} => Total = {count} trailing zeros."
+                )
+            else:
+                question = f"What is the highest power of {p} that completely divides {n}! ({n} factorial)?"
+                correct = str(count)
+                distractors = [str(count - 2), str(count + 2), str(count + 3)]
+                explanation = (
+                    f"Using Legendre's Formula for prime {p} dividing {n}!:\n"
+                    f"Sum = {' + '.join(terms)} = {count}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "missing_factor_for_perfect_power":
+            power_type = random.choice(["square", "cube"])
+            if power_type == "square":
+                pool = [
+                    (108, "2^2 * 3^3", 3),
+                    (180, "2^2 * 3^2 * 5^1", 5),
+                    (250, "2^1 * 5^3", 10),
+                    (392, "2^3 * 7^2", 2),
+                    (675, "3^3 * 5^2", 3),
+                ]
+                num, decomp, mult = random.choice(pool)
+                question = f"What is the smallest positive integer by which {num} must be multiplied so that the product is a perfect square?"
+                correct = str(mult)
+                distractors = [str(mult * 2), str(mult * 3), str(mult + 1)]
+                explanation = (
+                    f"Factorization: {num} = {decomp}.\n"
+                    f"To form a perfect square, every prime exponent must be an even number. "
+                    f"Multiplying by {mult} balances all odd exponents to the next even power."
+                )
+            else:
+                pool = [
+                    (72, "2^3 * 3^2", 3),
+                    (144, "2^4 * 3^2", 12),
+                    (200, "2^3 * 5^2", 5),
+                    (500, "2^2 * 5^3", 2),
+                    (720, "2^4 * 3^2 * 5^1", 300),
+                ]
+                num, decomp, mult = random.choice(pool)
+                question = f"What is the smallest positive integer by which {num} must be multiplied so that the product is a perfect cube?"
+                correct = str(mult)
+                distractors = [str(mult // 2 if mult > 4 else mult + 2), str(mult * 2), str(mult + 6)]
+                explanation = (
+                    f"Factorization: {num} = {decomp}.\n"
+                    f"To form a perfect cube, every prime exponent must be a multiple of 3. "
+                    f"The required multiplier is {mult}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "distinct_prime_factors":
+            pool = [
+                (210, [2, 3, 5, 7], 4, 17),
+                (330, [2, 3, 5, 11], 4, 21),
+                (2310, [2, 3, 5, 7, 11], 5, 28),
+                (1155, [3, 5, 7, 11], 4, 26),
+                (1001, [7, 11, 13], 3, 31),
+            ]
+            num, p_list, count, p_sum = random.choice(pool)
+            ask_sum = random.choice([True, False])
+            if ask_sum:
+                question = f"What is the sum of all DISTINCT prime factors of {num}?"
+                correct = str(p_sum)
+                distractors = [str(p_sum - 4), str(p_sum + 4), str(p_sum + 6)]
+                explanation = (
+                    f"The distinct prime factors of {num} are: {', '.join(map(str, p_list))}.\n"
+                    f"Sum = {' + '.join(map(str, p_list))} = {p_sum}."
+                )
+            else:
+                question = f"How many DISTINCT prime factors does {num} have?"
+                correct = str(count)
+                distractors = [str(count - 1), str(count + 1), str(count + 2)]
+                explanation = (
+                    f"Prime factorization of {num} = {' * '.join(map(str, p_list))}.\n"
+                    f"There are {count} distinct prime factors."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # algebraic_factorization
+        variant = random.choice(["ten_power_4_minus_1", "two_power_16_minus_1"])
+        if variant == "ten_power_4_minus_1":
+            question = "What is the largest prime factor of 10^4 - 1 (which equals 9,999)?"
+            correct = "101"
+            distractors = ["11", "37", "333"]
+            explanation = (
+                "10^4 - 1 = (10^2 - 1)(10^2 + 1) = (99)(101) = (9 * 11) * 101 = 3^2 * 11 * 101.\n"
+                "The prime factors are 3, 11, and 101. The largest prime factor is 101."
+            )
+        else:
+            question = "What is the largest prime factor of 2^16 - 1?"
+            correct = "257"
+            distractors = ["17", "31", "127"]
+            explanation = (
+                "Using difference of squares repeatedly:\n"
+                "2^16 - 1 = (2^8 - 1)(2^8 + 1) = (2^4 - 1)(2^4 + 1)(256 + 1) = (15)(17)(257) = (3 * 5 * 17 * 257).\n"
+                "The prime factors are 3, 5, 17, and 257. The largest prime factor is 257."
+            )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_hcf_gcd(self, difficulty=2):
+        """Pattern: Highest Common Factor (HCF / GCD)"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "euclidean_algorithm",
+            "prime_factorization_hcf",
+            "fractions_hcf",
+            "largest_divisor_with_remainders",
+            "word_problems_tiling",
+        ])
+
+        if sub_type == "euclidean_algorithm":
+            pairs = [
+                (198, 360, 18),
+                (144, 216, 72),
+                (168, 252, 84),
+                (288, 432, 144),
+                (210, 504, 42),
+                (135, 225, 45),
+            ]
+            a, b, ans = random.choice(pairs)
+            question = f"Find the Highest Common Factor (HCF / GCD) of {a} and {b}."
+            correct = str(ans)
+            distractors = [str(ans // 2 if ans > 20 else ans * 2), str(ans + 6), str(ans - 6)]
+            explanation = (
+                f"Using Euclidean Algorithm / Factorization:\n"
+                f"{b} = {a} * {b // a} + {b % a}\n"
+                f"Continuing division until remainder is 0 yields HCF({a}, {b}) = {ans}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "prime_factorization_hcf":
+            pool = [
+                ("A = 2^3 * 3^4 * 5^2", "B = 2^2 * 3^5 * 5^1 * 7^1", "2^2 * 3^4 * 5^1", 1620),
+                ("A = 2^4 * 3^2 * 5^3", "B = 2^3 * 3^3 * 5^1", "2^3 * 3^2 * 5^1", 360),
+                ("A = 2^5 * 3^1 * 7^2", "B = 2^3 * 3^3 * 7^1", "2^3 * 3^1 * 7^1", 168),
+                ("A = 3^3 * 5^2 * 11^1", "B = 3^2 * 5^3 * 11^2", "3^2 * 5^2 * 11^1", 2475),
+            ]
+            a_str, b_str, hcf_expr, hcf_val = random.choice(pool)
+            question = f"Find the HCF of the two numbers given in prime factor form: {a_str} and {b_str}."
+            correct = f"{hcf_expr} ({hcf_val})"
+            distractors = [
+                f"{hcf_expr.replace('^2', '^3')} ({hcf_val * 2})",
+                f"{hcf_expr.replace('^1', '^2')} ({hcf_val * 3})",
+                f"{hcf_expr.replace('2^', '2^1 * ')} ({hcf_val // 2})",
+            ]
+            explanation = (
+                "The HCF of numbers in prime factor form is the product of the lowest power of each common prime factor:\n"
+                f"HCF = {hcf_expr} = {hcf_val}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "fractions_hcf":
+            pool = [
+                ([2, 8, 16], [3, 9, 27], 2, 27, "2/3, 8/9, 16/27"),
+                ([3, 6, 9], [4, 8, 16], 3, 16, "3/4, 6/8, 9/16"),
+                ([4, 6, 8], [5, 15, 25], 2, 75, "4/5, 6/15, 8/25"),
+                ([5, 10, 25], [6, 12, 18], 5, 36, "5/6, 10/12, 25/18"),
+            ]
+            nums, dens, hcf_num, lcm_den, frac_str = random.choice(pool)
+            question = f"Find the HCF of the fractions: {frac_str}."
+            correct = f"{hcf_num}/{lcm_den}"
+            distractors = [
+                f"{hcf_num * 2}/{lcm_den}",
+                f"{hcf_num}/{lcm_den // 2 if lcm_den % 2 == 0 else lcm_den * 2}",
+                f"{lcm_den}/{hcf_num}",
+            ]
+            explanation = (
+                "Formula: HCF of Fractions = HCF of Numerators / LCM of Denominators.\n"
+                f"- Numerators: {nums} => HCF = {hcf_num}\n"
+                f"- Denominators: {dens} => LCM = {lcm_den}\n"
+                f"HCF = {correct}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "largest_divisor_with_remainders":
+            variant = random.choice(["diff_remainders", "same_remainder"])
+            if variant == "diff_remainders":
+                hcf_target = random.choice([24, 36, 48])
+                k1, k2 = random.choice([(3, 5), (4, 7), (5, 6)])
+                r1, r2 = 4, 6
+                a = hcf_target * k1 + r1
+                b = hcf_target * k2 + r2
+                ans = math.gcd(a - r1, b - r2)
+                question = f"What is the greatest number that divides {a} and {b} leaving remainders of {r1} and {r2} respectively?"
+                correct = str(ans)
+                distractors = [str(ans // 2), str(ans + 6), str(ans - 6)]
+                explanation = (
+                    f"The required number must exactly divide ({a} - {r1}) and ({b} - {r2}):\n"
+                    f"{a} - {r1} = {a - r1}\n"
+                    f"{b} - {r2} = {b - r2}\n"
+                    f"HCF({a - r1}, {b - r2}) = {ans}."
+                )
+            else:
+                d = random.choice([25, 30, 35, 40])
+                r = 7
+                a = d * 2 + r
+                b = d * 4 + r
+                c = d * 7 + r
+                ans = math.gcd(b - a, c - b)
+                question = f"What is the greatest positive integer that divides {a}, {b}, and {c} leaving the same remainder in each case?"
+                correct = str(ans)
+                distractors = [str(ans // 2), str(ans + 5), str(ans + 10)]
+                explanation = (
+                    f"When numbers leave the same remainder, the required divisor is the HCF of their absolute differences:\n"
+                    f"|{b} - {a}| = {b - a}\n"
+                    f"|{c} - {b}| = {c - b}\n"
+                    f"|{c} - {a}| = {c - a}\n"
+                    f"HCF({b - a}, {c - b}, {c - a}) = {ans}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # word_problems_tiling
+        pool = [
+            (18, 15, 3, 30),
+            (24, 18, 6, 12),
+            (36, 28, 4, 63),
+            (40, 25, 5, 40),
+            (60, 48, 12, 20),
+        ]
+        length, width, side, count = random.choice(pool)
+        question = f"A rectangular conference hall is {length} meters long and {width} meters wide. It is to be completely paved with identical square tiles of the largest possible size. What is the minimum number of tiles needed?"
+        correct = str(count)
+        distractors = [str(count + 5), str(count - 4), str(side * 4)]
+        explanation = (
+            f"Step 1: The side length of the largest square tile is HCF({length}, {width}) = {side} meters.\n"
+            f"Step 2: Number of tiles = (Area of hall) / (Area of 1 tile) = ({length} * {width}) / ({side} * {side})\n"
+            f"= ({length // side}) * ({width // side}) = {count} tiles."
+        )
+        return self._mcq(question, correct, explanation, level, distractors)
+
+    def generate_lcm(self, difficulty=2):
+        """Pattern: Least Common Multiple (LCM)"""
+        level = self._level(difficulty)
+        sub_type = random.choice([
+            "prime_factorization_lcm",
+            "fractions_lcm",
+            "product_formula_relation",
+            "smallest_number_with_remainders",
+            "word_problems_bells",
+        ])
+
+        if sub_type == "prime_factorization_lcm":
+            pool = [
+                ([18, 24, 30], 360),
+                ([24, 36, 60], 360),
+                ([15, 25, 40], 600),
+                ([16, 24, 36], 144),
+                ([20, 30, 45], 180),
+                ([28, 42, 56], 168),
+            ]
+            nums, lcm_val = random.choice(pool)
+            nums_str = ", ".join(map(str, nums))
+            question = f"Find the Least Common Multiple (LCM) of {nums_str}."
+            correct = str(lcm_val)
+            distractors = [str(lcm_val // 2), str(lcm_val * 2), str(lcm_val + nums[0])]
+            explanation = (
+                f"Using prime factor powers:\n"
+                f"Take the highest power of each prime factor present across {nums_str}.\n"
+                f"LCM = {lcm_val}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "fractions_lcm":
+            pool = [
+                ([2, 3, 4], [5, 10, 15], 12, 5, "2/5, 3/10, 4/15"),
+                ([1, 3, 5], [2, 4, 6], 15, 2, "1/2, 3/4, 5/6"),
+                ([2, 4, 6], [3, 9, 27], 12, 3, "2/3, 4/9, 6/27"),
+                ([5, 10, 15], [4, 8, 12], 30, 4, "5/4, 10/8, 15/12"),
+            ]
+            num_list, den_list, lcm_num, hcf_den, frac_str = random.choice(pool)
+            frac_ans = Fraction(lcm_num, hcf_den)
+            correct = f"{frac_ans.numerator}/{frac_ans.denominator}" if frac_ans.denominator != 1 else str(frac_ans.numerator)
+            question = f"Find the LCM of the fractions: {frac_str}."
+            distractors = [
+                f"{lcm_num}/{hcf_den * 2}",
+                f"{hcf_den}/{lcm_num}",
+                f"{lcm_num * 2}/{hcf_den}",
+            ]
+            explanation = (
+                "Formula: LCM of Fractions = LCM of Numerators / HCF of Denominators.\n"
+                f"- LCM of Numerators ({num_list}) = {lcm_num}\n"
+                f"- HCF of Denominators ({den_list}) = {hcf_den}\n"
+                f"LCM = {lcm_num}/{hcf_den} = {correct}."
+            )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "product_formula_relation":
+            variant = random.choice(["given_one_number", "ratio_and_hcf"])
+            if variant == "given_one_number":
+                hcf = random.choice([12, 15, 18, 20])
+                k1, k2 = random.choice([(3, 4), (2, 5), (3, 5)])
+                lcm_val = hcf * k1 * k2
+                num1 = hcf * k1
+                num2 = hcf * k2
+                question = f"The HCF and LCM of two numbers are {hcf} and {lcm_val} respectively. If one of the numbers is {num1}, what is the other number?"
+                correct = str(num2)
+                distractors = [str(num2 - hcf), str(num2 + hcf), str(num1)]
+                explanation = (
+                    "Formula: Product of two numbers = HCF * LCM.\n"
+                    f"Other Number = (HCF * LCM) / (Given Number) = ({hcf} * {lcm_val}) / {num1} = {num2}."
+                )
+            else:
+                hcf = random.choice([8, 12, 14, 15])
+                r1, r2 = random.choice([(3, 4), (3, 5), (4, 5), (5, 6)])
+                lcm_val = hcf * r1 * r2
+                question = f"Two numbers are in the ratio {r1}:{r2} and their HCF is {hcf}. What is their Least Common Multiple (LCM)?"
+                correct = str(lcm_val)
+                distractors = [str(lcm_val - hcf), str(lcm_val + hcf), str(hcf * (r1 + r2))]
+                explanation = (
+                    f"Let the numbers be {r1}x and {r2}x where x = HCF = {hcf}.\n"
+                    f"The two numbers are {r1 * hcf} and {r2 * hcf}.\n"
+                    f"LCM = HCF * r1 * r2 = {hcf} * {r1} * {r2} = {lcm_val}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        if sub_type == "smallest_number_with_remainders":
+            variant = random.choice(["constant_remainder", "constant_difference"])
+            if variant == "constant_remainder":
+                divs = random.choice([(12, 15, 20), (15, 18, 24), (16, 20, 24)])
+                rem = random.choice([3, 4, 5, 7])
+                lcm_val = self._lcm_list(divs)
+                ans = lcm_val + rem
+                divs_str = ", ".join(map(str, divs))
+                question = f"Find the smallest positive integer which when divided by {divs_str} leaves a remainder of {rem} in each case."
+                correct = str(ans)
+                distractors = [str(lcm_val), str(ans + divs[0]), str(ans - rem)]
+                explanation = (
+                    f"The required number is LCM({divs_str}) + remainder:\n"
+                    f"LCM({divs_str}) = {lcm_val}\n"
+                    f"Answer = {lcm_val} + {rem} = {ans}."
+                )
+            else:
+                divs = (20, 25, 35)
+                d = 6
+                rems = tuple(div - d for div in divs)
+                lcm_val = self._lcm_list(divs)
+                ans = lcm_val - d
+                question = f"Find the smallest positive integer which when divided by {divs[0]}, {divs[1]}, and {divs[2]} leaves remainders of {rems[0]}, {rems[1]}, and {rems[2]} respectively."
+                correct = str(ans)
+                distractors = [str(lcm_val), str(lcm_val + d), str(ans - 10)]
+                explanation = (
+                    f"Observe that the difference between each divisor and its remainder is constant:\n"
+                    f"{divs[0]} - {rems[0]} = {d}, {divs[1]} - {rems[1]} = {d}, {divs[2]} - {rems[2]} = {d}.\n"
+                    f"LCM({divs[0]}, {divs[1]}, {divs[2]}) = {lcm_val}.\n"
+                    f"Answer = LCM - difference = {lcm_val} - {d} = {ans}."
+                )
+            return self._mcq(question, correct, explanation, level, distractors)
+
+        # word_problems_bells
+        bells = random.choice([(6, 8, 12, 18), (8, 12, 15, 20), (10, 15, 20, 25)])
+        lcm_sec = self._lcm_list(bells)
+        mins = random.choice([30, 36, 60])
+        total_sec = mins * 60
+        tolls = total_sec // lcm_sec
+        bells_str = ", ".join(map(str, bells))
+        question = f"Four electronic bells toll together at intervals of {bells_str} seconds respectively. In {mins} minutes, how many times will they toll together (excluding the toll at the start)?"
+        correct = str(tolls)
+        distractors = [str(tolls + 1), str(tolls - 1), str(tolls * 2)]
+        explanation = (
+            f"Step 1: All bells toll together every LCM({bells_str}) seconds = {lcm_sec} seconds.\n"
+            f"Step 2: Total duration = {mins} minutes = {total_sec} seconds.\n"
+            f"Number of times they toll together = {total_sec} / {lcm_sec} = {tolls} times."
+        )
+        return self._mcq(question, correct, explanation, level, distractors)
+
 hybrid_generator = HybridGenerator()
