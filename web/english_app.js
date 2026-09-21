@@ -1907,6 +1907,7 @@
   };
 
   // =========================================================================
+  // =========================================================================
   // Spaced Repetition Flashcard UI Module
   // =========================================================================
   const FlashcardUI = {
@@ -1916,23 +1917,18 @@
     onComplete: null,
     isFlipped: false,
 
-    startDeck: function (config) {
-      this.deck = Array.isArray(config.deck) && config.deck.length > 0
     startDeck: function (config = {}) {
       const allVocab = (window.ENGLISH_DATA && Array.isArray(window.ENGLISH_DATA.VOCABULARY_ITEMS) && window.ENGLISH_DATA.VOCABULARY_ITEMS.length > 0)
         ? window.ENGLISH_DATA.VOCABULARY_ITEMS
         : BUILTIN_FLASHCARDS;
       let targetDeck = Array.isArray(config.deck) && config.deck.length > 0
         ? config.deck
-        : BUILTIN_FLASHCARDS;
         : allVocab;
       if (config.count && config.count > 0 && targetDeck.length > config.count) {
         targetDeck = [...targetDeck].sort(() => Math.random() - 0.5).slice(0, config.count);
       }
       this.deck = targetDeck;
       this.currentIndex = 0;
-      this.container = config.container || document.getElementById("englishFlashcardView") || document.getElementById("englishQuestionView");
-      this.container = config.container || EnglishOverlayManager.getViewContainer();
       this.container = config.container || (window.EnglishOverlayManager && EnglishOverlayManager.getViewContainer()) || document.getElementById("englishPracticeView");
       this.onComplete = config.onComplete || null;
       this.isFlipped = false;
@@ -1974,7 +1970,6 @@
               <div class="card-front-center">
                 <h2 class="card-word-title">${card.word}</h2>
                 <span class="card-phonetic">${card.phonetic || ''}</span>
-                <p class="card-hint-text" id="engCardHintText" style="display: none;">${card.hint || 'No hint available.'}</p>
                 <p class="card-hint-text" id="engCardHintText" style="display: none;">${card.hint || card.root_prefix_suffix || 'Think of the Latin/Greek root or contextual usage.'}</p>
               </div>
 
@@ -1996,10 +1991,8 @@
                   <div class="card-definition-text">${card.definition}</div>
                 </div>
 
-                ${card.contextual ? `
                 ${(card.contextual_meaning || card.contextual) ? `
                   <div class="card-example-box">
-                    <strong>Contextual Usage:</strong> ${card.contextual}
                     <strong>GMAT Contextual Nuance:</strong> ${card.contextual_meaning || card.contextual}
                   </div>
                 ` : ''}
@@ -2012,7 +2005,6 @@
 
                 ${card.business_example ? `
                   <div class="card-example-box">
-                    <strong>Business Context:</strong> ${card.business_example}
                     <strong>Executive / Business Context:</strong> ${card.business_example}
                   </div>
                 ` : ''}
@@ -2024,10 +2016,8 @@
                   </div>
                 ` : ''}
 
-                ${card.mnemonic ? `
                 ${(card.memory_aid || card.mnemonic) ? `
                   <div class="card-mnemonic-box">
-                    <strong>💡 Mnemonic Memory Aid:</strong> ${card.mnemonic}
                     <strong>💡 Mnemonic Memory Aid:</strong> ${card.memory_aid || card.mnemonic}
                   </div>
                 ` : ''}
@@ -2222,40 +2212,42 @@
       let studyPlan = null;
       let beginnerProfile = null;
 
+      // 1. Instant First Paint: Render layout immediately so screen is NEVER blank
+      this.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
+
+      // 2. Hydrate from IndexedDB in the background with a 1500ms safety timeout
       if (window.AptitudeEnglishDB) {
+        const timeoutPromise = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), ms));
         try {
-          overview = await window.AptitudeEnglishDB.getEnglishOverview();
+          overview = await Promise.race([window.AptitudeEnglishDB.getEnglishOverview(), timeoutPromise(1500)]);
         } catch (e) {
           console.warn("Could not load English overview:", e);
         }
         try {
-          activeSession = await window.AptitudeEnglishDB.getActiveEnglishSession();
+          activeSession = await Promise.race([window.AptitudeEnglishDB.getActiveEnglishSession(), timeoutPromise(1500)]);
         } catch (e) {
           console.warn("Could not check active English session:", e);
         }
         try {
-          studyPlan = await window.AptitudeEnglishDB.get100DayPlan();
+          studyPlan = await Promise.race([window.AptitudeEnglishDB.get100DayPlan(), timeoutPromise(1500)]);
         } catch (e) {
           console.warn("Could not load 100-day plan:", e);
         }
         try {
-          beginnerProfile = await window.AptitudeEnglishDB.getBeginnerProfile();
+          beginnerProfile = await Promise.race([window.AptitudeEnglishDB.getBeginnerProfile(), timeoutPromise(1500)]);
         } catch (e) {
           console.warn("Could not load beginner profile:", e);
         }
-      }
 
-      this.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
+        // Re-render once data has hydrated
+        this.renderMainLayout(screen, overview, activeSession, studyPlan, beginnerProfile);
+      }
     },
 
     renderMainLayout: function (screen, overview, activeSession, studyPlan, beginnerProfile) {
       const self = this;
       const readinessScore = overview.readiness_score || 0;
       const readinessTier = overview.readiness_tier || "Diagnostic Phase";
-      const verbalReadiness = overview.verbal_readiness || overview.readiness_score || 0;
-      const verbalTier = overview.verbal_tier || overview.readiness_tier || "Diagnostic Phase";
-      const foundationReadiness = overview.foundation_readiness || 0;
-      const foundationTier = overview.foundation_tier || "Beginner";
       const verbalReadiness = typeof overview.verbal_readiness === 'object' && overview.verbal_readiness !== null
         ? (overview.verbal_readiness.score || 0)
         : (overview.verbal_readiness || overview.readiness_score || 0);
@@ -2871,7 +2863,6 @@
     renderFoundationTab: function (container, overview) {
       const self = this;
       const grammarCount = (window.ENGLISH_DATA && window.ENGLISH_DATA.GRAMMAR_QUESTIONS) ? window.ENGLISH_DATA.GRAMMAR_QUESTIONS.length : 25;
-      const vocabCount = (window.ENGLISH_DATA && window.ENGLISH_DATA.VOCABULARY_ITEMS) ? window.ENGLISH_DATA.VOCABULARY_ITEMS.length : 30;
       const vocabItems = (window.ENGLISH_DATA && Array.isArray(window.ENGLISH_DATA.VOCABULARY_ITEMS) && window.ENGLISH_DATA.VOCABULARY_ITEMS.length > 0)
         ? window.ENGLISH_DATA.VOCABULARY_ITEMS
         : BUILTIN_FLASHCARDS;

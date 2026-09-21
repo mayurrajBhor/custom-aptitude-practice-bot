@@ -281,6 +281,10 @@ function initEnglishDB() {
       }
     };
 
+    request.onblocked = (event) => {
+      console.warn("AptitudeEnglishDB blocked by existing connection");
+    };
+
     request.onsuccess = (event) => {
       dbInstance = event.target.result;
       resolve(dbInstance);
@@ -2318,17 +2322,15 @@ async function get100DayPlan() {
     const tx = db.transaction(STORES.STUDY_PLAN, "readonly");
     const store = tx.objectStore(STORES.STUDY_PLAN);
     const req = store.get("current_plan");
-    req.onsuccess = async () => {
+    req.onsuccess = () => {
       if (req.result) {
         resolve(req.result);
       } else {
         const defaultPlan = generateDefault100DayPlan();
-        try {
-          await save100DayPlan(defaultPlan);
-          resolve(defaultPlan);
-        } catch (e) {
-          resolve(defaultPlan);
-        }
+        resolve(defaultPlan);
+        setTimeout(() => {
+          save100DayPlan(defaultPlan).catch(() => {});
+        }, 50);
       }
     };
     req.onerror = (e) => reject(e.target.error);
