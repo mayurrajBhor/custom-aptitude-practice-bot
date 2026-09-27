@@ -109,6 +109,17 @@
                   <strong id="selectedModeLabel">Quick 5</strong>
                 </div>
               </div>
+              <label class="time-limit-control" for="timeLimitSelect">
+                <span>Time per question</span>
+                <select id="timeLimitSelect" aria-label="Time limit per question">
+                  <option value="15" selected>15 seconds</option>
+                  <option value="30">30 seconds</option>
+                  <option value="45">45 seconds</option>
+                  <option value="60">60 seconds</option>
+                  <option value="90">90 seconds</option>
+                  <option value="120">120 seconds</option>
+                </select>
+              </label>
               <div class="selection-list" id="selectionList"></div>
               <button class="primary-button" id="startButton" type="button" disabled>Start practice</button>
             </aside>
