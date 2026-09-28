@@ -193,10 +193,39 @@ for legacy_id, new_id in ID_MAP_4000.items():
         pat_copy["id"] = legacy_id
         LOCAL_PATTERNS[legacy_id] = pat_copy
 
+from llm.gmat import (
+    ALL_GMAT_PATTERNS_METADATA,
+    DAY1_LIST,
+    DAY2_LIST,
+    DAY3_LIST,
+    DAY4_LIST,
+)
+
+for meta in ALL_GMAT_PATTERNS_METADATA:
+    variants = meta.get("variants") or meta.get("variant_names") or []
+    display_name = meta.get("title") or meta.get("name")
+    LOCAL_PATTERNS[meta["id"]] = {
+        "id": meta["id"],
+        "topic_id": meta["topic_id"],
+        "topic_name": meta["topic_name"],
+        "name": display_name,
+        "description": meta["description"],
+        "difficulty": 2,
+        "difficulty_level": 2,
+        "variant_count": len(variants) if variants else 1,
+        "variant_names": variants,
+        "source": "local",
+        "is_gmat": True,
+    }
+
 
 LOCAL_TOPICS = {
     101: {"id": 101, "category_id": 1, "name": "Percentages", "pattern_ids": [item[0] for item in PERCENTAGE_PATTERNS]},
     102: {"id": 102, "category_id": 1, "name": "Vedic Math", "pattern_ids": [item[0] for item in VEDIC_MATH_PATTERNS]},
+    501: {"id": 501, "category_id": 1, "name": "Day 1: Number Sense & Basic Arithmetic", "pattern_ids": [p["id"] for p in DAY1_LIST]},
+    502: {"id": 502, "category_id": 1, "name": "Day 2: Fractions & Decimals", "pattern_ids": [p["id"] for p in DAY2_LIST]},
+    503: {"id": 503, "category_id": 1, "name": "Day 3: Percentages & Commercial Math", "pattern_ids": [p["id"] for p in DAY3_LIST]},
+    504: {"id": 504, "category_id": 1, "name": "Day 4: Ratios, Proportion & Averages", "pattern_ids": [p["id"] for p in DAY4_LIST]},
     201: {
         "id": 201,
         "category_id": 2,
@@ -206,7 +235,7 @@ LOCAL_TOPICS = {
 }
 
 LOCAL_CATEGORIES = [
-    {"id": 1, "name": "Quant", "topic_ids": [101, 102]},
+    {"id": 1, "name": "Quant", "topic_ids": [101, 102, 501, 502, 503, 504]},
     {"id": 2, "name": "Reasoning", "topic_ids": [201]},
 ]
 

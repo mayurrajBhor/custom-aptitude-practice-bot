@@ -6,7 +6,7 @@ const MODE_CONFIG = {
 
 const AUTO_ADVANCE_MS = 600;
 const QUESTION_TIME_LIMIT_SECONDS = 15;
-const TIME_LIMIT_OPTIONS = [15, 30, 45, 60, 90, 120];
+const TIME_LIMIT_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 180];
 const state = {
   telegramUser: null,
   catalog: [],
@@ -2591,9 +2591,20 @@ function finalizeAnswerResponse(result, effectiveIndex) {
     loopbackNoticeHtml = `<div class="loopback-notice"><span class="loopback-icon">🔁</span> ${noticeText}</div>`;
   }
 
+  let mistakeBadgeHtml = "";
+  if (!result.is_correct && result.mistake_classification) {
+    const mc = result.mistake_classification;
+    mistakeBadgeHtml = `<div class="mistake-feedback-box" style="margin-top:10px; padding:10px 14px; border-radius:8px; background:rgba(239,68,68,0.08); border-left:4px solid #ef4444;">
+      <div style="font-weight:700; color:#dc2626; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">⚠️ ${escapeHtml(mc.label)}</div>
+      <p style="margin:4px 0 3px; font-size:13px; color:#334155; line-height:1.4;">${escapeHtml(mc.feedback)}</p>
+      <small style="color:#64748b; font-size:12px; display:block; margin-top:2px;"><strong>💡 GMAT Remedy:</strong> ${escapeHtml(mc.remedy)}</small>
+    </div>`;
+  }
+
   $("#feedbackTitle").innerHTML = `${result.is_correct ? "✓ Correct" : "✗ Review"} ${speedBadgeHtml}`;
   $("#feedbackText").innerHTML = `
     ${result.explanation ? `<div>${escapeHtml(result.explanation)}</div>` : `<div>Correct answer: <strong>${escapeHtml(String(result.correct_option))}</strong></div>`}
+    ${mistakeBadgeHtml}
     ${loopbackNoticeHtml}
   `;
   playAnswerFeedback(result.is_correct);
@@ -3053,6 +3064,18 @@ function startQuestionTimer() {
   clearQuestionTimer();
   state.questionStartedAt = Date.now();
   const timeLimit = getTimeLimitSeconds();
+  if (timeLimit <= 0) {
+    $("#questionTimer").textContent = "∞";
+    state.timerId = window.setInterval(() => {
+      if (state.answered) {
+        clearQuestionTimer();
+        return;
+      }
+      const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
+      $("#questionTimer").textContent = `${elapsed}s`;
+    }, 1000);
+    return;
+  }
   $("#questionTimer").textContent = `${timeLimit}s`;
   updateTimerDisplay(timeLimit, 0);
 

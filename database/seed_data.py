@@ -134,6 +134,23 @@ def seed_gmat_data():
     for name, desc in dir_patterns:
         db.add_pattern(dir_topic_id, name, desc, 2)
 
+    from llm.gmat import DAY1_LIST, DAY2_LIST, DAY3_LIST, DAY4_LIST
+
+    gmat_days = [
+        ("Day 1: Number Sense & Basic Arithmetic", DAY1_LIST),
+        ("Day 2: Fractions & Decimals", DAY2_LIST),
+        ("Day 3: Percentages & Commercial Math", DAY3_LIST),
+        ("Day 4: Ratios, Proportion & Averages", DAY4_LIST),
+    ]
+    for topic_name, patterns in gmat_days:
+        db.execute_query("INSERT INTO topics (category_id, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (quant_id, topic_name))
+        res = db.execute_query("SELECT id FROM topics WHERE category_id = %s AND name = %s", (quant_id, topic_name))
+        if res:
+            t_id = res[0]['id']
+            for p in patterns:
+                p_name = p.get("title") or p["name"]
+                db.add_pattern(t_id, p_name, p["description"], 2)
+
 if __name__ == "__main__":
     seed_gmat_data()
     print("Database seeded successfully with Foundational syllabus and Direction & Distance reasoning.")

@@ -5,6 +5,14 @@ import threading
 from groq import Groq
 from dotenv import load_dotenv
 from llm.hybrid_gen import hybrid_generator
+from llm.gmat import (
+    get_gmat_generator,
+    is_gmat_pattern_id,
+    GMAT_HYBRID_SUBTYPES,
+    PATTERNS_BY_NAME,
+    PATTERNS_BY_ID,
+    ALL_GMAT_GENERATORS,
+)
 
 load_dotenv()
 
@@ -266,6 +274,7 @@ class QuestionGenerator:
             "word_problems_bells",
         ],
     }
+    HYBRID_SUBTYPES.update(GMAT_HYBRID_SUBTYPES)
 
     HYBRID_RANDOM_VALUES = {
         ("random_conv", "fraction_to_percent"): [0.99],
@@ -277,6 +286,8 @@ class QuestionGenerator:
     _forced_variant_lock = threading.RLock()
 
     def __init__(self):
+        self.HYBRID_SUBTYPES = dict(self.HYBRID_SUBTYPES)
+        self.HYBRID_SUBTYPES.update(GMAT_HYBRID_SUBTYPES)
         api_key = os.getenv("GROQ_API_KEY")
         try:
             self.client = Groq(api_key=api_key) if api_key else None
@@ -310,6 +321,8 @@ class QuestionGenerator:
 
     @staticmethod
     def _is_difficulty_aware_hybrid(base_type):
+        if get_gmat_generator(base_type) is not None:
+            return True
         return str(base_type or "").startswith("vedic_") or base_type in (
             "odd_even",
             "prime_composite",
@@ -366,6 +379,16 @@ class QuestionGenerator:
                 random.random = real_random
 
     def _generate_hybrid(self, hybrid_type, difficulty=None):
+        selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
+        base_type, forced_variant = self._split_hybrid_variant(selected_type)
+
+        gmat_fn = get_gmat_generator(base_type)
+        if gmat_fn:
+            result = gmat_fn(difficulty=difficulty, forced_variant=forced_variant)
+            if result:
+                result["hybrid_type"] = selected_type
+            return result
+
         dispatch = {
             "mixed_fraction": hybrid_generator.generate_mixed_fraction,
             "fraction_subtraction": hybrid_generator.generate_fraction_subtraction,
@@ -419,8 +442,6 @@ class QuestionGenerator:
             "hcf_gcd": hybrid_generator.generate_hcf_gcd,
             "lcm": hybrid_generator.generate_lcm,
         }
-        selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
-        base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
         result = self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
         if result:
@@ -429,7 +450,13 @@ class QuestionGenerator:
 
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""
-        pn = pattern_name.strip().lower()
+        pn = str(pattern_name or "").strip().lower()
+        if pn in PATTERNS_BY_NAME:
+            return PATTERNS_BY_NAME[pn]["name"]
+        if is_gmat_pattern_id(pattern_name):
+            return PATTERNS_BY_ID[int(pattern_name)]["name"]
+        if pattern_name in ALL_GMAT_GENERATORS or pn in ALL_GMAT_GENERATORS:
+            return pattern_name
         if pn == "fraction, decimal and percent foundations":
             return "group_fraction_foundations"
         if pn == "core percentage equations":

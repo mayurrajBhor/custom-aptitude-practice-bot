@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from database.db_manager import db
 from llm.generator import generator
 from local_catalog import get_local_catalog_payload, get_local_pattern, is_local_pattern_id
+from llm.gmat.mistakes import classify_mistake
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -103,7 +104,7 @@ CACHE_TTL_SECONDS = {
     "progress": 20,
 }
 MODE_TARGETS = {"quick": 10, "focused": 20, "full": None}
-TIME_LIMIT_OPTIONS = {15, 30, 45, 60, 90, 120}
+TIME_LIMIT_OPTIONS = {0, 15, 30, 45, 60, 90, 120, 180}
 
 
 @app.get("/", include_in_schema=False)
@@ -220,7 +221,7 @@ def start_session(request: StartSessionRequest):
     if not request.pattern_ids and not request.retry_mistakes:
         raise HTTPException(status_code=400, detail="Select at least one pattern.")
     if request.time_limit_seconds not in TIME_LIMIT_OPTIONS:
-        raise HTTPException(status_code=400, detail="Time limit must be one of 15, 30, 45, 60, 90, or 120 seconds.")
+        raise HTTPException(status_code=400, detail="Time limit must be one of 0, 15, 30, 45, 60, 90, 120, or 180 seconds.")
 
     user_id = INTERNAL_USER_ID
     try:
@@ -514,6 +515,20 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
     if complete:
         background_tasks.add_task(_complete_persistent_session, session, "completed")
 
+    mistake_info = None
+    if not is_correct:
+        selected_text = (
+            question["options"][selected_index]
+            if selected_index is not None and 0 <= selected_index < len(question["options"])
+            else typed_str
+        )
+        mistake_info = classify_mistake(
+            question,
+            selected_option=selected_text,
+            is_timeout=bool(request.is_timeout),
+            time_taken_seconds=time_taken,
+        )
+
     return {
         "is_correct": is_correct,
         "correct_option_index": question["correct_option_index"],
@@ -531,6 +546,7 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         "speed_tier": speed_tier,
         "repetition_queued": repetition_queued,
         "repetition_reason": repetition_reason,
+        "mistake_classification": mistake_info,
     }
 
 
@@ -1040,6 +1056,7 @@ def _session_public(session: dict[str, Any]):
         "pattern_names": session["pattern_names"],
         "score": session["score"],
         "answered": session["current_index"],
+        "time_limit_seconds": session.get("time_limit_seconds", 30),
     }
 
 
