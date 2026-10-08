@@ -7,8 +7,8 @@ registry lookups, metadata completeness, and MCQ structural constraints.
 import unittest
 from typing import Any, Dict, List
 
-from llm.gmat.mistakes import MISTAKE_CATEGORIES
-from llm.gmat.day4_ratios_averages import (
+from llm.common import MISTAKE_CATEGORIES
+from llm.quant.ratios_and_averages import (
     DAY4_GENERATORS,
     DAY4_PATTERNS_METADATA,
     generate_adding_number_to_average,

@@ -5,7 +5,7 @@ import threading
 from groq import Groq
 from dotenv import load_dotenv
 from llm.hybrid_gen import hybrid_generator
-from llm.gmat import (
+from llm.quant import (
     get_gmat_generator,
     is_gmat_pattern_id,
     GMAT_HYBRID_SUBTYPES,
@@ -164,15 +164,9 @@ class QuestionGenerator:
             "equivalent_discount",
         ],
         "vedic_addition": [
-            "left_to_right",
-            "complements",
-            "missing_addend",
             "single_digit",
             "two_digit_add_single_digit",
-            "two_digit_add_lessthan_100",
-            "two_digit_add_morethan_100",
-            "three_to_four_digit",
-            "three_digit_near_base",
+            "Multi_type",
         ],
         "vedic_subtraction": [
             "left_to_right",

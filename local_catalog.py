@@ -193,7 +193,7 @@ for legacy_id, new_id in ID_MAP_4000.items():
         pat_copy["id"] = legacy_id
         LOCAL_PATTERNS[legacy_id] = pat_copy
 
-from llm.gmat import (
+from llm.quant import (
     ALL_GMAT_PATTERNS_METADATA,
     DAY1_LIST,
     DAY2_LIST,

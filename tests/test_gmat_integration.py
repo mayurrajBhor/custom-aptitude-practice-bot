@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 import web_app
 from local_catalog import get_local_catalog_payload, get_local_pattern, is_local_pattern_id
-from llm.gmat import (
+from llm.quant import (
     ALL_GMAT_PATTERNS_METADATA,
     DAY1_LIST,
     DAY2_LIST,

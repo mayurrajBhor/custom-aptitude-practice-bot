@@ -6,9 +6,8 @@ Covers Patterns 5010 through 5024.
 import unittest
 from typing import Any, Dict
 
-from llm.gmat.common import clamp_level
-from llm.gmat.mistakes import MISTAKE_CATEGORIES
-from llm.gmat.day2_fractions import (
+from llm.common import clamp_level, MISTAKE_CATEGORIES
+from llm.quant.fractions_and_decimals import (
     DAY2_GENERATORS,
     DAY2_PATTERNS_METADATA,
     generate_fraction_basics,

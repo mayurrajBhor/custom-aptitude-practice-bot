@@ -1,7 +1,7 @@
 """Tests for Day 1: GMAT Practice Engine - Arithmetic Foundations (Patterns 5001-5009)"""
 
 import unittest
-from llm.gmat.day1_arithmetic import (
+from llm.quant.number_sense import (
     DAY1_GENERATORS,
     DAY1_PATTERNS_METADATA,
     generate_number_classification,

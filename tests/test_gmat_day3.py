@@ -3,7 +3,7 @@ import os
 import sys
 import random
 
-from llm.gmat.day3_percentages import (
+from llm.quant.commercial_math import (
     DAY3_GENERATORS,
     DAY3_PATTERNS_METADATA,
     percentage_fundamentals,
@@ -22,7 +22,7 @@ from llm.gmat.day3_percentages import (
     more_than_vs_less_than,
     percentage_word_problems,
 )
-from llm.gmat.mistakes import MISTAKE_CATEGORIES
+from llm.common import MISTAKE_CATEGORIES
 
 
 class TestGmatDay3Percentages(unittest.TestCase):

@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from database.db_manager import db
 from llm.generator import generator
 from local_catalog import get_local_catalog_payload, get_local_pattern, is_local_pattern_id
-from llm.gmat.mistakes import classify_mistake
+from llm.common.mistakes import classify_mistake
 
 
 BASE_DIR = Path(__file__).resolve().parent

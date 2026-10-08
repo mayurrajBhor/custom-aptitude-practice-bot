@@ -134,7 +134,7 @@ def seed_gmat_data():
     for name, desc in dir_patterns:
         db.add_pattern(dir_topic_id, name, desc, 2)
 
-    from llm.gmat import DAY1_LIST, DAY2_LIST, DAY3_LIST, DAY4_LIST
+    from llm.quant import DAY1_LIST, DAY2_LIST, DAY3_LIST, DAY4_LIST
 
     gmat_days = [
         ("Day 1: Number Sense & Basic Arithmetic", DAY1_LIST),
