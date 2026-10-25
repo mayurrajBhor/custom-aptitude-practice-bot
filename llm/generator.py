@@ -169,10 +169,9 @@ class QuestionGenerator:
             "Multi_type",
         ],
         "vedic_subtraction": [
-            "left_to_right",
-            "base_complement",
-            "near_base_difference",
-            "missing_minuend",
+            "single_digit",
+            "two_digit_subtraction",
+            "Multi_type",
         ],
         "vedic_multiplication": [
             "vertical_crosswise",
