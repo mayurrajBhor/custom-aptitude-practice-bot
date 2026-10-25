@@ -38,6 +38,8 @@ try:
 except Exception:
     english_generator = None
 
+from llm.common.mistakes import classify_mistake
+
 
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
@@ -88,6 +90,9 @@ class StartSessionRequest(BaseModel):
     mistake_ids: list[int] = Field(default_factory=list)
     mistake_pattern_id: Optional[int] = None
     variant_selection: dict[str, list[str]] = Field(default_factory=dict)
+    # Keep the API's legacy default for callers that do not send the new field.
+    # The web UI always sends its explicit selection (15s by default).
+    time_limit_seconds: int = 30
 
 
 class AnswerRequest(BaseModel):
@@ -119,6 +124,7 @@ CACHE_TTL_SECONDS = {
     "progress": 20,
 }
 MODE_TARGETS = {"quick": 10, "focused": 20, "full": None}
+TIME_LIMIT_OPTIONS = {0, 15, 30, 45, 60, 90, 120, 180}
 
 
 @app.get("/", include_in_schema=False)
@@ -234,6 +240,8 @@ def profile_progress(user_id: int):
 def start_session(request: StartSessionRequest):
     if not request.pattern_ids and not request.retry_mistakes:
         raise HTTPException(status_code=400, detail="Select at least one pattern.")
+    if request.time_limit_seconds not in TIME_LIMIT_OPTIONS:
+        raise HTTPException(status_code=400, detail="Time limit must be one of 0, 15, 30, 45, 60, 90, 120, or 180 seconds.")
 
     user_id = INTERNAL_USER_ID
     try:
@@ -287,6 +295,7 @@ def start_session(request: StartSessionRequest):
         "id": session_id,
         "user_id": user_id,
         "mode": request.mode,
+        "time_limit_seconds": request.time_limit_seconds,
         "session_type": "mistake_retry" if request.retry_mistakes else request.mode,
         "pattern_ids": session_pattern_ids,
         "pattern_names": pattern_names,
@@ -443,7 +452,7 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         is_correct = False
         selected_index = None
         typed_str = request.typed_answer or ""
-        time_taken = 30.0
+        time_taken = float(session.get("time_limit_seconds") or 30)
     elif request.answer_index is not None:
         if request.answer_index < 0 or request.answer_index >= len(question["options"]):
             raise HTTPException(status_code=400, detail="Invalid answer option.")
@@ -526,6 +535,20 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
     if complete:
         background_tasks.add_task(_complete_persistent_session, session, "completed")
 
+    mistake_info = None
+    if not is_correct:
+        selected_text = (
+            question["options"][selected_index]
+            if selected_index is not None and 0 <= selected_index < len(question["options"])
+            else typed_str
+        )
+        mistake_info = classify_mistake(
+            question,
+            selected_option=selected_text,
+            is_timeout=bool(request.is_timeout),
+            time_taken_seconds=time_taken,
+        )
+
     return {
         "is_correct": is_correct,
         "correct_option_index": question["correct_option_index"],
@@ -533,6 +556,7 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         "explanation": question.get("explanation") or "",
         "score": session["score"],
         "answered": session["current_index"],
+        "time_limit_seconds": session.get("time_limit_seconds", 30),
         "total_questions": session["total_questions"],
         "time_taken": time_taken,
         "complete": complete,
@@ -542,6 +566,7 @@ def answer_question(session_id: str, request: AnswerRequest, background_tasks: B
         "speed_tier": speed_tier,
         "repetition_queued": repetition_queued,
         "repetition_reason": repetition_reason,
+        "mistake_classification": mistake_info,
     }
 
 
@@ -702,6 +727,7 @@ def re_practice_weak(session_id: str, request: Optional[RePracticeWeakRequest] =
         "id": new_session_id,
         "user_id": session.get("user_id"),
         "mode": "quick",
+        "time_limit_seconds": session.get("time_limit_seconds", 30),
         "session_type": "weak_questions_retry",
         "pattern_ids": session_pattern_ids,
         "pattern_names": session.get("pattern_names", []),
@@ -1050,6 +1076,7 @@ def _session_public(session: dict[str, Any]):
         "pattern_names": session["pattern_names"],
         "score": session["score"],
         "answered": session["current_index"],
+        "time_limit_seconds": session.get("time_limit_seconds", 30),
     }
 
 

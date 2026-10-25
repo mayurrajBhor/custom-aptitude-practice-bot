@@ -5,6 +5,14 @@ import threading
 from groq import Groq
 from dotenv import load_dotenv
 from llm.hybrid_gen import hybrid_generator
+from llm.quant import (
+    get_gmat_generator,
+    is_gmat_pattern_id,
+    GMAT_HYBRID_SUBTYPES,
+    PATTERNS_BY_NAME,
+    PATTERNS_BY_ID,
+    ALL_GMAT_GENERATORS,
+)
 
 load_dotenv()
 
@@ -156,21 +164,14 @@ class QuestionGenerator:
             "equivalent_discount",
         ],
         "vedic_addition": [
-            "left_to_right",
-            "complements",
-            "missing_addend",
             "single_digit",
             "two_digit_add_single_digit",
-            "two_digit_add_lessthan_100",
-            "two_digit_add_morethan_100",
-            "three_to_four_digit",
-            "three_digit_near_base",
+            "Multi_type",
         ],
         "vedic_subtraction": [
-            "left_to_right",
-            "base_complement",
-            "near_base_difference",
-            "missing_minuend",
+            "single_digit",
+            "two_digit_subtraction",
+            "Multi_type",
         ],
         "vedic_multiplication": [
             "vertical_crosswise",
@@ -216,7 +217,57 @@ class QuestionGenerator:
             "estimate_division",
             "quick_percent",
         ],
+        "odd_even": [
+            "parity_arithmetic",
+            "algebraic_parity",
+            "consecutive_integers",
+            "power_and_exponents",
+            "word_problem_parity",
+        ],
+        "prime_composite": [
+            "prime_identification",
+            "coprime_pairs",
+            "prime_ranges_and_counting",
+            "composite_properties",
+            "twin_primes_and_triplets",
+        ],
+        "factors": [
+            "total_number_of_factors",
+            "sum_of_factors",
+            "odd_and_even_factors",
+            "factor_pairs_and_products",
+            "perfect_square_factors",
+        ],
+        "multiples": [
+            "counting_multiples_in_range",
+            "common_multiples_and_intervals",
+            "either_or_multiples",
+            "consecutive_multiples_sum",
+            "word_problems_multiples",
+        ],
+        "prime_factorization": [
+            "canonical_decomposition",
+            "highest_power_in_factorial",
+            "missing_factor_for_perfect_power",
+            "distinct_prime_factors",
+            "algebraic_factorization",
+        ],
+        "hcf_gcd": [
+            "euclidean_algorithm",
+            "prime_factorization_hcf",
+            "fractions_hcf",
+            "largest_divisor_with_remainders",
+            "word_problems_tiling",
+        ],
+        "lcm": [
+            "prime_factorization_lcm",
+            "fractions_lcm",
+            "product_formula_relation",
+            "smallest_number_with_remainders",
+            "word_problems_bells",
+        ],
     }
+    HYBRID_SUBTYPES.update(GMAT_HYBRID_SUBTYPES)
 
     HYBRID_RANDOM_VALUES = {
         ("random_conv", "fraction_to_percent"): [0.99],
@@ -228,6 +279,8 @@ class QuestionGenerator:
     _forced_variant_lock = threading.RLock()
 
     def __init__(self):
+        self.HYBRID_SUBTYPES = dict(self.HYBRID_SUBTYPES)
+        self.HYBRID_SUBTYPES.update(GMAT_HYBRID_SUBTYPES)
         api_key = os.getenv("GROQ_API_KEY")
         try:
             self.client = Groq(api_key=api_key) if api_key else None
@@ -261,7 +314,17 @@ class QuestionGenerator:
 
     @staticmethod
     def _is_difficulty_aware_hybrid(base_type):
-        return str(base_type or "").startswith("vedic_")
+        if get_gmat_generator(base_type) is not None:
+            return True
+        return str(base_type or "").startswith("vedic_") or base_type in (
+            "odd_even",
+            "prime_composite",
+            "factors",
+            "multiples",
+            "prime_factorization",
+            "hcf_gcd",
+            "lcm",
+        )
 
     def _call_hybrid_generator(self, generator_fn, base_type, forced_variant=None, difficulty=None):
         def call_generator():
@@ -309,6 +372,16 @@ class QuestionGenerator:
                 random.random = real_random
 
     def _generate_hybrid(self, hybrid_type, difficulty=None):
+        selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
+        base_type, forced_variant = self._split_hybrid_variant(selected_type)
+
+        gmat_fn = get_gmat_generator(base_type)
+        if gmat_fn:
+            result = gmat_fn(difficulty=difficulty, forced_variant=forced_variant)
+            if result:
+                result["hybrid_type"] = selected_type
+            return result
+
         dispatch = {
             "mixed_fraction": hybrid_generator.generate_mixed_fraction,
             "fraction_subtraction": hybrid_generator.generate_fraction_subtraction,
@@ -354,9 +427,14 @@ class QuestionGenerator:
             "seating_arrangement": hybrid_generator.generate_seating_arrangement,
             "based_on_turns": hybrid_generator.generate_based_on_turns,
             "one_direction_only": hybrid_generator.generate_one_direction_only,
+            "odd_even": hybrid_generator.generate_odd_even,
+            "prime_composite": hybrid_generator.generate_prime_composite,
+            "factors": hybrid_generator.generate_factors,
+            "multiples": hybrid_generator.generate_multiples,
+            "prime_factorization": hybrid_generator.generate_prime_factorization,
+            "hcf_gcd": hybrid_generator.generate_hcf_gcd,
+            "lcm": hybrid_generator.generate_lcm,
         }
-        selected_type = hybrid_type if "::" in str(hybrid_type) else self._select_hybrid_type(hybrid_type)
-        base_type, forced_variant = self._split_hybrid_variant(selected_type)
         generator_fn = dispatch.get(base_type)
         result = self._call_hybrid_generator(generator_fn, base_type, forced_variant, difficulty=difficulty)
         if result:
@@ -365,7 +443,13 @@ class QuestionGenerator:
 
     def _get_hybrid_type(self, pattern_name):
         """Map exact pattern names to hybrid generator methods (case-insensitive)."""
-        pn = pattern_name.strip().lower()
+        pn = str(pattern_name or "").strip().lower()
+        if pn in PATTERNS_BY_NAME:
+            return PATTERNS_BY_NAME[pn]["name"]
+        if is_gmat_pattern_id(pattern_name):
+            return PATTERNS_BY_ID[int(pattern_name)]["name"]
+        if pattern_name in ALL_GMAT_GENERATORS or pn in ALL_GMAT_GENERATORS:
+            return pattern_name
         if pn == "fraction, decimal and percent foundations":
             return "group_fraction_foundations"
         if pn == "core percentage equations":
@@ -470,6 +554,20 @@ class QuestionGenerator:
             return "one_direction_only"
         if pn == "instructions based":
             return "moving_towards_direction"
+        if pn in ("odd/even", "odd/even properties", "odd and even", "odd and even properties", "odd even"):
+            return "odd_even"
+        if pn in ("prime/composite", "prime/composite properties", "prime and composite", "prime and composite numbers", "prime composite"):
+            return "prime_composite"
+        if pn in ("factors", "factors and divisors", "factors & divisors"):
+            return "factors"
+        if pn in ("multiples", "multiples and divisibility patterns", "multiples and divisibility"):
+            return "multiples"
+        if pn in ("prime factorization", "prime factorization and exponents", "prime factorization and powers"):
+            return "prime_factorization"
+        if pn in ("hcf/gcd", "hcf", "gcd", "hcf and gcd", "highest common factor", "highest common factor (hcf / gcd)", "greatest common divisor"):
+            return "hcf_gcd"
+        if pn in ("lcm", "least common multiple", "lowest common multiple", "least common multiple (lcm)"):
+            return "lcm"
         return None
 
     def generate_mcq(self, topic_name, pattern_name, pattern_description, difficulty, avoid_questions=None):

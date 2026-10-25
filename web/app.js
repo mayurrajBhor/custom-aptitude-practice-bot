@@ -5,6 +5,8 @@ const MODE_CONFIG = {
 };
 
 const AUTO_ADVANCE_MS = 600;
+const QUESTION_TIME_LIMIT_SECONDS = 15;
+const TIME_LIMIT_OPTIONS = [0, 15, 30, 45, 60, 90, 120, 180];
 const state = {
   telegramUser: null,
   catalog: [],
@@ -16,6 +18,7 @@ const state = {
   variantPickerDraft: [],
   variantPickerAnchor: null,
   selectedMode: "quick",
+  selectedTimeLimit: QUESTION_TIME_LIMIT_SECONDS,
   session: null,
   activeQuestion: null,
   answered: false,
@@ -360,7 +363,7 @@ function updateNumpadDisplay() {
       indicatorTitle.textContent = "Checking on digit...";
       indicatorSub.textContent = "• Auto-passes instantly when correct";
     } else {
-      indicatorTitle.textContent = "15s Timer Active";
+      indicatorTitle.textContent = `${getTimeLimitSeconds()}s Timer Active`;
       indicatorSub.textContent = "• Auto-passes on correct answer";
     }
   }
@@ -1692,7 +1695,7 @@ function renderSelection() {
   const variantCount = selected.reduce((sum, pattern) => sum + patternEffectiveVariantCount(pattern), 0);
   $("#variantCount").textContent = `${variantCount} variants`;
   $("#selectedPatternCount").textContent = selected.length;
-  $("#selectedModeLabel").textContent = MODE_CONFIG[state.selectedMode].label;
+  $("#selectedModeLabel").textContent = `${MODE_CONFIG[state.selectedMode].label} · ${getTimeLimitSeconds()}s`;
   $("#startButton").disabled = selected.length === 0;
 
   $("#selectionList").innerHTML = selected.length
@@ -1703,6 +1706,11 @@ function renderSelection() {
         </div>
       `).join("")
     : `<div class="selection-empty">Select patterns to begin.</div>`;
+}
+
+function getTimeLimitSeconds() {
+  const selected = Number(state.selectedTimeLimit || state.session?.time_limit_seconds || QUESTION_TIME_LIMIT_SECONDS);
+  return TIME_LIMIT_OPTIONS.includes(selected) ? selected : QUESTION_TIME_LIMIT_SECONDS;
 }
 
 function getActiveCategory() {
@@ -2282,9 +2290,11 @@ async function startPractice(options = {}) {
         pattern_ids: patternIds,
         mode: modeKey,
         target_count: targetCount,
+        time_limit_seconds: state.selectedTimeLimit,
         variant_selection: variantSelection,
       }),
     });
+    state.selectedTimeLimit = Number(state.session.time_limit_seconds || state.selectedTimeLimit);
     updateQuestionHud({ question_number: 1, total_questions: state.session.total_questions });
     setScreen("question");
     renderGameIntro();
@@ -2370,6 +2380,7 @@ async function startMistakeRetry(mistakeId) {
         pattern_ids: [patternId],
         mode: "quick",
         target_count: 1,
+        time_limit_seconds: state.selectedTimeLimit,
         retry_mistakes: true,
         mistake_ids: [Number(mistakeId)],
       }),
@@ -2407,6 +2418,7 @@ async function startMistakePatternRetry(patternId) {
         pattern_ids: [id],
         mode: "quick",
         target_count: 5,
+        time_limit_seconds: state.selectedTimeLimit,
         retry_mistakes: true,
         mistake_pattern_id: id,
       }),
@@ -2447,6 +2459,7 @@ async function startAllMistakeRetry() {
         pattern_ids: state.mistakePatternIds,
         mode: "quick",
         target_count: 5,
+        time_limit_seconds: state.selectedTimeLimit,
         retry_mistakes: true,
       }),
     });
@@ -2586,9 +2599,20 @@ function finalizeAnswerResponse(result, effectiveIndex) {
     loopbackNoticeHtml = `<div class="loopback-notice"><span class="loopback-icon">🔁</span> ${noticeText}</div>`;
   }
 
+  let mistakeBadgeHtml = "";
+  if (!result.is_correct && result.mistake_classification) {
+    const mc = result.mistake_classification;
+    mistakeBadgeHtml = `<div class="mistake-feedback-box" style="margin-top:10px; padding:10px 14px; border-radius:8px; background:rgba(239,68,68,0.08); border-left:4px solid #ef4444;">
+      <div style="font-weight:700; color:#dc2626; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">⚠️ ${escapeHtml(mc.label)}</div>
+      <p style="margin:4px 0 3px; font-size:13px; color:#334155; line-height:1.4;">${escapeHtml(mc.feedback)}</p>
+      <small style="color:#64748b; font-size:12px; display:block; margin-top:2px;"><strong>💡 GMAT Remedy:</strong> ${escapeHtml(mc.remedy)}</small>
+    </div>`;
+  }
+
   $("#feedbackTitle").innerHTML = `${result.is_correct ? "✓ Correct" : "✗ Review"} ${speedBadgeHtml}`;
   $("#feedbackText").innerHTML = `
     ${result.explanation ? `<div>${escapeHtml(result.explanation)}</div>` : `<div>Correct answer: <strong>${escapeHtml(String(result.correct_option))}</strong></div>`}
+    ${mistakeBadgeHtml}
     ${loopbackNoticeHtml}
   `;
   playAnswerFeedback(result.is_correct);
@@ -2657,7 +2681,7 @@ function finalizeAnswerResponse(result, effectiveIndex) {
       correct_answer: correctAnswer ?? null,
       correct_option_index: result.correct_option_index !== undefined ? result.correct_option_index : (q.correct_option_index ?? null),
       is_correct: Boolean(result.is_correct),
-      is_timeout: Boolean(result.is_timeout || (result.time_taken >= QUESTION_TIME_LIMIT_SECONDS && !result.is_correct)),
+      is_timeout: Boolean(result.is_timeout || (result.time_taken >= getTimeLimitSeconds() && !result.is_correct)),
       is_skipped: false,
       time_taken: typeof result.time_taken === "number" ? result.time_taken : Number(result.time_taken) || 0,
       explanation: result.explanation || "",
@@ -3012,8 +3036,6 @@ function renderReview(questions, summary = {}) {
   }).join("");
 }
 
-const QUESTION_TIME_LIMIT_SECONDS = 15;
-
 function updateTimerDisplay(remaining, elapsed = 0) {
   const timerElem = $("#questionTimer");
   if (!timerElem) return;
@@ -3049,8 +3071,21 @@ function updateTimerDisplay(remaining, elapsed = 0) {
 function startQuestionTimer() {
   clearQuestionTimer();
   state.questionStartedAt = Date.now();
-  $("#questionTimer").textContent = `${QUESTION_TIME_LIMIT_SECONDS}s`;
-  updateTimerDisplay(QUESTION_TIME_LIMIT_SECONDS, 0);
+  const timeLimit = getTimeLimitSeconds();
+  if (timeLimit <= 0) {
+    $("#questionTimer").textContent = "∞";
+    state.timerId = window.setInterval(() => {
+      if (state.answered) {
+        clearQuestionTimer();
+        return;
+      }
+      const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
+      $("#questionTimer").textContent = `${elapsed}s`;
+    }, 1000);
+    return;
+  }
+  $("#questionTimer").textContent = `${timeLimit}s`;
+  updateTimerDisplay(timeLimit, 0);
 
   state.timerId = window.setInterval(() => {
     if (state.answered) {
@@ -3058,7 +3093,7 @@ function startQuestionTimer() {
       return;
     }
     const elapsed = Math.floor((Date.now() - state.questionStartedAt) / 1000);
-    const remaining = Math.max(0, QUESTION_TIME_LIMIT_SECONDS - elapsed);
+    const remaining = Math.max(0, timeLimit - elapsed);
     updateTimerDisplay(remaining, elapsed);
 
     if (state.activeGameMode && state.gameState && !state.answered) {
@@ -3113,7 +3148,7 @@ async function handleQuestionTimeout() {
     feedbackPanel.classList.add("is-wrong");
   }
   $("#feedbackTitle").textContent = "Time's Up (Failed)";
-  $("#feedbackText").textContent = `${QUESTION_TIME_LIMIT_SECONDS} seconds expired. Showing correct answer...`;
+  $("#feedbackText").textContent = `${getTimeLimitSeconds()} seconds expired. Showing correct answer...`;
   playTone("wrong");
   triggerHaptic("error");
 
@@ -3458,6 +3493,11 @@ function bindEvents() {
 
   $("#selectTopicButton")?.addEventListener("click", selectWholeTopic);
   $("#startButton")?.addEventListener("click", startPractice);
+  $("#timeLimitSelect")?.addEventListener("change", (event) => {
+    const selected = Number(event.target.value);
+    state.selectedTimeLimit = TIME_LIMIT_OPTIONS.includes(selected) ? selected : QUESTION_TIME_LIMIT_SECONDS;
+    renderSelection();
+  });
   $("#practiceAgainButton")?.addEventListener("click", () => {
     startPractice();
   });
@@ -3826,7 +3866,7 @@ function renderJournalAttemptCard(attempt, overallAvgTime = 15) {
         </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${isCorrect ? '<span class="journal-badge badge-correct">✓ Correct</span>' : '<span class="journal-badge badge-wrong">✗ Wrong</span>'}
-          ${isTimeout ? `<span class="journal-badge badge-timeout">⏰ ${QUESTION_TIME_LIMIT_SECONDS}s Timeout</span>` : ""}
+          ${isTimeout ? `<span class="journal-badge badge-timeout">⏰ ${getTimeLimitSeconds()}s Timeout</span>` : ""}
           <span class="journal-badge ${isSlow ? "badge-slow" : "badge-fast"}">${isSlow ? "🐢" : "⚡"} ${timeSec}s</span>
         </div>
       </div>
@@ -3879,7 +3919,7 @@ function renderQuestionFrequencyCard(q, overallAvgTime = 15) {
         <span class="attempt-date">${escapeHtml(attDate)} ${escapeHtml(attTimeStr)}</span>
         <span class="attempt-user-answer">Answer: <strong>${escapeHtml(attAns)}</strong></span>
         <span class="journal-badge ${isAttCorr ? "badge-correct" : "badge-wrong"}">${isAttCorr ? "✓ Correct" : "✗ Wrong"}</span>
-        <span class="journal-badge ${Number(att.time_taken || 0) > (overallAvgTime || 15) ? "badge-slow" : "badge-fast"}">${att.is_timeout ? `⏰ ${QUESTION_TIME_LIMIT_SECONDS}s Timeout` : `⏱️ ${attTime}s`}</span>
+        <span class="journal-badge ${Number(att.time_taken || 0) > (overallAvgTime || 15) ? "badge-slow" : "badge-fast"}">${att.is_timeout ? `⏰ ${getTimeLimitSeconds()}s Timeout` : `⏱️ ${attTime}s`}</span>
       </div>
     `;
   }).join("");

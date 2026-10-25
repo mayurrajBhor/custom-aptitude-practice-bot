@@ -114,6 +114,19 @@
                   <strong id="selectedModeLabel">Quick 5</strong>
                 </div>
               </div>
+              <label class="time-limit-control" for="timeLimitSelect">
+                <span>Speed Mode / Timer</span>
+                <select id="timeLimitSelect" aria-label="Time limit per question">
+                  <option value="0">Accuracy Mode (Untimed)</option>
+                  <option value="15">Lightning (15s)</option>
+                  <option value="30" selected>Speed (30s)</option>
+                  <option value="45">Speed (45s)</option>
+                  <option value="60">Normal (60s)</option>
+                  <option value="90">Normal (90s)</option>
+                  <option value="120">Extended (120s)</option>
+                  <option value="180">Deep Practice (180s)</option>
+                </select>
+              </label>
               <div class="selection-list" id="selectionList"></div>
               <button class="primary-button" id="startButton" type="button" disabled>Start practice</button>
             </aside>

@@ -106,6 +106,41 @@ VEDIC_MATH_PATTERNS = [
         "Approximation and Number Sense",
         "Speed estimation drills using compatible numbers, rounded products, rounded division, and benchmark percentages.",
     ),
+    (
+        3010,
+        "Odd/even",
+        "Properties of odd and even numbers, parity arithmetic, algebraic parity, consecutive integer parity, and power rules.",
+    ),
+    (
+        3011,
+        "Prime/composite",
+        "Prime identification, coprime pairs, prime ranges and counting, composite number properties, and twin primes.",
+    ),
+    (
+        3012,
+        "Factors",
+        "Total number of factors, sum of factors, odd and even factor counts, factor pairs, and perfect square factor counts.",
+    ),
+    (
+        3013,
+        "Multiples",
+        "Counting multiples in range, common multiples of two or more numbers, either/or sets, and consecutive multiple sums.",
+    ),
+    (
+        3014,
+        "Prime factorization",
+        "Canonical prime decomposition, highest power of prime dividing factorials, missing factors for perfect powers, and distinct prime factors.",
+    ),
+    (
+        3015,
+        "HCF/GCD",
+        "Highest Common Factor via Euclidean algorithm, prime factor powers, HCF of fractions, remainder constraints, and tiling word problems.",
+    ),
+    (
+        3016,
+        "LCM",
+        "Least Common Multiple using prime powers, LCM of fractions, product formula relation (HCF x LCM = a x b), remainder cases, and bell tolling cycles.",
+    ),
 ]
 
 
@@ -137,15 +172,60 @@ LOCAL_PATTERNS.update(
 )
 LOCAL_PATTERNS.update(
     {
-        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description, difficulty=1)
+        pattern_id: _pattern(pattern_id, 102, "Vedic Math", name, description, difficulty=1 if pattern_id <= 3009 else 2)
         for pattern_id, name, description in VEDIC_MATH_PATTERNS
     }
 )
+
+# Support compatibility for IDs 4001-4007
+ID_MAP_4000 = {
+    4001: 3010,
+    4002: 3011,
+    4003: 3012,
+    4004: 3013,
+    4005: 3014,
+    4006: 3015,
+    4007: 3016,
+}
+for legacy_id, new_id in ID_MAP_4000.items():
+    if new_id in LOCAL_PATTERNS:
+        pat_copy = deepcopy(LOCAL_PATTERNS[new_id])
+        pat_copy["id"] = legacy_id
+        LOCAL_PATTERNS[legacy_id] = pat_copy
+
+from llm.quant import (
+    ALL_GMAT_PATTERNS_METADATA,
+    DAY1_LIST,
+    DAY2_LIST,
+    DAY3_LIST,
+    DAY4_LIST,
+)
+
+for meta in ALL_GMAT_PATTERNS_METADATA:
+    variants = meta.get("variants") or meta.get("variant_names") or []
+    display_name = meta.get("title") or meta.get("name")
+    LOCAL_PATTERNS[meta["id"]] = {
+        "id": meta["id"],
+        "topic_id": meta["topic_id"],
+        "topic_name": meta["topic_name"],
+        "name": display_name,
+        "description": meta["description"],
+        "difficulty": 2,
+        "difficulty_level": 2,
+        "variant_count": len(variants) if variants else 1,
+        "variant_names": variants,
+        "source": "local",
+        "is_gmat": True,
+    }
 
 
 LOCAL_TOPICS = {
     101: {"id": 101, "category_id": 1, "name": "Percentages", "pattern_ids": [item[0] for item in PERCENTAGE_PATTERNS]},
     102: {"id": 102, "category_id": 1, "name": "Vedic Math", "pattern_ids": [item[0] for item in VEDIC_MATH_PATTERNS]},
+    501: {"id": 501, "category_id": 1, "name": "Day 1: Number Sense & Basic Arithmetic", "pattern_ids": [p["id"] for p in DAY1_LIST]},
+    502: {"id": 502, "category_id": 1, "name": "Day 2: Fractions & Decimals", "pattern_ids": [p["id"] for p in DAY2_LIST]},
+    503: {"id": 503, "category_id": 1, "name": "Day 3: Percentages & Commercial Math", "pattern_ids": [p["id"] for p in DAY3_LIST]},
+    504: {"id": 504, "category_id": 1, "name": "Day 4: Ratios, Proportion & Averages", "pattern_ids": [p["id"] for p in DAY4_LIST]},
     201: {
         "id": 201,
         "category_id": 2,
@@ -155,7 +235,7 @@ LOCAL_TOPICS = {
 }
 
 LOCAL_CATEGORIES = [
-    {"id": 1, "name": "Quant", "topic_ids": [101, 102]},
+    {"id": 1, "name": "Quant", "topic_ids": [101, 102, 501, 502, 503, 504]},
     {"id": 2, "name": "Reasoning", "topic_ids": [201]},
 ]
 
